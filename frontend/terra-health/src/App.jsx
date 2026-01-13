@@ -3,6 +3,8 @@ import LoginPage from './views/Login/LoginPage';
 import useAuthStore from './modules/auth/hooks/useAuthStore';
 import MainLayout from './app/MainLayout';
 import * as Views from './views/Placeholders';
+import UsersPage from './views/Users/UsersPage';
+import PermissionsPage from './views/Users/PermissionsPage';
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
@@ -30,6 +32,8 @@ function App() {
         <Route path="ads" element={<Views.Ads />} />
         <Route path="statistics" element={<Views.Statistics />} />
         <Route path="notifications" element={<Views.Notifications />} />
+        <Route path="users" element={<UsersPage />} />
+        <Route path="permissions" element={<PermissionsPage />} />
         <Route path="settings" element={<Views.Settings />} />
       </Route>
 

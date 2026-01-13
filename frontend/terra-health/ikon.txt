@@ -107,3 +107,13 @@ CUSTOM ICON
     stroke="light"
     style="width:250px;height:250px">
 </lord-icon>
+
+11 - Users
+
+<script src="https://cdn.lordicon.com/lordicon.js"></script>
+<lord-icon
+    src="https://cdn.lordicon.com/ntfaoelc.json"
+    trigger="hover"
+    stroke="light"
+    style="width:250px;height:250px">
+</lord-icon>
