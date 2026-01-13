@@ -1,0 +1,131 @@
+---
+
+### 6. Customer Module
+modules/customer/ modülünü oluştur:
+ENTITIES:
+Customer:
+
+id (UUID)
+firstName, lastName
+email (encrypted - AES-256)
+phone (encrypted)
+country, language
+source (GOOGLE_ADS, META_ADS, MANUAL)
+leadScore (0-100)
+pipelineStage (LEAD, CONTACT, etc.)
+assignedTo (User FK)
+createdAt, updatedAt
+createdBy, updatedBy
+
+CustomerMedicalInfo:
+
+id
+customerId (FK - OneToOne)
+operationType
+medicalHistory (TEXT)
+allergies
+bloodType
+specialRequirements
+
+CustomerActivity:
+
+id
+customerId (FK - ManyToOne)
+activityType (CALL, EMAIL, MEETING, NOTE)
+description
+performedBy (User FK)
+performedAt
+
+CustomerLostReason:
+
+id
+customerId (FK)
+reasonCategory (PRICE, TRUST, DOCTOR, DATE)
+detailedNote
+lostBy (User FK)
+lostAt
+
+REPOSITORIES:
+
+CustomerRepository
+
+Specification kullan (dynamic queries)
+Custom query: findByPipelineStage
+
+
+CustomerMedicalInfoRepository
+CustomerActivityRepository
+CustomerLostReasonRepository
+
+SERVICES:
+CustomerService:
+
+createCustomer(request): Yeni müşteri + Event publish
+updateCustomer(id, request): Güncelle
+deleteCustomer(id): Soft delete
+getCustomerById(id): Detay + email/phone decrypt
+getCustomers(page, filters): Pagination + filtering
+changeStage(id, newStage, reason): Stage değiştir + Pipeline event
+
+CustomerActivityService:
+
+addActivity(customerId, request): Aktivite ekle
+getActivities(customerId): Liste
+
+LeadScoringService:
+
+calculateScore(customer): Lead score hesapla
+
+Form doldurma hızı: +10
+Mesaj cevap süresi: +15
+Bütçe uygunluğu: +20
+vb.
+
+
+
+CustomerEncryptionService:
+
+encrypt(plainText): AES-256
+decrypt(cipherText): Plain text
+
+CONTROLLERS:
+CustomerController:
+GET    /api/v1/customers (Pagination)
+POST   /api/v1/customers
+GET    /api/v1/customers/{id}
+PUT    /api/v1/customers/{id}
+DELETE /api/v1/customers/{id}
+POST   /api/v1/customers/{id}/activities
+GET    /api/v1/customers/{id}/activities
+POST   /api/v1/customers/{id}/lost-reason
+DTOs:
+
+CreateCustomerRequest
+UpdateCustomerRequest
+CustomerDTO (email/phone decrypted)
+CustomerActivityDTO
+LostReasonRequest
+
+FILTERS:
+
+pipelineStage
+leadSource
+leadScore (COLD/WARM/HOT)
+country
+assignedTo
+
+SPECIFICATIONS:
+CustomerSpecification:
+
+byPipelineStage(stage)
+byLeadSource(source)
+byCountry(country)
+byAssignedTo(userId)
+
+EVENTS:
+Customer oluşturulduğunda:
+
+RabbitMQ: customer.created event
+Consumer'lar: Analytics, Notification
+
+Önce Customer entity ve CustomerService oluştur.

@@ -1,0 +1,76 @@
+modules/auth/ modülünü oluştur:
+
+ENTITIES:
+User:
+- id (UUID)
+- email (unique)
+- passwordHash
+- fullName
+- role (ADMIN/MANAGER/AGENT/DOCTOR)
+- languagePreference (TR/EN)
+- isActive
+- lastLoginAt
+- createdAt, updatedAt
+
+Role:
+- id
+- name (ADMIN, MANAGER, vb.)
+- permissions (JSON)
+- description
+
+AuditLog:
+- id
+- userId
+- action (LOGIN, LOGOUT, CREATE_CUSTOMER, vb.)
+- resourceType
+- resourceId
+- ipAddress
+- userAgent
+- timestamp
+
+REPOSITORIES:
+- UserRepository extends JpaRepository
+- RoleRepository
+- AuditLogRepository
+
+SERVICES:
+AuthService:
+- login(email, passwor): JWT döner
+
+register(request): Yeni kullanıcı
+refreshToken(oldToken): Token yenile
+logout(userId): Audit log
+
+UserService:
+
+getUserById(id)
+updateUser(id, request)
+changePassword(id, oldPassword, newPassword)
+
+AuditService:
+
+logAction(userId, action, resourceType, resourceId)
+
+CONTROLLERS:
+AuthController:
+POST /api/v1/auth/login
+POST /api/v1/auth/register
+POST /api/v1/auth/refresh
+POST /api/v1/auth/logout
+GET  /api/v1/auth/me
+DTOs:
+
+LoginRequest: email, password
+LoginResponse: token, user
+RegisterRequest: email, password, fullName
+UserDTO: id, email, fullName, role
+
+VALIDATION:
+
+Email format
+Password minimum 8 karakter
+Required fields
+
+AUDIT:
+Her login'de audit log oluştur
+Önce User entity ve AuthService oluştur.

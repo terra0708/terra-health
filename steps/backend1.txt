@@ -1,0 +1,55 @@
+Sağlık turizmi CRM için Spring Boot 3.x projesi oluştur (Modular Monolith). uygulamanın adı terra-health:
+
+TEMEL SETUP:
+- Spring Boot 3.2.x
+- Java 17
+- Maven
+- Package: com.healthtourism.crm
+
+DEPENDENCIES (pom.xml):
+- spring-boot-starter-web
+- spring-boot-starter-data-jpa
+- spring-boot-starter-data-mongodb
+- spring-boot-starter-security
+- spring-boot-starter-validation
+- spring-boot-starter-amqp (RabbitMQ)
+- spring-boot-starter-data-redis
+- jjwt (JWT için)
+- postgresql
+- lombok
+- flyway-core (DB migration)
+- springdoc-openapi (Swagger)
+- minio (Object storage)
+
+KLASÖR YAPISI:
+src/main/java/com/healthtourism/crm/
+├── HealthTourismCrmApplication.java
+├── shared/ (Ortak katman)
+│   ├── config/
+│   ├── infrastructure/
+│   ├── security/
+│   ├── exception/
+│   ├── dto/
+│   └── util/
+└── modules/ (Domain modülleri)
+    ├── auth/
+    ├── customer/
+    ├── pipeline/
+    ├── appointment/
+    ├── advertising/
+    ├── communication/
+    ├── document/
+    ├── analytics/
+    ├── notification/
+    └── integration/
+
+APPLICATION.YML:
+- PostgreSQL connection
+- MongoDB connection
+- Redis connection
+- RabbitMQ connection
+- MinIO connection
+- JWT secret
+- CORS config
+
+Projeyi oluştur ve pom.xml'i hazırla.

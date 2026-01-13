@@ -1,0 +1,160 @@
+---
+
+### 9. Advertising Module
+modules/advertising/ modülünü oluştur:
+ENTITIES:
+Campaign:
+
+id
+platform (GOOGLE, META)
+externalCampaignId
+name
+budget, budgetCurrency
+startDate, endDate
+status (ACTIVE, PAUSED, COMPLETED)
+targetAudience (JSONB)
+
+AdMetrics:
+
+id
+campaignId (FK)
+date
+impressions, clicks, conversions
+cost, costCurrency
+ctr, cpc
+syncedAt
+
+LeadFromAd:
+
+id
+campaignId (FK)
+customerId (FK)
+formData (JSONB)
+sourceUrl
+utmParams (JSONB)
+capturedAt
+costPerLead
+
+ConversionEvent:
+
+id
+customerId (FK)
+eventType (LEAD, APPOINTMENT, SURGERY, PAYMENT)
+eventValue, eventCurrency
+campaignId (FK)
+occurredAt
+sentToPlatform (CAPI için)
+
+WebhookLog:
+
+id
+platform
+eventType
+payload (JSONB)
+processedAt
+status
+
+REPOSITORIES:
+
+CampaignRepository
+AdMetricsRepository
+
+findByCampaignIdAndDateBetween(id, start, end)
+
+
+LeadFromAdRepository
+ConversionEventRepository
+
+findBySentToPlatformFalse(): CAPI için pending events
+
+
+WebhookLogRepository
+
+SERVICES:
+CampaignService:
+
+createCampaign(request)
+getCampaigns(platform, status)
+getCampaignById(id)
+
+AdMetricsService:
+
+syncMetrics(campaignId): API'den metrik çek, kaydet
+getMetrics(campaignId, dateRange)
+
+ROICalculationService:
+
+calculateROI(campaignId, dateRange):
+ROI = (Revenue - Cost) / Cost * 100
+getCostPerLead(campaignId): Total cost / Total leads
+
+LeadCaptureService:
+
+captureLeadFromWebhook(payload):
+
+Webhook payload parse et
+Customer oluştur (Customer Service)
+LeadFromAd kaydet
+Event publish (lead.captured)
+
+
+
+ConversionTrackingService:
+
+trackConversion(customerId, eventType, value):
+
+ConversionEvent kaydet
+sentToPlatform = false
+
+
+sendToPlatform(eventId): CAPI'ye gönder
+
+INTEGRATION CLIENTS:
+MetaMarketingApiClient:
+
+getCampaigns(): List campaigns
+getCampaignInsights(campaignId, dateRange): Metrics
+
+MetaConversionApiClient (CAPI):
+
+sendConversion(event): Server-side conversion tracking
+
+GoogleAdsApiClient:
+
+getCampaigns()
+getCampaignMetrics(campaignId, dateRange)
+
+CONTROLLERS:
+CampaignController:
+GET  /api/v1/campaigns
+POST /api/v1/campaigns
+GET  /api/v1/campaigns/{id}
+GET  /api/v1/campaigns/{id}/metrics?start=&end=
+GET  /api/v1/campaigns/roi?start=&end=
+WebhookController:
+POST /webhooks/meta/leads (Lead form submission)
+POST /webhooks/google/conversions
+DTOs:
+
+CampaignDTO
+AdMetricsDTO
+ROIReportDTO: totalCost, totalRevenue, roi
+WebhookPayloadDTO
+
+SCHEDULED JOBS:
+@Scheduled(cron = "0 0 2 * * *") // Her gün 02:00
+syncAllCampaignMetrics():
+
+Tüm aktif kampanyaların metriklerini çek
+
+@Scheduled(cron = "0 0 * * * *") // Her saat
+sendPendingConversions():
+
+sentToPlatform=false olan eventleri CAPI'ye gönder
+
+EVENTS:
+
+lead.captured
+Consumer: Customer Module (Müşteri oluştur)
+
+Önce LeadCaptureService ve webhook handler oluştur.

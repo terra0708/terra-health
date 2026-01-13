@@ -1,0 +1,43 @@
+---
+
+### 15. Database Migration (Flyway)
+src/main/resources/db/migration/ klasörüne migration dosyaları oluştur:
+V1__create_users_table.sql:
+CREATE TABLE users (
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+email VARCHAR(255) UNIQUE NOT NULL,
+password_hash VARCHAR(255) NOT NULL,
+full_name VARCHAR(255) NOT NULL,
+role VARCHAR(50) NOT NULL,
+language_preference VARCHAR(5) DEFAULT 'tr',
+is_active BOOLEAN DEFAULT true,
+last_login_at TIMESTAMP,
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+V2__create_customers_table.sql:
+CREATE TABLE customers (
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+first_name VARCHAR(100) NOT NULL,
+last_name VARCHAR(100) NOT NULL,
+email VARCHAR(255),
+phone VARCHAR(50),
+country VARCHAR(100),
+language VARCHAR(5) DEFAULT 'en',
+source VARCHAR(50) NOT NULL,
+lead_score INTEGER DEFAULT 0,
+pipeline_stage VARCHAR(50) NOT NULL DEFAULT 'LEAD',
+assigned_to UUID REFERENCES users(id),
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX idx_customers_pipeline_stage ON customers(pipeline_stage);
+CREATE INDEX idx_customers_assigned_to ON customers(assigned_to);
+V3__create_appointments_table.sql:
+(Appointment tabloları)V4__create_campaigns_table.sql:
+(Campaign tabloları)...Her migration dosyası:
+
+Atomik (tek sorumluluk)
+Rollback script yok (forward-only)
+Test edilmiş
+Önce V1 ve V2 migration dosyalarını oluştur.

@@ -1,0 +1,85 @@
+---
+
+### 7. Pipeline Module
+modules/pipeline/ modülünü oluştur:
+ENTITY:
+PipelineHistory:
+
+id
+customerId (FK)
+fromStage
+toStage
+changedBy (User FK)
+changeReason
+changedAt
+durationInStageSeconds
+
+REPOSITORY:
+PipelineHistoryRepository:
+
+findByCustomerId(customerId): Geçmiş
+
+SERVICES:
+PipelineService:
+
+getOverview(): Stage bazında müşteri sayıları
+{
+LEAD: 45,
+CONTACT: 30,
+PROPOSAL: 20,
+...
+}
+moveCustomer(customerId, toStage, reason):
+
+Customer stage'ini güncelle
+History kaydet
+Event publish
+
+
+
+PipelineAnalyticsService:
+
+getFunnelData(): Conversion rates
+[
+{stage: "LEAD", count: 100, conversionRate: 60},
+{stage: "CONTACT", count: 60, conversionRate: 66},
+...
+]
+getStageMetrics(): Her stage için metrikler
+
+Ortalama kalış süresi
+Toplam müşteri
+Dönüşüm oranı
+
+
+
+CONTROLLER:
+PipelineController:
+GET  /api/v1/pipeline/overview
+POST /api/v1/pipeline/move
+GET  /api/v1/pipeline/funnel
+GET  /api/v1/pipeline/metrics
+DTOs:
+
+PipelineOverviewDTO: Map<Stage, Count>
+StageChangeRequest: customerId, toStage, reason
+PipelineFunnelDTO: List of stage data
+StageMetricsDTO: avgDuration, count, conversionRate
+
+BUSINESS LOGIC:
+moveCustomer:
+
+Mevcut stage'i al
+Yeni stage'e geç
+Duration hesapla (entered_at - now)
+History kaydet
+Customer.pipelineStage güncelle
+Event publish (customer.stage_changed)
+
+EVENTS:
+
+customer.stage_changed
+Payload: {customerId, fromStage, toStage, reason}
+Consumer: Analytics
+
+Önce PipelineService.getOverview() oluştur.

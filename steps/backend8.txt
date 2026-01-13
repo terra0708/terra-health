@@ -1,0 +1,137 @@
+---
+
+### 8. Appointment Module
+modules/appointment/ modülünü oluştur:
+ENTITIES:
+Doctor:
+
+id
+name
+specialty
+clinicId (FK)
+email, phone
+isActive
+
+Clinic:
+
+id
+name, address, city, country, phone
+
+DoctorAvailability:
+
+id
+doctorId (FK)
+dayOfWeek (1-7: Monday-Sunday)
+startTime, endTime
+slotDuration (30 dakika default)
+isRecurring (true/false)
+specificDate (one-time için)
+
+Appointment:
+
+id
+customerId (FK)
+doctorId (FK)
+appointmentDatetime
+duration (30 dakika)
+status (SCHEDULED, CONFIRMED, COMPLETED, CANCELLED)
+appointmentType (CONSULTATION, SURGERY, FOLLOW_UP)
+notes
+createdBy
+reminderSent
+
+AppointmentReminder:
+
+id
+appointmentId (FK)
+reminderType (EMAIL, SMS, WHATSAPP)
+scheduledFor
+sentAt
+status (PENDING, SENT, FAILED)
+
+REPOSITORIES:
+
+DoctorRepository
+ClinicRepository
+DoctorAvailabilityRepository
+AppointmentRepository
+
+findByAppointmentDatetimeBetween(start, end)
+findByDoctorIdAndStatus(doctorId, status)
+
+
+AppointmentReminderRepository
+
+SERVICES:
+AppointmentService:
+
+createAppointment(request): Randevu oluştur
+
+Müsaitlik kontrol
+Çakışma kontrol
+Redis lock al
+Randevu kaydet
+Reminder zamanla
+Event publish
+Lock serbest bırak
+
+
+updateAppointment(id, request)
+cancelAppointment(id)
+getAppointments(startDate, endDate)
+
+DoctorAvailabilityService:
+
+getAvailableSlots(doctorId, date): Müsait saatler
+
+Availability'den slot'ları üret
+Mevcut randevuları çıkar
+
+
+createAvailability(request)
+
+ConflictDetectionService:
+
+hasConflict(doctorId, datetime, duration): boolean
+
+Aynı saatte başka randevu var mı?
+
+
+
+AppointmentReminderService:
+
+scheduleReminders(appointmentId):
+
+7 gün önce EMAIL
+3 gün önce SMS
+1 gün önce WHATSAPP
+
+
+sendDueReminders(): Zamanı gelen hatırlatıcıları gönder
+
+CONTROLLERS:
+AppointmentController:
+GET    /api/v1/appointments?start=&end=
+POST   /api/v1/appointments
+PUT    /api/v1/appointments/{id}
+DELETE /api/v1/appointments/{id}
+GET    /api/v1/doctors/{id}/availability?date=
+DTOs:
+
+CreateAppointmentRequest
+AppointmentDTO
+AvailabilityDTO
+TimeSlotDTO: {startTime, endTime, isAvailable}
+
+DISTRIBUTED LOCKING (Redis):
+@Lock(key = "appointment:{doctorId}:{datetime}")
+Aynı anda 2 request aynı saate randevu alamasın
+SCHEDULED JOBS:
+@Scheduled(fixedRate = 300000) // 5 dakika
+sendDueReminders()
+EVENTS:
+
+appointment.scheduled
+Consumer: Notification (Email/SMS gönder)
+
+Önce Appointment entity ve AppointmentService.createAppointment() oluştur.

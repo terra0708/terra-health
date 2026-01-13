@@ -1,0 +1,28 @@
+shared/security/ ve shared/config/SecurityConfig oluştur:
+
+JWT PROVIDER:
+- generateToken(user): JWT üret (24 saat expiry)
+- validateToken(token): Token doğrula
+- getUserIdFromToken(token): User ID çıkar
+- refreshToken(oldToken): Yeni token üret
+
+JWT FILTER:
+- Her request'te Authorization header'ı kontrol et
+- Bearer token'ı parse et
+- Token geçerliyse SecurityContext'e user bilgisini set et
+
+SECURITY CONFIG:
+- JWT filter'ı ekle
+- CORS ayarları
+- Public endpoints: /api/v1/auth/**, /webhooks/**
+- Protected endpoints: Diğer her şey
+- CSRF disable (REST API için)
+
+PASSWORD ENCODER:
+- BCryptPasswordEncoder kullan
+- Strength: 12
+
+ACCESS DENIED HANDLER:
+- 401 ve 403 hataları için custom response
+
+Önce JwtTokenProvider class'ını oluştur.

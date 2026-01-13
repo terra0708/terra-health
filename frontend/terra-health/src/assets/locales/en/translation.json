@@ -1,0 +1,42 @@
+{
+    "auth": {
+        "login_title": "Login",
+        "email": "Email Address",
+        "password": "Password",
+        "login_button": "Login",
+        "welcome_message": "Welcome to Customer Management Panel",
+        "invalid_credentials": "Invalid credentials!",
+        "demo_title": "Demo Login Info:",
+        "demo_email": "Email",
+        "demo_password": "Password",
+        "validation": {
+            "email_required": "Email is required",
+            "email_invalid": "Enter a valid email address",
+            "password_min": "Password must be at least 6 characters"
+        }
+    },
+    "menu": {
+        "dashboard": "Dashboard",
+        "appointments": "Appointments",
+        "customers": "Customers",
+        "ads": "Ad Management",
+        "statistics": "Statistics",
+        "notifications": "Notifications",
+        "settings": "Settings"
+    },
+    "common": {
+        "profile": "Profile",
+        "logout": "Secure Logout",
+        "system_status": "System Status",
+        "live_panel": "Live Panel",
+        "dark_mode": "Dark Mode",
+        "light_mode": "Light Mode",
+        "change_language": "Change Language",
+        "admin": "Admin",
+        "user_placeholder": "User"
+    },
+    "placeholders": {
+        "under_development": "This page is currently under development. Great content will be here soon!",
+        "content_will_be_here": "Content will be here"
+    }
+}

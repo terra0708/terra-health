@@ -1,0 +1,55 @@
+shared/infrastructure/ altında altyapı servislerini oluştur:
+
+RABBITMQ (messaging/):
+RabbitMQPublisher:
+- publishEvent(exchange, routingKey, message)
+- Exchange'ler: customer, appointment, lead, notification
+
+RabbitMQConfig:
+- Exchange'leri tanımla (topic type)
+- Queue'ları oluştur
+- Binding'leri kur
+
+REDIS (cache/):
+CacheService:
+- set(key, value, ttl)
+- get(key)
+- delete(key)
+- exists(key)
+
+RedisCacheManager:
+- Cache annotation'ları için config
+- TTL ayarları
+
+MINIO (storage/):
+MinIOService:
+- uploadFile(bucket, path, file): Dosya yükle
+- downloadFile(bucket, path): Dosya indir
+- deleteFile(bucket, path): Dosya sil
+- generatePresignedUrl(bucket, path, expiry): İndirme linki
+
+MinIOConfig:
+- Endpoint, access key, secret key
+- Bucket oluşturma
+
+EMAIL (email/):
+EmailService:
+- sendEmail(to, subject, body, isHtml)
+- sendTemplatedEmail(to, templateName, variables)
+
+SendGridClient:
+- SendGrid API entegrasyonu
+
+SMS (sms/):
+SmsService:
+- sendSms(phoneNumber, message)
+
+TwilioClient:
+- Twilio API entegrasyonu
+
+I18N (i18n/):
+I18nService:
+- getMessage(key, locale, args): Çoklu dil mesaj
+- MessageSource bean
+
+Önce RabbitMQPublisher ve MinIOService oluştur.

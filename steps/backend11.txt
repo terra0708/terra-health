@@ -1,0 +1,108 @@
+---
+
+### 11. Document Module
+modules/document/ modülünü oluştur:
+ENTITY:
+Document:
+
+id
+customerId (FK)
+category (MEDICAL, VISA, PASSPORT, INSURANCE)
+fileName
+fileType (PDF, JPG, PNG)
+fileSize
+storagePath (MinIO path)
+isEncrypted
+uploadedBy
+uploadedAt
+expiryDate (Vize/pasaport için)
+
+DocumentAccessLog:
+
+id
+documentId (FK)
+accessedBy
+action (VIEW, DOWNLOAD, DELETE)
+ipAddress
+accessedAt
+
+REPOSITORIES:
+
+DocumentRepository
+
+findByCustomerId(customerId)
+findByCategory(category)
+
+
+DocumentAccessLogRepository
+
+SERVICES:
+DocumentService:
+
+uploadDocument(customerId, file, category):
+
+Dosya validasyonu (tip, boyut)
+Şifrele (optional)
+MinIO'ya yükle
+Metadata kaydet
+Event publish
+
+
+downloadDocument(id):
+
+MinIO'dan indir
+Deşifrele (if encrypted)
+Access log kaydet
+Return file
+
+
+deleteDocument(id)
+getCustomerDocuments(customerId)
+
+FileEncryptionService:
+
+encryptFile(file): AES-256
+decryptFile(encryptedFile)
+
+AccessControlService:
+
+canAccess(userId, documentId): Permission check
+logAccess(documentId, userId, action, ip)
+
+CONTROLLER:
+DocumentController:
+POST   /api/v1/documents/upload
+GET    /api/v1/documents/{id}
+GET    /api/v1/documents/download/{id}
+DELETE /api/v1/documents/{id}
+GET    /api/v1/customers/{customerId}/documents
+DTOs:
+
+UploadDocumentRequest: MultipartFile, customerId, category
+DocumentDTO
+DocumentMetadataDTO
+
+FILE VALIDATION:
+
+Max size: 10 MB
+Allowed types: PDF, JPG, PNG, DOCX
+Virus scan (ClamAV optional)
+
+MINIO STRUCTURE:
+/health-tourism-crm/
+/customers/{customerId}/
+/medical/
+/documents/
+/photos/
+PRESIGNED URLs:
+generatePresignedUrl(documentId, expiry):
+
+Geçici indirme linki (1 saat)
+Direct MinIO access
+
+EVENTS:
+
+document.uploaded
+Consumer: Customer Activity
+
+Önce DocumentService.uploadDocument() oluştur.

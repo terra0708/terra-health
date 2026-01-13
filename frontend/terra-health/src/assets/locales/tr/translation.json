@@ -1,0 +1,42 @@
+{
+    "auth": {
+        "login_title": "Giriş Yap",
+        "email": "E-posta Adresi",
+        "password": "Şifre",
+        "login_button": "Giriş Yap",
+        "welcome_message": "Müşteri Yönetim Paneline Hoş Geldiniz",
+        "invalid_credentials": "Hatalı giriş bilgileri!",
+        "demo_title": "Demo Giriş Bilgileri:",
+        "demo_email": "E-posta",
+        "demo_password": "Şifre",
+        "validation": {
+            "email_required": "E-posta adresi gereklidir",
+            "email_invalid": "Geçerli bir e-posta adresi giriniz",
+            "password_min": "Şifre en az 6 karakter olmalıdır"
+        }
+    },
+    "menu": {
+        "dashboard": "Gösterge Paneli",
+        "appointments": "Randevular",
+        "customers": "Müşteriler",
+        "ads": "Reklam Yönetimi",
+        "statistics": "İstatistikler",
+        "notifications": "Bildirimler",
+        "settings": "Ayarlar"
+    },
+    "common": {
+        "profile": "Profil",
+        "logout": "Güvenli Çıkış",
+        "system_status": "Sistem Durumu",
+        "live_panel": "Canlı Panel",
+        "dark_mode": "Karanlık Mod",
+        "light_mode": "Aydınlık Mod",
+        "change_language": "Dil Değiştir",
+        "admin": "Yönetici",
+        "user_placeholder": "Kullanıcı"
+    },
+    "placeholders": {
+        "under_development": "Bu sayfa şu an geliştirme aşamasındadır. Yakında burada harika içerikler olacak!",
+        "content_will_be_here": "İçeriği Buraya Gelecek"
+    }
+}

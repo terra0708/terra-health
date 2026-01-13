@@ -1,0 +1,62 @@
+---
+
+### 16. Configuration Files
+application.yml dosyasını oluştur:spring:
+application:
+name: health-tourism-crmdatasource:
+url: jdbc:postgresql://localhost:5432/health_tourism_crm
+username: ${DB_USERNAME:postgres}
+password: ${DB_PASSWORD:postgres}jpa:
+hibernate:
+ddl-auto: validate
+show-sql: falsedata:
+mongodb:
+uri: mongodb://localhost:27017/health_tourism_crm
+redis:
+  host: localhost
+  port: 6379
+
+  rabbitmq:
+host: localhost
+port: 5672
+username: guest
+password: guest
+servlet:
+multipart:
+max-file-size: 10MB
+max-request-size: 10MB
+minio:
+url: http://localhost:9000
+access-key: ${MINIO_ACCESS_KEY}
+secret-key: ${MINIO_SECRET_KEY}
+bucket-name: health-tourism-crm
+jwt:
+secret: ${JWT_SECRET}
+expiration: 86400000 # 24 hours
+external-api:
+meta:
+access-token: ${META_ACCESS_TOKEN}
+pixel-id: ${META_PIXEL_ID}
+google:
+developer-token: ${GOOGLE_DEV_TOKEN}
+customer-id: ${GOOGLE_CUSTOMER_ID}
+whatsapp:
+phone-number-id: ${WHATSAPP_PHONE_ID}
+access-token: ${WHATSAPP_TOKEN}
+sendgrid:
+api-key: ${SENDGRID_API_KEY}
+twilio:
+account-sid: ${TWILIO_SID}
+auth-token: ${TWILIO_TOKEN}
+from-number: ${TWILIO_FROM}
+application-dev.yml:
+(Development override'lar)
+application-prod.yml:
+(Production override'lar)
+messages_tr.properties:
+customer.created=Müşteri başarıyla oluşturuldu
+customer.notfound=Müşteri bulunamadı
+messages_en.properties:
+customer.created=Customer created successfully
+customer.notfound=Customer not found
+Tüm konfigürasyon dosyalarını oluştur.

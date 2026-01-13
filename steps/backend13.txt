@@ -1,0 +1,110 @@
+---
+
+### 13. Notification Module
+modules/notification/ modülünü oluştur:
+ENTITIES:
+Notification:
+
+id
+recipientId
+recipientType (CUSTOMER, USER)
+type (REMINDER, ALERT, INFO)
+channel (EMAIL, SMS, WHATSAPP)
+title, content
+scheduledFor
+sentAt
+status (PENDING, SENT, FAILED)
+retryCount
+
+NotificationPreference:
+
+id
+userId
+emailEnabled, smsEnabled, whatsappEnabled
+quietHours (JSONB: {start: "22:00", end: "08:00"})
+
+REPOSITORIES:
+
+NotificationRepository
+
+findByScheduledForBeforeAndStatus(now, PENDING)
+
+
+NotificationPreferenceRepository
+
+SERVICES:
+NotificationService:
+
+sendNotification(recipientId, type, channel, content):
+
+Preference kontrol (enabled mı?)
+Quiet hours kontrol
+Channel'a göre gönder (Email/SMS/WhatsApp)
+Notification kaydet
+
+
+scheduleNotification(recipientId, content, scheduledFor)
+retryFailedNotifications()
+
+EmailNotificationService:
+
+send(to, subject, body): SendGrid
+
+SmsNotificationService:
+
+send(phoneNumber, message): Twilio
+
+WhatsAppNotificationService:
+
+send(phoneNumber, message): WhatsApp Business API
+
+ReminderSchedulerService:
+
+scheduleAppointmentReminders(appointmentId):
+
+7 gün önce EMAIL
+3 gün önce SMS
+1 gün önce WHATSAPP
+
+
+
+CONTROLLERS:
+NotificationController:
+GET /api/v1/notifications
+POST /api/v1/notifications/send
+PUT  /api/v1/notifications/{id}/read
+DTOs:
+
+NotificationDTO
+SendNotificationRequest
+NotificationPreferenceDTO
+
+RABBITMQ LISTENERS:
+@RabbitListener(queues = "notification.send")
+handleNotificationRequest(message):
+
+sendNotification()
+
+@RabbitListener(queues = "customer.created")
+sendWelcomeEmail(customerId):
+
+Template: "Hoşgeldiniz"
+Channel: EMAIL
+
+@RabbitListener(queues = "appointment.scheduled")
+sendAppointmentConfirmation(appointmentId):
+
+Email + SMS gönder
+
+SCHEDULED JOBS:
+@Scheduled(fixedRate = 300000) // 5 dakika
+sendDueNotifications():
+
+scheduledFor <= NOW olan PENDING notification'ları gönder
+
+@Scheduled(fixedRate = 3600000) // 1 saat
+retryFailedNotifications():
+
+status = FAILED ve retryCount < 3 olanları tekrar dene
+
+Önce NotificationService.sendNotification() oluştur.

@@ -1,0 +1,40 @@
+shared/exception/ paketi oluştur:
+
+CUSTOM EXCEPTIONS:
+1. BusinessException: İş kuralı hataları
+2. ResourceNotFoundException: Kayıt bulunamadı
+3. ValidationException: Validasyon hataları
+4. UnauthorizedException: Yetki hataları
+5. ExternalApiException: Dış API hataları
+
+GLOBAL EXCEPTION HANDLER:
+@RestControllerAdvice
+- handleBusinessException: 400 Bad Request
+- handleResourceNotFoundException: 404 Not Found
+- handleValidationException: 400 + field errors
+- handleUnauthorizedException: 401 Unauthorized
+- handleMethodArgumentNotValid: 400 + validation errors
+- handleGenericException: 500 Internal Server Error
+
+ERROR RESPONSE DTO:
+{
+  "timestamp": "2025-01-13T10:30:00",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "Email already exists",
+  "path": "/api/v1/customers",
+  "errors": [{field, message}] // validation için
+}
+
+API RESPONSE WRAPPER:
+ApiResponse<T>:
+{
+  "success": true,
+  "data": T,
+  "error": null,
+  "timestamp": "..."
+}
+
+Her endpoint ApiResponse dönebilir.
+
+Önce GlobalExceptionHandler oluştur.

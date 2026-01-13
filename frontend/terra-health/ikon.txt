@@ -1,0 +1,109 @@
+1 - sağlık için ikon
+
+<script src="https://cdn.lordicon.com/lordicon.js"></script>
+<lord-icon
+    src="https://cdn.lordicon.com/qlrjanhh.json"
+    trigger="hover"
+    style="width:250px;height:250px">
+</lord-icon>
+
+
+
+2 - Randevü
+
+<script src="https://cdn.lordicon.com/lordicon.js"></script>
+<lord-icon
+    src="https://cdn.lordicon.com/aksvbzmu.json"
+    trigger="hover"
+    stroke="light"
+    style="width:250px;height:250px">
+</lord-icon>
+
+
+3 Müşteriler
+
+<script src="https://cdn.lordicon.com/lordicon.js"></script>
+<lord-icon
+    src="https://cdn.lordicon.com/eaivqdbn.json"
+    trigger="hover"
+    stroke="light"
+    style="width:250px;height:250px">
+</lord-icon>
+
+
+
+4 - dasboard gösterge paneli
+
+<script src="https://cdn.lordicon.com/lordicon.js"></script>
+<lord-icon
+    src="https://cdn.lordicon.com/jgeruqwm.json"
+    trigger="hover"
+    stroke="light"
+    style="width:250px;height:250px">
+</lord-icon>
+
+
+5 İstatistikler (Statistics): 
+
+<script src="https://cdn.lordicon.com/lordicon.js"></script>
+<lord-icon
+    src="https://cdn.lordicon.com/sqqsmbzs.json"
+    trigger="hover"
+    stroke="light"
+    style="width:250px;height:250px">
+</lord-icon>
+
+
+
+Ayarlar (Settings): 
+
+
+
+6 - Reklam yönetii
+
+<script src="https://cdn.lordicon.com/lordicon.js"></script>
+<lord-icon
+    src="https://cdn.lordicon.com/wyaqzesp.json"
+    trigger="hover"
+    stroke="light"
+    style="width:250px;height:250px">
+</lord-icon>
+
+
+7 -  Settings
+
+<script src="https://cdn.lordicon.com/lordicon.js"></script>
+<lord-icon
+    src="https://cdn.lordicon.com/eduzjjfi.json"
+    trigger="hover"
+    stroke="light"
+    style="width:250px;height:250px">
+</lord-icon>
+
+
+
+8 - bildirimler
+<script src="https://cdn.lordicon.com/lordicon.js"></script>
+<lord-icon
+    src="https://cdn.lordicon.com/zyylfmfm.json"
+    trigger="hover"
+    stroke="light"
+    style="width:250px;height:250px">
+</lord-icon>
+
+
+
+9 - logout
+CUSTOM ICON
+
+
+
+
+10 - avatar
+<script src="https://cdn.lordicon.com/lordicon.js"></script>
+<lord-icon
+    src="https://cdn.lordicon.com/rzsnbiaw.json"
+    trigger="hover"
+    stroke="light"
+    style="width:250px;height:250px">
+</lord-icon>

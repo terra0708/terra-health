@@ -1,0 +1,146 @@
+---
+
+### 14. Integration Module & External APIs
+modules/integration/ modülünü oluştur:
+ENTITIES:
+SyncLog:
+
+id
+source (META, GOOGLE)
+syncType (CAMPAIGNS, METRICS)
+status (SUCCESS, FAILED)
+recordsSynced
+startedAt, completedAt
+errorMessage
+
+WebhookEvent:
+
+id
+platform (META, GOOGLE, WHATSAPP)
+eventType
+payload (JSONB)
+receivedAt, processedAt
+status
+
+REPOSITORIES:
+
+SyncLogRepository
+WebhookEventRepository
+
+SERVICES:
+WebhookHandlerService:
+
+handleMetaLeadWebhook(payload):
+
+Signature verify
+Parse payload
+LeadCaptureService çağır
+WebhookEvent kaydet
+
+
+
+DataSyncService:
+
+syncCampaignMetrics(platform):
+
+API client çağır
+Metrikleri parse et
+Database'e kaydet
+SyncLog oluştur
+
+
+
+RateLimitService:
+
+checkRateLimit(apiName): Redis ile rate limit kontrol
+incrementCounter(apiName)
+
+EXTERNAL API CLIENTS:
+MetaMarketingApiClient:
+
+BASE_URL: https://graph.facebook.com/v18.0
+getCampaigns(adAccountId)
+getCampaignInsights(campaignId, datePreset)
+Rate Limit: 200/hour
+Auth: Access Token
+
+MetaGraphApiClient:
+
+getConversations()
+sendMessage(psid, message)
+
+MetaConversionApiClient (CAPI):
+
+sendServerEvent(pixelId, event):
+POST /{pixel_id}/events
+{
+event_name: "Purchase",
+event_time: timestamp,
+user_data: {email_hash, phone_hash},
+custom_data: {value, currency}
+}
+
+GoogleAdsApiClient:
+
+BASE_URL: https://googleads.googleapis.com/v14
+getCampaigns(customerId)
+getCampaignMetrics(customerId, query)
+Auth: OAuth 2.0 + Developer Token
+
+WhatsAppApiClient:
+
+sendMessage(phoneNumberId, to, message)
+sendMediaMessage(phoneNumberId, to, mediaUrl)
+
+SendGridEmailClient:
+
+sendEmail(to, from, subject, content)
+sendTemplatedEmail(to, templateId, dynamicData)
+
+TwilioSmsClient:
+
+sendSms(from, to, body)
+
+ExchangeRateApiClient:
+
+getLatestRates(baseCurrency)
+Cache: Redis 24h
+
+DeepLTranslationClient:
+
+translate(text, sourceLang, targetLang)
+Cache: Redis (text hash → translation)
+
+CONTROLLERS:
+WebhookController:
+POST /webhooks/meta/leads
+POST /webhooks/meta/messages
+POST /webhooks/google/conversions
+POST /webhooks/whatsapp
+DTOs:
+
+WebhookPayloadDTO
+
+WEBHOOK VERIFICATION:
+Meta: X-Hub-Signature header verify
+Google: Token validation
+WhatsApp: Signature verification
+SCHEDULED JOBS:
+@Scheduled(cron = "0 0 2 * * *") // 02:00
+syncMetaCampaignMetrics():
+
+Tüm Meta kampanyalarını sync et
+
+@Scheduled(cron = "0 0 3 * * *") // 03:00
+syncGoogleCampaignMetrics()
+@Scheduled(cron = "0 0 4 * * *") // 04:00
+syncExchangeRates()
+@Scheduled(cron = "0 0 * * * *") // Her saat
+sendPendingConversions():
+
+CAPI'ye pending conversion'ları gönder
+
+RETRY LOGIC:
+@Retryable(maxAttempts = 3, backoff = @Backoff(delay = 2000))
+API çağrıları otomatik retry
+Önce MetaMarketingApiClient ve webhook handler oluştur.

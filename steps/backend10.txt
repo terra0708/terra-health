@@ -1,0 +1,139 @@
+---
+
+### 10. Communication Module
+modules/communication/ modülünü oluştur (MongoDB):
+DOCUMENTS (MongoDB):
+Conversation:
+
+id
+customerId
+channel (WHATSAPP, INSTAGRAM, FACEBOOK, EMAIL)
+status (OPEN, CLOSED)
+assignedTo (userId)
+createdAt
+lastMessageAt
+
+Message:
+
+id
+conversationId
+senderType (CUSTOMER, AGENT, SYSTEM)
+senderId
+content
+mediaUrls (List)
+sentAt
+readAt
+translatedContent (Map<Language, String>)
+
+MessageTemplate:
+
+id
+name
+category (WELCOME, REMINDER, FOLLOW_UP)
+channel
+translations (Map<Language, String>)
+variables (List: customerName, appointmentDate, etc.)
+
+REPOSITORIES (MongoDB):
+
+ConversationRepository extends MongoRepository
+MessageRepository
+
+findByConversationIdOrderBySentAtDesc()
+
+
+MessageTemplateRepository
+
+SERVICES:
+ConversationService:
+
+getConversations(userId, status): Kullanıcıya atanan konuşmalar
+getConversationById(id)
+assignConversation(conversationId, userId)
+
+MessageService:
+
+sendMessage(conversationId, content, mediaUrls):
+
+Message kaydet
+WhatsApp/Instagram API'ye gönder
+WebSocket üzerinden real-time broadcast
+Event publish
+
+
+getMessages(conversationId, page)
+
+TemplateService:
+
+getTemplates(category, channel, language)
+createTemplate(request)
+populateTemplate(templateId, variables): Placeholder'ları doldur
+
+TranslationService:
+
+translateMessage(text, targetLang):
+
+DeepL API çağır
+Redis'te cache'le
+
+
+
+MessageRoutingService:
+
+routeIncomingMessage(webhook):
+
+WhatsApp/Instagram/Facebook'tan gelen mesaj
+Conversation bul/oluştur
+Message kaydet
+Assigned agent'a bildirim gönder
+
+
+
+INTEGRATION CLIENTS:
+WhatsAppApiClient:
+
+sendMessage(phoneNumber, message)
+sendMediaMessage(phoneNumber, mediaUrl, caption)
+
+MetaMessengerClient:
+
+sendMessage(psid, message) (Facebook Messenger)
+
+InstagramDMClient:
+
+sendMessage(igid, message)
+
+DeepLTranslationClient:
+
+translate(text, sourceLang, targetLang)
+
+CONTROLLERS:
+ConversationController:
+GET  /api/v1/conversations
+POST /api/v1/conversations/{id}/messages
+GET  /api/v1/messages/{conversationId}
+TemplateController:
+GET  /api/v1/templates?category=&channel=&lang=
+POST /api/v1/templates
+WebhookController:
+POST /webhooks/whatsapp
+POST /webhooks/meta/messages
+DTOs:
+
+ConversationDTO
+MessageDTO
+SendMessageRequest
+TemplateDTO
+
+WEBSOCKET:
+WebSocketHandler:
+
+/ws/chat/{conversationId}
+Yeni mesaj geldiğinde tüm bağlı client'lara broadcast
+
+EVENTS:
+
+message.received
+Consumer: Customer Activity (Müşteri aktivitesine ekle)
+
+Önce Conversation entity ve MessageService oluştur.

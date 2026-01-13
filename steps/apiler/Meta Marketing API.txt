@@ -1,0 +1,92 @@
+https://developers.facebook.com/docs/marketing-api/guides/lead-ads/retrieving/
+
+
+
+FORM VERİLERİNİ ÇEKİP ALMAK
+
+Form verilerinçekip CRM’ye kaydedebilirsin.
+Ama sadece formu gerçekten submit eden kişiyi. Tıklayanı değil, bakanı değil, vazgeçeni değil.
+
+Gerçek tabloyu olduğu gibi koyayım:
+
+Kullanıcı Meta Lead Ads içindeki formda Gönder (Submit) derse
+→ Meta sana leadgen_id üretir
+→ Sen bu ID ile API’den:
+
+isim
+
+e-posta
+
+telefon
+
+özel alanlar
+ne varsa alırsın
+→ CRM’ye kaydedersin
+
+Bu tamamen resmi, desteklenen, yıllardır kullanılan yol. Ajanslar, büyük CRM’ler (HubSpot, Zoho, Salesforce) bunu böyle yapıyor.
+
+Ama sınır çizgisi çok net:
+
+• Submit yoksa → veri yok
+• Form yarım kaldıysa → veri yok
+• Sadece reklama tıkladıysa → veri yok
+
+İki teknik yolun var:
+
+Webhook kullanırsan
+→ submit anında CRM’ye düşer
+→ gerçek zamanlı
+→ doğru çözüm
+
+Bulk read kullanırsan
+→ sonradan çekersin
+→ raporlama / backfill için
+
+Yetki tarafı da olmazsa olmaz:
+
+Sayfa + reklam hesabı yetkisi
+
+leads_retrieval izni
+
+Page Access Token
+
+Bunlar yoksa API sana kapıyı gösterir.
+
+Kısaca tek cümlelik gerçek:
+Meta sana “lead” verir, “niyet” vermez.
+CRM’ye giden şey formu teslim etmiş insandır, geri kalan herkes hayalettir.
+
+Buradan sonra istersen:
+
+CRM tablo tasarımını
+
+webhook akışını
+
+“aynı kişi 3 kere submit ederse ne yapmalı”
+
+KVKK tarafında neye dikkat edilmeli
+
+oralara gireriz.
+
+
+Aynı zamanda bu dökümanda reklam oluşturma vs form oluşturma vs de var.
+
+
+
+
+
+Meta, reklam altyapısını birleştirdiği için tek bir entegrasyonla her iki platformdan gelen verileri de yönetebilirsin. Dikkat etmen gereken birkaç detay şunlar:
+
+Platform Desteği ve Farklar
+Ortak Altyapı: Facebook Marketing API üzerinden oluşturduğun bir reklam setinde (Ad Set), "Placement" (Yerleşim) olarak Instagram'ı seçersen, formun Instagram akışında veya hikayelerinde görünür.
+
+Aynı Veri Yapısı: Bir kullanıcı Instagram üzerinden formu doldurduğunda, veri yine aynı /{ad_id}/leads veya /{form_id}/leads endpoint'inden çekilir. Instagram'dan gelen bir lead ile Facebook'tan gelen bir lead arasındaki tek fark, verinin içindeki "platform" bilgisidir.
+
+Instagram Ads API: Doküman listesinde gördüğün "Instagram Ads API" başlığı, Instagram'a özel bazı ek özellikler (örneğin yorum yönetimi veya hikaye bazlı spesifik işlemler) için kullanılır; ancak form verileri (lead) çekme işlemi tamamen Marketing API üzerinden yürür.
+
+Dokümanda Dikkat Çeken "Messenger" Detayı
+Paylaştığın metinde "Forms for Messenger Conversations" diye bir bölüm var. Bu, formun sadece Facebook/Instagram akışında değil, direkt mesaj kutusu (DM) içinde de açılabileceğini gösteriyor. Eğer Instagram DM üzerinden bir form doldurtmak istersen, formun "Eligible" (uygun) olması için dokümandaki şu kısıtlamalara uyman gerekiyor:
+
+Sadece belirli soru tiplerini (isim, e-posta, telefon vb.) kullanabilirsin.
+
+Formun "Açık Paylaşım" (block_display_for_non_targeted_viewer: false) modunda olması gerekir.

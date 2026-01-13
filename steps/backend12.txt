@@ -1,0 +1,130 @@
+---
+
+### 12. Analytics Module
+modules/analytics/ modülünü oluştur:
+ENTITIES:
+AnalyticsEvent:
+
+id
+eventType (customer_created, appointment_scheduled, etc.)
+customerId
+userId
+metadata (JSONB)
+timestamp
+
+FunnelStage:
+
+id
+customerId
+stage
+enteredAt
+exitedAt
+durationSeconds
+converted
+
+RevenueEvent:
+
+id
+customerId
+campaignId
+revenueAmount, revenueCurrency
+cost, costCurrency
+profit, roi
+recordedAt
+
+REPOSITORIES:
+
+AnalyticsEventRepository
+
+findByTimestampBetween(start, end)
+
+
+FunnelStageRepository
+
+findByStageAndEnteredAtBetween()
+
+
+RevenueEventRepository
+
+sumRevenueByDateRange()
+
+
+
+SERVICES:
+DashboardService:
+
+getDashboardMetrics():
+{
+totalLeads: 150,
+activeCampaigns: 5,
+conversionRate: 25,
+avgResponseTime: 2.5, // hours
+totalRevenue: 150000,
+roi: 340
+}
+
+FunnelAnalyticsService:
+
+getFunnelData():
+[
+{stage: "LEAD", count: 100, dropped: 40, conversionRate: 60},
+{stage: "CONTACT", count: 60, dropped: 20, conversionRate: 66},
+...
+]
+
+ROICalculationService:
+
+calculateROI(dateRange):
+totalRevenue = SUM(revenue_events.revenue)
+totalCost = SUM(ad_metrics.cost)
+ROI = (totalRevenue - totalCost) / totalCost * 100
+
+CLVCalculationService:
+
+calculateCLV():
+avgRevenue = AVG(customer revenue)
+avgLifespan = AVG(customer duration)
+CLV = avgRevenue * avgLifespan
+
+ConversionRateService:
+
+getConversionRate(fromStage, toStage, dateRange):
+converted = COUNT(customers moved from LEAD to SURGERY)
+total = COUNT(customers in LEAD)
+rate = converted / total * 100
+
+ReportGenerationService:
+
+generatePDFReport(type, dateRange)
+generateExcelReport(type, dateRange)
+
+CONTROLLERS:
+AnalyticsController:
+GET  /api/v1/analytics/dashboard
+GET  /api/v1/analytics/funnel?start=&end=
+GET  /api/v1/analytics/roi?start=&end=
+GET  /api/v1/analytics/clv
+GET  /api/v1/analytics/conversion-rate?from=&to=&start=&end=
+POST /api/v1/analytics/reports/export
+DTOs:
+
+DashboardMetricsDTO
+FunnelAnalyticsDTO
+ROIReportDTO
+CLVReportDTO
+
+RABBITMQ LISTENERS:
+@RabbitListener(queues = "analytics.events")
+handleEvent(event):
+
+AnalyticsEvent kaydet
+Aggregation'ları güncelle
+
+SCHEDULED JOBS:
+@Scheduled(cron = "0 0 0 * * *") // Her gece 00:00
+calculateDailyAggregations():
+
+Günlük toplam değerleri hesapla
+Cache'e yaz
+
+Önce DashboardService.getDashboardMetrics() oluştur.
