@@ -117,3 +117,15 @@ CUSTOM ICON
     stroke="light"
     style="width:250px;height:250px">
 </lord-icon>
+
+
+
+12 - aut and auth icon
+
+<script src="https://cdn.lordicon.com/lordicon.js"></script>
+<lord-icon
+    src="https://cdn.lordicon.com/ojgowmvw.json"
+    trigger="hover"
+    stroke="light"
+    style="width:250px;height:250px">
+</lord-icon>

@@ -23,7 +23,9 @@ import {
     MenuItem,
     Divider,
     Checkbox,
-    ListItemText
+    ListItemText,
+    useMediaQuery,
+    Stack
 } from '@mui/material';
 import {
     Search,
@@ -44,7 +46,8 @@ import {
     MapPin,
     HeartPulse,
     UserCircle,
-    Package
+    Package,
+    MoreVertical
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -93,11 +96,66 @@ const StatCard = memo(({ icon: Icon, title, value, color }) => {
     );
 });
 
+// --- SUB-COMPONENT: USER MOBILE CARD ---
+const UserMobileCard = ({ user, t, theme, onEdit, getRoleChip }) => {
+    const isDark = theme.palette.mode === 'dark';
+    return (
+        <Paper elevation={0} sx={{
+            p: 2, mb: 2, borderRadius: '20px', border: `1px solid ${theme.palette.divider}`,
+            background: isDark ? alpha(theme.palette.background.paper, 0.4) : '#ffffff'
+        }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Avatar src={user.avatar} sx={{ width: 50, height: 50, borderRadius: '14px' }} />
+                    <Box>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>{user.name}</Typography>
+                        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>{user.email}</Typography>
+                    </Box>
+                </Box>
+                <Box>{getRoleChip(user.role)}</Box>
+            </Box>
+
+            <Divider sx={{ mb: 2, opacity: 0.5 }} />
+
+            <Grid container spacing={2} sx={{ mb: 2 }}>
+                <Grid item xs={6}>
+                    <Typography variant="caption" sx={{ color: 'text.disabled', fontWeight: 700, display: 'block', mb: 0.5 }}>{t('common.phone')}</Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Phone size={14} color={theme.palette.primary.main} />
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>{user.phone}</Typography>
+                    </Box>
+                </Grid>
+                <Grid item xs={6}>
+                    <Typography variant="caption" sx={{ color: 'text.disabled', fontWeight: 700, display: 'block', mb: 0.5 }}>{t('common.joining_date')}</Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Calendar size={14} color={theme.palette.primary.main} />
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>{user.joined}</Typography>
+                    </Box>
+                </Grid>
+            </Grid>
+
+            <Box sx={{ display: 'flex', gap: 1.5 }}>
+                <Button
+                    fullWidth variant="outlined" startIcon={<Edit3 size={16} />}
+                    onClick={() => onEdit(user)}
+                    sx={{ borderRadius: '12px', textTransform: 'none', fontWeight: 700, py: 1 }}
+                >
+                    {t('common.edit')}
+                </Button>
+                <IconButton color="error" sx={{ bgcolor: alpha(theme.palette.error.main, 0.08), borderRadius: '12px' }}>
+                    <Trash2 size={18} />
+                </IconButton>
+            </Box>
+        </Paper>
+    );
+};
+
 // --- SUB-COMPONENT: USER FORM (DRAWER) ---
 const UserDrawer = ({ open, onClose, user, t }) => {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
-    // Local state for the form to prevent global re-renders
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
     const [formData, setFormData] = useState({
         name: '', email: '', phone: '', tc_no: '', birth_date: '', address: '', emergency_person: '', emergency_phone: '', role: 'staff', packages: []
     });
@@ -130,12 +188,17 @@ const UserDrawer = ({ open, onClose, user, t }) => {
 
     return (
         <Drawer
-            anchor="right" open={open} onClose={onClose}
+            anchor={isMobile ? "bottom" : "right"}
+            open={open}
+            onClose={onClose}
+            disableEnforceFocus
+            disableRestoreFocus
             sx={{ zIndex: 1400 }}
             PaperProps={{
                 sx: {
-                    width: { xs: '100%', sm: 500 },
-                    borderRadius: { xs: 0, sm: '32px 0 0 32px' },
+                    width: isMobile ? '100%' : 500,
+                    height: isMobile ? '85vh' : '100%',
+                    borderRadius: isMobile ? '32px 32px 0 0' : '32px 0 0 32px',
                     boxShadow: isDark ? '-20px 0 60px rgba(0,0,0,0.5)' : '-20px 0 60px rgba(0,0,0,0.1)',
                     overflow: 'hidden',
                     bgcolor: 'background.paper'
@@ -143,7 +206,7 @@ const UserDrawer = ({ open, onClose, user, t }) => {
             }}
         >
             <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'background.paper' }}>
-                <Box sx={{ p: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', bgcolor: alpha(theme.palette.primary.main, isDark ? 0.05 : 0.02) }}>
+                <Box sx={{ p: isMobile ? 3 : 4, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', bgcolor: alpha(theme.palette.primary.main, isDark ? 0.05 : 0.02) }}>
                     <Box>
                         <Typography variant="h5" sx={{ fontWeight: 900, color: 'text.primary' }}>{user ? t('users.edit_user') : t('users.add_user')}</Typography>
                         <Typography variant="body2" sx={{ color: 'text.secondary' }}>{t('users.form_subtitle')}</Typography>
@@ -152,9 +215,9 @@ const UserDrawer = ({ open, onClose, user, t }) => {
                 </Box>
                 <Divider />
 
-                <Box sx={{ flexGrow: 1, p: 4, overflowY: 'auto' }}>
+                <Box sx={{ flexGrow: 1, p: isMobile ? 3 : 4, overflowY: 'auto' }}>
                     <SectionTitle icon={UserCircle}>{t('users.basic_info')}</SectionTitle>
-                    <Grid container spacing={3}>
+                    <Grid container spacing={2}>
                         <Grid item xs={12}>
                             <TextField fullWidth label={t('common.name')} name="name" value={formData.name} onChange={handleChange} sx={fieldStyles} InputProps={{ startAdornment: <InputAdornment position="start"><UsersIcon size={18} /></InputAdornment> }} />
                         </Grid>
@@ -167,7 +230,7 @@ const UserDrawer = ({ open, onClose, user, t }) => {
                     </Grid>
 
                     <SectionTitle icon={Fingerprint}>{t('users.personal_info')}</SectionTitle>
-                    <Grid container spacing={3}>
+                    <Grid container spacing={2}>
                         <Grid item xs={12} sm={6}>
                             <TextField fullWidth label={t('common.tc_no')} name="tc_no" value={formData.tc_no} onChange={handleChange} sx={fieldStyles} />
                         </Grid>
@@ -180,7 +243,7 @@ const UserDrawer = ({ open, onClose, user, t }) => {
                     </Grid>
 
                     <SectionTitle icon={HeartPulse}>{t('users.emergency_info')}</SectionTitle>
-                    <Grid container spacing={3}>
+                    <Grid container spacing={2}>
                         <Grid item xs={12} sm={6}>
                             <TextField fullWidth label={t('common.emergency_person')} name="emergency_person" value={formData.emergency_person} onChange={handleChange} sx={fieldStyles} />
                         </Grid>
@@ -262,7 +325,9 @@ const UserDrawer = ({ open, onClose, user, t }) => {
 const UsersPage = () => {
     const { t } = useTranslation();
     const theme = useTheme();
-    const isDark = theme.palette.mode === 'dark';
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+    const isSmall = useMediaQuery(theme.breakpoints.down('sm'));
+
     const [searchTerm, setSearchTerm] = useState('');
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [editUser, setEditUser] = useState(null);
@@ -283,61 +348,124 @@ const UsersPage = () => {
     );
 
     return (
-        <Box sx={{ animation: 'fadeIn 0.6s ease' }}>
-            <Grid container spacing={4} sx={{ mb: 6 }}>
-                <Grid item xs={12} md={6}><StatCard icon={UsersIcon} title={t('users.total_team')} value={MOCK_USERS.length} color={theme.palette.primary.main} /></Grid>
-                <Grid item xs={12} md={6}><StatCard icon={ShieldCheck} title={t('users.admin_count')} value={1} color={theme.palette.error.main} /></Grid>
+        <Box sx={{ animation: 'fadeIn 0.6s ease', pb: 4 }}>
+            {/* STAT CARDS */}
+            <Grid container spacing={isSmall ? 2 : 4} sx={{ mb: isSmall ? 4 : 6 }}>
+                <Grid item xs={12} sm={6}><StatCard icon={UsersIcon} title={t('users.total_team')} value={MOCK_USERS.length} color={theme.palette.primary.main} /></Grid>
+                <Grid item xs={12} sm={6}><StatCard icon={ShieldCheck} title={t('users.admin_count')} value={1} color={theme.palette.error.main} /></Grid>
             </Grid>
 
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 3 }}>
-                <Typography variant="h4" sx={{ fontWeight: 900, letterSpacing: '-0.05em', color: 'text.primary' }}>{t('users.title')}</Typography>
-                <Box sx={{ display: 'flex', gap: 1.5 }}>
-                    <IconButton sx={{ borderRadius: '14px', border: `1px solid ${theme.palette.divider}`, bgcolor: 'background.paper', color: 'text.primary' }}><Filter size={20} /></IconButton>
-                    <Button onClick={() => { setEditUser(null); setDrawerOpen(true); }} variant="contained" startIcon={<UserPlus size={18} />} sx={{ borderRadius: '16px', px: 3.5, py: 1.4, fontWeight: 800, textTransform: 'none', background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)` }}>{t('users.add_user')}</Button>
+            {/* HEADER ACTIONS */}
+            <Box sx={{
+                display: 'flex',
+                flexDirection: isSmall ? 'column' : 'row',
+                justifyContent: 'space-between',
+                alignItems: isSmall ? 'flex-start' : 'flex-end',
+                mb: 3,
+                gap: 2
+            }}>
+                <Box>
+                    <Typography variant={isSmall ? "h5" : "h4"} sx={{ fontWeight: 900, letterSpacing: '-0.05em', color: 'text.primary' }}>{t('users.title')}</Typography>
+                    {isSmall && <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>{filteredUsers.length} {t('users.total_team').toLowerCase()}</Typography>}
+                </Box>
+                <Box sx={{ display: 'flex', gap: 1.5, width: isSmall ? '100%' : 'auto' }}>
+                    <IconButton sx={{ borderRadius: '14px', border: `1px solid ${theme.palette.divider}`, bgcolor: 'background.paper', color: 'text.primary', display: { xs: 'none', sm: 'flex' } }}><Filter size={20} /></IconButton>
+                    <Button
+                        fullWidth={isSmall}
+                        onClick={() => { setEditUser(null); setDrawerOpen(true); }}
+                        variant="contained"
+                        startIcon={<UserPlus size={18} />}
+                        sx={{
+                            borderRadius: '16px', px: isSmall ? 2 : 3.5, py: 1.4, fontWeight: 800, textTransform: 'none',
+                            background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`
+                        }}
+                    >
+                        {t('users.add_user')}
+                    </Button>
                 </Box>
             </Box>
 
-            <Paper elevation={0} sx={{ borderRadius: '32px', overflow: 'hidden', border: `1px solid ${theme.palette.divider}`, background: 'background.paper' }}>
-                <Box sx={{ p: 3, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.5)}` }}>
-                    <TextField placeholder={t('common.search')} variant="standard" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} sx={{ width: { xs: '100%', sm: 350 }, '& .MuiInput-underline:before, & .MuiInput-underline:after': { display: 'none' }, '& input': { fontSize: '1rem', fontWeight: 600, color: 'text.primary' } }} InputProps={{ startAdornment: <InputAdornment position="start"><Box sx={{ width: 36, height: 36, borderRadius: '12px', bgcolor: alpha(theme.palette.primary.main, 0.04), display: 'flex', alignItems: 'center', justifyContent: 'center', mr: 1, color: 'primary.main' }}><Search size={18} /></Box></InputAdornment> }} />
+            {/* SEARCH & CONTENT */}
+            <Paper elevation={0} sx={{ borderRadius: isSmall ? '24px' : '32px', overflow: 'hidden', border: `1px solid ${theme.palette.divider}`, background: 'background.paper' }}>
+                <Box sx={{ p: isSmall ? 2 : 3, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.5)}` }}>
+                    <TextField
+                        fullWidth={isSmall}
+                        placeholder={t('common.search')} variant="standard"
+                        value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+                        sx={{
+                            width: { xs: '100%', sm: 350 },
+                            '& .MuiInput-underline:before, & .MuiInput-underline:after': { display: 'none' },
+                            '& input': { fontSize: '1rem', fontWeight: 600, color: 'text.primary' }
+                        }}
+                        InputProps={{
+                            startAdornment: (
+                                <InputAdornment position="start">
+                                    <Box sx={{
+                                        width: 36, height: 36, borderRadius: '12px',
+                                        bgcolor: alpha(theme.palette.primary.main, 0.04),
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', mr: 1, color: 'primary.main'
+                                    }}>
+                                        <Search size={18} />
+                                    </Box>
+                                </InputAdornment>
+                            )
+                        }}
+                    />
                 </Box>
 
-                <TableContainer>
-                    <Table sx={{ minWidth: 900 }}>
-                        <TableHead>
-                            <TableRow sx={{ bgcolor: alpha(theme.palette.primary.main, 0.015) }}>
-                                <TableCell sx={{ py: 2.5, pl: 4, fontWeight: 800, color: 'text.secondary', fontSize: '0.75rem', textTransform: 'uppercase' }}>{t('common.name')}</TableCell>
-                                <TableCell sx={{ py: 2.5, fontWeight: 800, color: 'text.secondary', fontSize: '0.75rem', textTransform: 'uppercase' }}>{t('common.phone')}</TableCell>
-                                <TableCell sx={{ py: 2.5, fontWeight: 800, color: 'text.secondary', fontSize: '0.75rem', textTransform: 'uppercase' }}>{t('common.role')}</TableCell>
-                                <TableCell sx={{ py: 2.5, fontWeight: 800, color: 'text.secondary', fontSize: '0.75rem', textTransform: 'uppercase' }}>{t('common.joining_date')}</TableCell>
-                                <TableCell sx={{ py: 2.5, fontWeight: 800, color: 'text.secondary', fontSize: '0.75rem', textTransform: 'uppercase' }}>{t('common.leaving_date')}</TableCell>
-                                <TableCell align="right" sx={{ py: 2.5, pr: 4, fontWeight: 800, color: 'text.secondary', fontSize: '0.75rem', textTransform: 'uppercase' }}>{t('common.actions')}</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {filteredUsers.map((user) => (
-                                <TableRow key={user.id} sx={{ '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.01) } }}>
-                                    <TableCell sx={{ py: 2.5, pl: 4 }}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                            <Avatar src={user.avatar} sx={{ width: 48, height: 48, borderRadius: '14px', border: `2px solid ${theme.palette.background.paper}` }} />
-                                            <Box><Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'text.primary' }}>{user.name}</Typography><Typography variant="caption" sx={{ color: 'text.disabled', fontWeight: 600 }}>{user.email}</Typography></Box>
-                                        </Box>
-                                    </TableCell>
-                                    <TableCell><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Phone size={14} strokeWidth={2.5} color={theme.palette.text.secondary} /><Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>{user.phone}</Typography></Box></TableCell>
-                                    <TableCell>{getRoleChip(user.role)}</TableCell>
-                                    <TableCell><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Calendar size={14} strokeWidth={2.5} color={theme.palette.text.secondary} /><Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>{user.joined}</Typography></Box></TableCell>
-                                    <TableCell><Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: user.left === '-' ? theme.palette.text.disabled : theme.palette.error.main }}><LogOut size={14} strokeWidth={2.5} /><Typography variant="body2" sx={{ fontWeight: 600 }}>{user.left}</Typography></Box></TableCell>
-                                    <TableCell align="right" sx={{ pr: 4 }}>
-                                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.2 }}>
-                                            <Tooltip title={t('common.edit')}><IconButton onClick={() => { setEditUser(user); setDrawerOpen(true); }} size="small" sx={{ color: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.04), borderRadius: '12px', width: 38, height: 38 }}><Edit3 size={18} /></IconButton></Tooltip>
-                                            <IconButton size="small" sx={{ color: 'error.main', bgcolor: alpha(theme.palette.error.main, 0.04), borderRadius: '12px', width: 38, height: 38 }}><Trash2 size={18} /></IconButton>
-                                        </Box>
-                                    </TableCell>
+                {isMobile ? (
+                    /* MOBILE CARD LIST */
+                    <Box sx={{ p: 2 }}>
+                        {filteredUsers.map(user => (
+                            <UserMobileCard
+                                key={user.id}
+                                user={user}
+                                t={t}
+                                theme={theme}
+                                onEdit={(u) => { setEditUser(u); setDrawerOpen(true); }}
+                                getRoleChip={getRoleChip}
+                            />
+                        ))}
+                    </Box>
+                ) : (
+                    /* DESKTOP TABLE */
+                    <TableContainer>
+                        <Table sx={{ minWidth: 900 }}>
+                            <TableHead>
+                                <TableRow sx={{ bgcolor: alpha(theme.palette.primary.main, 0.015) }}>
+                                    <TableCell sx={{ py: 2.5, pl: 4, fontWeight: 800, color: 'text.secondary', fontSize: '0.75rem', textTransform: 'uppercase' }}>{t('common.name')}</TableCell>
+                                    <TableCell sx={{ py: 2.5, fontWeight: 800, color: 'text.secondary', fontSize: '0.75rem', textTransform: 'uppercase' }}>{t('common.phone')}</TableCell>
+                                    <TableCell sx={{ py: 2.5, fontWeight: 800, color: 'text.secondary', fontSize: '0.75rem', textTransform: 'uppercase' }}>{t('common.role')}</TableCell>
+                                    <TableCell sx={{ py: 2.5, fontWeight: 800, color: 'text.secondary', fontSize: '0.75rem', textTransform: 'uppercase' }}>{t('common.joining_date')}</TableCell>
+                                    <TableCell sx={{ py: 2.5, fontWeight: 800, color: 'text.secondary', fontSize: '0.75rem', textTransform: 'uppercase' }}>{t('common.leaving_date')}</TableCell>
+                                    <TableCell align="right" sx={{ py: 2.5, pr: 4, fontWeight: 800, color: 'text.secondary', fontSize: '0.75rem', textTransform: 'uppercase' }}>{t('common.actions')}</TableCell>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
+                            </TableHead>
+                            <TableBody>
+                                {filteredUsers.map((user) => (
+                                    <TableRow key={user.id} sx={{ '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.01) } }}>
+                                        <TableCell sx={{ py: 2.5, pl: 4 }}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                                <Avatar src={user.avatar} sx={{ width: 48, height: 48, borderRadius: '14px', border: `2px solid ${theme.palette.background.paper}` }} />
+                                                <Box><Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'text.primary' }}>{user.name}</Typography><Typography variant="caption" sx={{ color: 'text.disabled', fontWeight: 600 }}>{user.email}</Typography></Box>
+                                            </Box>
+                                        </TableCell>
+                                        <TableCell><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Phone size={14} strokeWidth={2.5} color={theme.palette.text.secondary} /><Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>{user.phone}</Typography></Box></TableCell>
+                                        <TableCell>{getRoleChip(user.role)}</TableCell>
+                                        <TableCell><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Calendar size={14} strokeWidth={2.5} color={theme.palette.text.secondary} /><Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>{user.joined}</Typography></Box></TableCell>
+                                        <TableCell><Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: user.left === '-' ? theme.palette.text.disabled : theme.palette.error.main }}><LogOut size={14} strokeWidth={2.5} /><Typography variant="body2" sx={{ fontWeight: 600 }}>{user.left}</Typography></Box></TableCell>
+                                        <TableCell align="right" sx={{ pr: 4 }}>
+                                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.2 }}>
+                                                <Tooltip title={t('common.edit')}><IconButton onClick={() => { setEditUser(user); setDrawerOpen(true); }} size="small" sx={{ color: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.04), borderRadius: '12px', width: 38, height: 38 }}><Edit3 size={18} /></IconButton></Tooltip>
+                                                <IconButton size="small" sx={{ color: 'error.main', bgcolor: alpha(theme.palette.error.main, 0.04), borderRadius: '12px', width: 38, height: 38 }}><Trash2 size={18} /></IconButton>
+                                            </Box>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                )}
             </Paper>
 
             <UserDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} user={editUser} t={t} />

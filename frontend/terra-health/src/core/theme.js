@@ -41,15 +41,70 @@ export const getTheme = (mode) => createTheme({
         borderRadius: 14,
     },
     components: {
+        MuiButtonBase: {
+            defaultProps: {
+                disableRipple: false,
+            },
+            styleOverrides: {
+                root: {
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important',
+                },
+            },
+        },
         MuiButton: {
             styleOverrides: {
                 root: {
                     borderRadius: 12,
                     padding: '10px 20px',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                     '&:hover': {
                         transform: 'translateY(-2px)',
                         boxShadow: '0 8px 20px rgba(162, 89, 255, 0.3)',
+                    },
+                    '&:active': {
+                        transform: 'translateY(0) scale(0.98)',
+                    },
+                },
+            },
+        },
+        MuiIconButton: {
+            styleOverrides: {
+                root: {
+                    '&:hover': {
+                        transform: 'scale(1.1)',
+                        backgroundColor: mode === 'light' ? 'rgba(162, 89, 255, 0.08)' : 'rgba(162, 89, 255, 0.15)',
+                    },
+                    '&:active': {
+                        transform: 'scale(0.95)',
+                    },
+                },
+            },
+        },
+        MuiListItemButton: {
+            styleOverrides: {
+                root: {
+                    '&:hover': {
+                        transform: 'translateX(4px)',
+                    },
+                },
+            },
+        },
+        MuiMenuItem: {
+            styleOverrides: {
+                root: {
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                        transform: 'translateX(4px)',
+                        backgroundColor: mode === 'light' ? 'rgba(162, 89, 255, 0.04)' : 'rgba(162, 89, 255, 0.08)',
+                    },
+                },
+            },
+        },
+        MuiTab: {
+            styleOverrides: {
+                root: {
+                    '&:hover': {
+                        transform: 'translateY(-2px)',
+                        opacity: 1,
                     },
                 },
             },
@@ -58,6 +113,7 @@ export const getTheme = (mode) => createTheme({
             styleOverrides: {
                 root: {
                     backgroundImage: 'none',
+                    transition: 'all 0.3s ease',
                     boxShadow: mode === 'light'
                         ? '0 10px 40px rgba(0,0,0,0.03)'
                         : '0 10px 40px rgba(0,0,0,0.2)',

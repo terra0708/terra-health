@@ -75,7 +75,7 @@ const ICON_DATA = {
     statistics: 'https://cdn.lordicon.com/sqqsmbzs.json',
     notifications: 'https://cdn.lordicon.com/zyylfmfm.json',
     users: 'https://cdn.lordicon.com/ntfaoelc.json',
-    permissions: 'https://cdn.lordicon.com/puvaffet.json',
+    permissions: 'https://cdn.lordicon.com/ojgowmvw.json',
     settings: 'https://cdn.lordicon.com/eduzjjfi.json',
     logo: 'https://cdn.lordicon.com/qlrjanhh.json',
 };
