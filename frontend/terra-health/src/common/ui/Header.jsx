@@ -37,7 +37,10 @@ const Header = ({ onLogout }) => {
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     {isMobile && (
                         <IconButton
-                            onClick={toggleSidebar}
+                            onClick={(e) => {
+                                toggleSidebar();
+                                e.currentTarget.blur();
+                            }}
                             sx={{
                                 width: 40,
                                 height: 40,

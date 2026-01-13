@@ -215,7 +215,7 @@ const Sidebar = () => {
                 </Typography>
             </Box>
 
-            <IconButton onClick={toggleSidebar} sx={{
+            <IconButton onClick={(e) => { toggleSidebar(); e.currentTarget.blur(); }} sx={{
                 color: 'text.secondary',
                 ml: 'auto',
                 transition: 'all 0.3s ease',
@@ -230,7 +230,7 @@ const Sidebar = () => {
         <>
             {(sidebarOpen || isMobile) ? sidebarHeader : (
                 <DrawerHeader sx={{ justifyContent: 'center' }}>
-                    <IconButton onClick={toggleSidebar} sx={{ color: 'text.secondary', '&:hover': { color: 'primary.main', transform: 'scale(1.2)' } }}>
+                    <IconButton onClick={(e) => { toggleSidebar(); e.currentTarget.blur(); }} sx={{ color: 'text.secondary', '&:hover': { color: 'primary.main', transform: 'scale(1.2)' } }}>
                         <ChevronRight size={20} />
                     </IconButton>
                 </DrawerHeader>
@@ -287,6 +287,8 @@ const Sidebar = () => {
                 variant="temporary"
                 open={sidebarOpen}
                 onClose={toggleSidebar}
+                disableEnforceFocus
+                disableRestoreFocus
                 ModalProps={{ keepMounted: true }}
                 sx={{
                     zIndex: (theme) => theme.zIndex.drawer + 5,

@@ -1,34 +1,13 @@
 import { Box, Paper, Typography, Container, Alert } from '@mui/material';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Button, TextField, SettingsSwitchers } from '@common/ui';
-import { z } from 'zod';
-import useAuthStore from '../../modules/auth/hooks/useAuthStore';
+import { SettingsSwitchers } from '@common/ui';
+import { LoginForm, useAuthStore } from '../../modules/auth';
 
 const LoginPage = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const login = useAuthStore((state) => state.login);
-
-    // Schema defined inside to use translation
-    const loginSchema = z.object({
-        email: z.string().min(1, t('auth.validation.email_required')).email(t('auth.validation.email_invalid')),
-        password: z.string().min(6, t('auth.validation.password_min')),
-    });
-
-    const {
-        register,
-        handleSubmit,
-        formState: { errors, isSubmitting },
-    } = useForm({
-        resolver: zodResolver(loginSchema),
-        defaultValues: {
-            email: '',
-            password: '',
-        },
-    });
 
     const onSubmit = async (data) => {
         if (data.email === 'admin@terra.com' && data.password === 'admin123') {
@@ -71,30 +50,7 @@ const LoginPage = () => {
 
                     <SettingsSwitchers sx={{ my: 2 }} />
 
-                    <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ mt: 1, width: '100%' }}>
-                        <TextField
-                            label={t('auth.email')}
-                            {...register('email')}
-                            error={!!errors.email}
-                            helperText={errors.email?.message}
-                        />
-                        <TextField
-                            label={t('auth.password')}
-                            type="password"
-                            {...register('password')}
-                            error={!!errors.password}
-                            helperText={errors.password?.message}
-                        />
-                        <Button
-                            type="submit"
-                            fullWidth
-                            size="large"
-                            loading={isSubmitting}
-                            sx={{ mt: 3, mb: 1 }}
-                        >
-                            {t('auth.login_button')}
-                        </Button>
-                    </Box>
+                    <LoginForm onSubmit={onSubmit} t={t} />
 
                     <Alert severity="info" sx={{ mt: 4, width: '100%' }}>
                         <Typography variant="body2">
