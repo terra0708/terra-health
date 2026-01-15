@@ -9,7 +9,7 @@ export const usePermissions = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [showDetail, setShowDetail] = useState(false);
-    const [formData, setFormData] = useState({ name: '', description: '', color: COLORS[1] });
+    const [formData, setFormData] = useState({ name_tr: '', name_en: '', description_tr: '', description_en: '', color: COLORS[1] });
 
     // Pagination state
     const [page, setPage] = useState(0);
@@ -37,7 +37,10 @@ export const usePermissions = () => {
 
     const allFilteredItems = useMemo(() => {
         const items = tabValue === 0 ? store.packages : store.roles;
-        return items.filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase()));
+        return items.filter(i =>
+            i.name_tr?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            i.name_en?.toLowerCase().includes(searchTerm.toLowerCase())
+        );
     }, [tabValue, searchTerm, store.packages, store.roles]);
 
     const paginatedItems = useMemo(() => {
@@ -51,7 +54,7 @@ export const usePermissions = () => {
             store.addRole(formData);
         }
         setDrawerOpen(false);
-        setFormData({ name: '', description: '', color: COLORS[1] });
+        setFormData({ name_tr: '', name_en: '', description_tr: '', description_en: '', color: COLORS[1] });
     };
 
     return {

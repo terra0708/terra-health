@@ -33,7 +33,9 @@ import {
     Tag as TagIcon,
     AlertTriangle,
     ArrowRight,
-    Languages
+    Languages,
+    FileText,
+    Layers
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useCustomerSettingsStore } from '../../modules/customers/hooks/useCustomerSettingsStore';
@@ -66,7 +68,7 @@ const CustomerPanel = () => {
     // Silme öncesi etki analizi
     const usageCount = useMemo(() => {
         if (!itemToDelete) return 0;
-        const typeKeys = ['services', 'status', 'source', 'tags'];
+        const typeKeys = ['services', 'status', 'source', 'tags', 'categories', 'fileCategories'];
         const currentType = typeKeys[tabValue];
 
         // Eşleşme için unique değerleri kullanıyoruz
@@ -75,6 +77,7 @@ const CustomerPanel = () => {
         else if (tabValue === 1) valueToMatch = itemToDelete.value; // Durumlar için value
         else if (tabValue === 2) valueToMatch = itemToDelete.value; // Kaynaklar için value
         else if (tabValue === 3) valueToMatch = itemToDelete.label_tr; // Etiketler için label
+        else if (tabValue === 4 || tabValue === 5) valueToMatch = itemToDelete.label_tr; // Kategoriler için label
 
         return customers.filter(c => {
             const val = c[currentType];
@@ -108,6 +111,8 @@ const CustomerPanel = () => {
             { add: settings.addStatus, update: settings.updateStatus },
             { add: settings.addSource, update: settings.updateSource },
             { add: settings.addTag, update: settings.updateTag },
+            { add: settings.addCategory, update: settings.updateCategory },
+            { add: settings.addFileCategory, update: settings.updateFileCategory },
         ];
 
         const { add, update } = actionMap[tabValue];
@@ -139,6 +144,8 @@ const CustomerPanel = () => {
             settings.deleteStatus,
             settings.deleteSource,
             settings.deleteTag,
+            settings.deleteCategory,
+            settings.deleteFileCategory
         ];
         deleteMap[tabValue](itemToDelete.id);
         setDeleteConfirm({ open: false, item: null });
@@ -151,6 +158,8 @@ const CustomerPanel = () => {
         { key: 'status', label: t('common.status'), icon: <Activity size={18} />, data: settings.statuses },
         { key: 'source', label: t('customers.source'), icon: <Link size={18} />, data: settings.sources },
         { key: 'tags', label: t('customers.tags'), icon: <TagIcon size={18} />, data: settings.tags },
+        { key: 'categories', label: t('customers.category'), icon: <Layers size={18} />, data: settings.categories },
+        { key: 'file_categories', label: t('customers.drawer.file_categories'), icon: <FileText size={18} />, data: settings.fileCategories },
     ];
 
     const getDisplayName = (item) => {
@@ -311,7 +320,13 @@ const CustomerPanel = () => {
                         {/* TR Name */}
                         <TextField
                             fullWidth
-                            label={tabValue === 0 ? "Hizmet İsmi (TR)" : tabValue === 1 ? "Durum İsmi (TR)" : tabValue === 2 ? "Kaynak İsmi (TR)" : "Etiket İsmi (TR)"}
+                            label={
+                                tabValue === 0 ? `${t('customers.services')} (TR)` :
+                                    tabValue === 1 ? `${t('common.status')} (TR)` :
+                                        tabValue === 2 ? `${t('customers.source')} (TR)` :
+                                            tabValue === 3 ? `${t('customers.tags')} (TR)` :
+                                                tabValue === 4 ? `${t('customers.category')} (TR)` : `${t('customers.drawer.file_categories')} (TR)`
+                            }
                             value={tabValue === 0 ? currentItem?.name_tr : currentItem?.label_tr}
                             onChange={(e) => setCurrentItem({ ...currentItem, [tabValue === 0 ? 'name_tr' : 'label_tr']: e.target.value })}
                             InputProps={{ startAdornment: <Languages size={18} style={{ marginRight: 8, opacity: 0.5 }} /> }}
@@ -319,7 +334,13 @@ const CustomerPanel = () => {
                         {/* EN Name */}
                         <TextField
                             fullWidth
-                            label={tabValue === 0 ? "Hizmet İsmi (EN)" : tabValue === 1 ? "Durum İsmi (EN)" : tabValue === 2 ? "Kaynak İsmi (EN)" : "Etiket İsmi (EN)"}
+                            label={
+                                tabValue === 0 ? `${t('customers.services')} (EN)` :
+                                    tabValue === 1 ? `${t('common.status')} (EN)` :
+                                        tabValue === 2 ? `${t('customers.source')} (EN)` :
+                                            tabValue === 3 ? `${t('customers.tags')} (EN)` :
+                                                tabValue === 4 ? `${t('customers.category')} (EN)` : `${t('customers.drawer.file_categories')} (EN)`
+                            }
                             value={tabValue === 0 ? currentItem?.name_en : currentItem?.label_en}
                             onChange={(e) => setCurrentItem({ ...currentItem, [tabValue === 0 ? 'name_en' : 'label_en']: e.target.value })}
                             InputProps={{ startAdornment: <Languages size={18} style={{ marginRight: 8, opacity: 0.5 }} /> }}
@@ -333,7 +354,7 @@ const CustomerPanel = () => {
                                 placeholder="e.g. facebook_ads"
                                 value={currentItem?.value}
                                 onChange={(e) => setCurrentItem({ ...currentItem, value: e.target.value })}
-                                helperText="Sistem arka planda bu değeri kullanır. Boş bırakırsanız EN isminden oluşur."
+                                helperText={t('customers.system_value_helper')}
                             />
                         )}
 

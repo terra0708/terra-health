@@ -34,7 +34,7 @@ export const useCustomerStore = create(
                 const customerWithId = {
                     ...newCustomer,
                     id: Date.now(),
-                    registrationDate: new Date().toISOString()
+                    registrationDate: newCustomer.registrationDate || new Date().toISOString().split('T')[0]
                 };
                 set((state) => ({
                     customers: [customerWithId, ...state.customers]

@@ -22,7 +22,9 @@ import {
     useMediaQuery,
     TablePagination,
     Pagination,
-    Stack
+    Stack,
+    Snackbar,
+    Alert
 } from '@mui/material';
 import {
     Search,
@@ -35,12 +37,15 @@ import {
     Filter,
     Phone,
     Calendar,
-    LogOut
+    LogOut,
+    Info
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
     UserDrawer,
     UserMobileCard,
+    UserDetailsDialog,
+    UserTerminationDialog,
     StatCard,
     useUsers
 } from '../../modules/users';
@@ -66,8 +71,55 @@ const UsersPage = () => {
         page,
         setPage,
         rowsPerPage,
-        setRowsPerPage
+        setRowsPerPage,
+        store // Access to actions: addUser, updateUser, deleteUser
     } = useUsers();
+
+    const [detailsOpen, setDetailsOpen] = useState(false);
+    const [viewUser, setViewUser] = useState(null);
+
+    const handleViewDetails = (user) => {
+        setViewUser(user);
+        setDetailsOpen(true);
+    };
+
+    const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+
+    const handleSaveUser = (userData) => {
+        // Map form data to user object structure
+        const finalData = {
+            ...userData,
+            email: userData.corporate_email || userData.email // Ensure main email is set
+        };
+
+        if (editUser) {
+            store.updateUser(editUser.id, finalData);
+        } else {
+            store.addUser(finalData);
+        }
+
+        handleCloseDrawer();
+        setSnackbar({ open: true, message: t('common.success_save'), severity: 'success' });
+    };
+
+    const [terminationOpen, setTerminationOpen] = useState(false);
+    const [terminatingUser, setTerminatingUser] = useState(null);
+
+    const handleOpenTermination = (user) => {
+        setTerminatingUser(user);
+        setTerminationOpen(true);
+    };
+
+    const handleTerminateConfirm = ({ userId, exitDate, reason }) => {
+        // Instead of deleting, we update the user with exit info
+        store.updateUser(userId, {
+            left: exitDate,
+            exit_reason: reason,
+            system_access: false // Revoke access
+        });
+        setSnackbar({ open: true, message: t('common.success_update'), severity: 'info' });
+        setTerminationOpen(false);
+    };
 
     const getRoleChip = (role) => {
         const configs = {
@@ -198,8 +250,9 @@ const UsersPage = () => {
                                             <TableCell><Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: user.left === '-' ? theme.palette.text.disabled : theme.palette.error.main }}><LogOut size={14} strokeWidth={2.5} /><Typography variant="body2" sx={{ fontWeight: 600 }}>{user.left}</Typography></Box></TableCell>
                                             <TableCell align="right" sx={{ pr: 4 }}>
                                                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.2 }}>
+                                                    <Tooltip title={t('common.user_info')}><IconButton onClick={() => handleViewDetails(user)} size="small" sx={{ color: 'info.main', bgcolor: alpha(theme.palette.info.main, 0.04), borderRadius: '12px', width: 38, height: 38 }}><Info size={18} /></IconButton></Tooltip>
                                                     <Tooltip title={t('common.edit')}><IconButton onClick={(e) => { handleOpenDrawer(user); e.currentTarget.blur(); }} size="small" sx={{ color: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.04), borderRadius: '12px', width: 38, height: 38 }}><Edit3 size={18} /></IconButton></Tooltip>
-                                                    <IconButton size="small" sx={{ color: 'error.main', bgcolor: alpha(theme.palette.error.main, 0.04), borderRadius: '12px', width: 38, height: 38 }}><Trash2 size={18} /></IconButton>
+                                                    <IconButton onClick={() => handleOpenTermination(user)} size="small" sx={{ color: 'error.main', bgcolor: alpha(theme.palette.error.main, 0.04), borderRadius: '12px', width: 38, height: 38 }}><Trash2 size={18} /></IconButton>
                                                 </Box>
                                             </TableCell>
                                         </TableRow>
@@ -221,7 +274,25 @@ const UsersPage = () => {
                 )}
             </Paper>
 
-            <UserDrawer open={drawerOpen} onClose={handleCloseDrawer} user={editUser} t={t} />
+            <UserDrawer open={drawerOpen} onClose={handleCloseDrawer} onSave={handleSaveUser} user={editUser} t={t} />
+            <UserDetailsDialog open={detailsOpen} onClose={() => setDetailsOpen(false)} user={viewUser} />
+            <UserTerminationDialog
+                open={terminationOpen}
+                onClose={() => setTerminationOpen(false)}
+                user={terminatingUser}
+                onConfirm={handleTerminateConfirm}
+            />
+
+            <Snackbar
+                open={snackbar.open}
+                autoHideDuration={4000}
+                onClose={() => setSnackbar({ ...snackbar, open: false })}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            >
+                <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} sx={{ width: '100%', borderRadius: '12px', fontWeight: 600 }}>
+                    {snackbar.message}
+                </Alert>
+            </Snackbar>
 
             <style>{`
                 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }

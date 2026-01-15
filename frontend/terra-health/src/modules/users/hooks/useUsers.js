@@ -1,7 +1,10 @@
 import { useState, useMemo } from 'react';
-import { MOCK_USERS } from '../data/mockData';
+import { useUserStore } from './useUserStore';
 
 export const useUsers = () => {
+    const store = useUserStore();
+    const { users } = store;
+
     const [searchTerm, setSearchTerm] = useState('');
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [editUser, setEditUser] = useState(null);
@@ -19,11 +22,12 @@ export const useUsers = () => {
     };
 
     const allFilteredUsers = useMemo(() => {
-        return MOCK_USERS.filter(user =>
+        if (!users) return [];
+        return users.filter(user =>
             user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             user.email.toLowerCase().includes(searchTerm.toLowerCase())
         );
-    }, [searchTerm]);
+    }, [users, searchTerm]);
 
     const paginatedUsers = useMemo(() => {
         return allFilteredUsers.slice(page * rowsPerPage, (page + 1) * rowsPerPage);
@@ -42,7 +46,8 @@ export const useUsers = () => {
         setPage,
         rowsPerPage,
         setRowsPerPage,
-        totalTeam: MOCK_USERS.length,
-        adminCount: MOCK_USERS.filter(u => u.role === 'admin').length
+        totalTeam: users.length,
+        adminCount: users.filter(u => u.role === 'admin').length,
+        store // Expose the store to access actions
     };
 };

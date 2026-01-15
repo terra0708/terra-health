@@ -47,6 +47,30 @@ export const usePermissionStore = create(
                     return { ...r, packages };
                 })
             })),
+
+            repairData: () => set((state) => {
+                const repairList = (current, initial, nameKey = 'name') => {
+                    return initial.map(initItem => {
+                        const existing = current.find(c => c.id === initItem.id);
+                        if (!existing) return initItem;
+
+                        // Localize fields update (name_tr, name_en etc)
+                        const repairs = {};
+                        Object.keys(initItem).forEach(key => {
+                            if (key.includes('_tr') || key.includes('_en') || key === 'description') {
+                                if (!existing[key]) repairs[key] = initItem[key];
+                            }
+                        });
+
+                        return { ...existing, ...repairs };
+                    });
+                };
+
+                return {
+                    packages: repairList(state.packages, MOCK_PACKAGES),
+                    roles: repairList(state.roles, MOCK_ROLES)
+                };
+            })
         }),
         {
             name: 'terra-permissions-storage',

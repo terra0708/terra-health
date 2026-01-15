@@ -41,11 +41,13 @@ import {
     PERMISSION_MODULES,
     PermissionCard,
     CreateDrawer,
+    PermissionDeleteDialog,
     usePermissions
 } from '../../modules/permissions';
 
 const PermissionsPage = () => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const lang = i18n.language;
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -76,29 +78,73 @@ const PermissionsPage = () => {
         store
     } = usePermissions();
 
+    const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+
+    // Verilerin (etiketler vb.) her zaman mock ve ayarlar ile senkron kalmasını sağla
+    React.useEffect(() => {
+        if (store.repairData) store.repairData();
+    }, []);
+
+    const [localData, setLocalData] = React.useState([]);
+    const [hasChanges, setHasChanges] = React.useState(false);
+
+    // Seçilen öğe değiştiğinde yerel veriyi sıfırla
+    React.useEffect(() => {
+        if (selectedItem) {
+            setLocalData(tabValue === 0 ? [...(selectedItem.permissions || [])] : [...(selectedItem.packages || [])]);
+            setHasChanges(false);
+        }
+    }, [selectedId, tabValue, selectedItem]);
+
     if (!selectedItem) return null;
 
     const handleTogglePermission = (permissionId) => {
-        store.togglePermissionInPackage(selectedId, permissionId);
-        setSnackbar({ open: true, message: t('common.success_save'), severity: 'success' });
+        setLocalData(prev => {
+            const next = prev.includes(permissionId)
+                ? prev.filter(id => id !== permissionId)
+                : [...prev, permissionId];
+            return next;
+        });
+        setHasChanges(true);
     };
 
     const handleTogglePackageInRole = (packageId) => {
-        store.togglePackageInRole(selectedId, packageId);
-        setSnackbar({ open: true, message: t('common.success_save'), severity: 'success' });
+        setLocalData(prev => {
+            const next = prev.includes(packageId)
+                ? prev.filter(id => id !== packageId)
+                : [...prev, packageId];
+            return next;
+        });
+        setHasChanges(true);
     };
 
     const handleDelete = () => {
+        setDeleteDialogOpen(true);
+    };
+
+    const handleConfirmDelete = (action, targetId) => {
+        // Logic for migration (simulated for now since users are mock)
+        if (action === 'migrate') {
+            console.log(`Migrating users from ${selectedId} to ${targetId}`);
+        } else {
+            console.log(`Removing ${selectedId} from all users`);
+        }
+
         if (tabValue === 0) store.deletePackage(selectedId);
         else store.deleteRole(selectedId);
+
+        setDeleteDialogOpen(false);
         setSnackbar({ open: true, message: t('common.success_delete'), severity: 'success' });
     };
 
     const handleUpdate = () => {
-        // Simple update for now if name or description changes in some UI
-        // In this UI we mainly toggle items which auto-saves in zustand
+        if (tabValue === 0) {
+            store.updatePackage(selectedId, { permissions: localData });
+        } else {
+            store.updateRole(selectedId, { packages: localData });
+        }
+        setHasChanges(false);
         setSnackbar({ open: true, message: t('common.success_save'), severity: 'success' });
-        console.log("Update triggered");
     };
 
     const onSaveNew = () => {
@@ -208,7 +254,7 @@ const PermissionsPage = () => {
                                                 {tabValue === 0 ? <Layers size={20} /> : <UserCircle size={20} />}
                                             </ListItemIcon>
                                             <ListItemText
-                                                primary={item.name}
+                                                primary={lang === 'tr' ? item.name_tr : (item.name_en || item.name_tr)}
                                                 primaryTypographyProps={{ fontWeight: 800, fontSize: '0.9rem' }}
                                             />
                                             <ChevronRight size={16} style={{ opacity: selectedId === item.id ? 1 : 0.3 }} />
@@ -264,11 +310,13 @@ const PermissionsPage = () => {
                                         {tabValue === 0 ? <Lock size={24} /> : <Shield size={24} />}
                                     </Box>
                                     <Box>
-                                        <Typography variant="h6" sx={{ fontWeight: 900, color: 'text.primary', fontSize: isSmall ? '1rem' : '1.25rem' }}>{selectedItem.name}</Typography>
+                                        <Typography variant="h6" sx={{ fontWeight: 900, color: 'text.primary', fontSize: isSmall ? '1rem' : '1.25rem' }}>
+                                            {lang === 'tr' ? selectedItem.name_tr : (selectedItem.name_en || selectedItem.name_tr)}
+                                        </Typography>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
                                             {tabValue === 0
-                                                ? t('permissions.permission_count', { count: selectedItem.permissions.length })
-                                                : t('permissions.package_count', { count: selectedItem.packages.length })}
+                                                ? t('permissions.permission_count', { count: localData.length })
+                                                : t('permissions.package_count', { count: localData.length })}
                                         </Typography>
                                     </Box>
                                 </Box>
@@ -284,10 +332,14 @@ const PermissionsPage = () => {
                                     <Button
                                         fullWidth={isSmall}
                                         onClick={handleUpdate}
-                                        variant="contained" startIcon={<Save size={18} />}
+                                        variant="contained"
+                                        startIcon={<Save size={18} />}
+                                        disabled={!hasChanges}
                                         sx={{
                                             borderRadius: '14px', fontWeight: 800, textTransform: 'none', px: 3,
-                                            bgcolor: selectedItem.color, '&:hover': { bgcolor: selectedItem.color, filter: 'brightness(0.9)' }
+                                            bgcolor: hasChanges ? selectedItem.color : alpha(selectedItem.color, 0.5),
+                                            boxShadow: hasChanges ? `0 4px 14px 0 ${alpha(selectedItem.color, 0.39)}` : 'none',
+                                            '&:hover': { bgcolor: selectedItem.color, filter: 'brightness(0.9)' }
                                         }}
                                     >
                                         {t('common.save')}
@@ -303,7 +355,9 @@ const PermissionsPage = () => {
                                             <Grid item xs={12} key={module.id}>
                                                 <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
                                                     <module.icon size={20} color={theme.palette.primary.main} />
-                                                    <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'text.primary' }}>{module.name}</Typography>
+                                                    <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'text.primary' }}>
+                                                        {lang === 'tr' ? module.name_tr : (module.name_en || module.name_tr)}
+                                                    </Typography>
                                                     <Divider sx={{ flexGrow: 1, ml: 2, opacity: 0.5 }} />
                                                 </Box>
                                                 <Grid container spacing={isSmall ? 1.5 : 2}>
@@ -311,7 +365,7 @@ const PermissionsPage = () => {
                                                         <Grid item xs={12} sm={6} lg={4} key={perm.id}>
                                                             <PermissionCard
                                                                 perm={perm}
-                                                                selected={selectedItem.permissions.includes(perm.id)}
+                                                                selected={localData.includes(perm.id)}
                                                                 color={selectedItem.color}
                                                                 onClick={() => handleTogglePermission(perm.id)}
                                                             />
@@ -325,7 +379,9 @@ const PermissionsPage = () => {
                                     <Box>
                                         <Box sx={{ mb: 4, p: 3, borderRadius: '20px', bgcolor: alpha(theme.palette.primary.main, 0.03), border: `1px dashed ${alpha(theme.palette.primary.main, isDark ? 0.3 : 0.2)}` }}>
                                             <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1, color: 'text.primary' }}>{t('permissions.role_description')}</Typography>
-                                            <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.9rem' }}>{selectedItem.description}</Typography>
+                                            <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.9rem' }}>
+                                                {lang === 'tr' ? selectedItem.description_tr : (selectedItem.description_en || selectedItem.description_tr)}
+                                            </Typography>
                                         </Box>
 
                                         <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2, display: 'flex', alignItems: 'center', gap: 1, color: 'text.primary' }}>
@@ -333,7 +389,7 @@ const PermissionsPage = () => {
                                         </Typography>
                                         <Grid container spacing={isSmall ? 1.5 : 2}>
                                             {store.packages.map((pkg) => {
-                                                const isAtanan = selectedItem.packages.includes(pkg.id);
+                                                const isAtanan = localData.includes(pkg.id);
                                                 return (
                                                     <Grid item xs={12} sm={6} key={pkg.id}>
                                                         <Paper
@@ -349,7 +405,9 @@ const PermissionsPage = () => {
                                                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                                                                     <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: pkg.color }} />
-                                                                    <Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'text.primary' }}>{pkg.name}</Typography>
+                                                                    <Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'text.primary' }}>
+                                                                        {lang === 'tr' ? pkg.name_tr : (pkg.name_en || pkg.name_tr)}
+                                                                    </Typography>
                                                                 </Box>
                                                                 <Checkbox checked={isAtanan} sx={{ color: pkg.color, '&.Mui-checked': { color: pkg.color } }} />
                                                             </Box>
@@ -377,6 +435,17 @@ const PermissionsPage = () => {
                 theme={theme}
                 t={t}
                 isMobile={isSmall}
+            />
+
+            {/* SİLME ONAY DİYALOGU */}
+            <PermissionDeleteDialog
+                open={deleteDialogOpen}
+                onClose={() => setDeleteDialogOpen(false)}
+                onConfirm={handleConfirmDelete}
+                type={tabValue === 0 ? 'package' : 'role'}
+                item={selectedItem}
+                list={tabValue === 0 ? store.packages : store.roles}
+                t={t}
             />
 
             <Snackbar

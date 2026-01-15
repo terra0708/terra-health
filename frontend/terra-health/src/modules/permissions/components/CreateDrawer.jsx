@@ -29,13 +29,19 @@ export const CreateDrawer = ({ open, onClose, onSave, type, formData, setFormDat
                 </Box>
                 <Divider />
                 <Box sx={{ p: 3, flexGrow: 1, maxHeight: isMobile ? '60vh' : 'none', overflowY: 'auto' }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1, color: 'text.primary' }}>{type === 'package' ? t('permissions.package_name') : t('permissions.role_name')}</Typography>
-                    <TextField fullWidth placeholder={type === 'package' ? "Örn: Finans Paketi" : "Örn: Başhekim"} value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} sx={drawerFieldStyles} />
+                    <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1, color: 'text.primary' }}>{type === 'package' ? t('permissions.package_name') : t('permissions.role_name')} (TR)</Typography>
+                    <TextField fullWidth placeholder={type === 'package' ? "Örn: Finans Paketi" : "Örn: Başhekim"} value={formData.name_tr} onChange={(e) => setFormData({ ...formData, name_tr: e.target.value })} sx={drawerFieldStyles} />
+
+                    <Typography variant="subtitle2" sx={{ fontWeight: 800, mt: 2, mb: 1, color: 'text.primary' }}>{type === 'package' ? t('permissions.package_name') : t('permissions.role_name')} (EN)</Typography>
+                    <TextField fullWidth placeholder={type === 'package' ? "Ex: Finance Package" : "Ex: Chief Physician"} value={formData.name_en} onChange={(e) => setFormData({ ...formData, name_en: e.target.value })} sx={drawerFieldStyles} />
 
                     {type === 'role' && (
                         <>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 800, mt: 3, mb: 1, color: 'text.primary' }}>{t('permissions.description')}</Typography>
-                            <TextField fullWidth multiline rows={3} placeholder="Bu rolün görev tanımı..." value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} sx={drawerFieldStyles} />
+                            <Typography variant="subtitle2" sx={{ fontWeight: 800, mt: 3, mb: 1, color: 'text.primary' }}>{t('permissions.description')} (TR)</Typography>
+                            <TextField fullWidth multiline rows={2} placeholder="Bu rolün görev tanımı..." value={formData.description_tr} onChange={(e) => setFormData({ ...formData, description_tr: e.target.value })} sx={drawerFieldStyles} />
+
+                            <Typography variant="subtitle2" sx={{ fontWeight: 800, mt: 2, mb: 1, color: 'text.primary' }}>{t('permissions.description')} (EN)</Typography>
+                            <TextField fullWidth multiline rows={2} placeholder="Job description for this role..." value={formData.description_en} onChange={(e) => setFormData({ ...formData, description_en: e.target.value })} sx={drawerFieldStyles} />
                         </>
                     )}
 

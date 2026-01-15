@@ -2,11 +2,23 @@ import { Box, Container, useMediaQuery, useTheme } from '@mui/material';
 import { Sidebar, Header } from '@common/ui';
 import { Outlet } from 'react-router-dom';
 import useAuthStore from '../modules/auth/hooks/useAuthStore';
+import React from 'react';
+import { useSettingsStore } from '@core';
+import { useTranslation } from 'react-i18next';
 
 const MainLayout = () => {
     const logout = useAuthStore((state) => state.logout);
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+    const { language } = useSettingsStore();
+    const { i18n } = useTranslation();
+
+    // Dil senkronizasyonu
+    React.useEffect(() => {
+        if (language && i18n.language !== language) {
+            i18n.changeLanguage(language);
+        }
+    }, [language, i18n]);
 
     return (
         <Box sx={{ display: 'flex', width: '100%', overflowX: 'hidden' }}>

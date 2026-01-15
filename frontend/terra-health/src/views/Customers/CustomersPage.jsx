@@ -113,6 +113,12 @@ const CustomersPage = () => {
         completed: customers.filter(c => c.status === 'completed').length
     };
 
+    const getLocalizedLabel = (item, type) => {
+        if (!item) return '-';
+        if (type === 'service') return lang === 'tr' ? item.name_tr : (item.name_en || item.name_tr);
+        return lang === 'tr' ? item.label_tr : (item.label_en || item.label_tr);
+    };
+
     const getStatusChip = (statusValue) => {
         const s = settings.statuses.find(x => x.value === statusValue);
         if (!s) return <Chip label={statusValue} size="small" />;
@@ -264,9 +270,33 @@ const CustomersPage = () => {
                             </Grid>
 
                             <Grid item xs={12} sm={6} md={3}>
-                                <Stack direction="row" spacing={1}>
-                                    <TextField type="date" size="small" label={t('common.start_date')} InputLabelProps={{ shrink: true }} value={dateRange.start} onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })} sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }} />
-                                    <TextField type="date" size="small" label={t('common.end_date')} InputLabelProps={{ shrink: true }} value={dateRange.end} onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })} sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }} />
+                                <Stack direction="row" spacing={1} sx={{ height: '40px' }}>
+                                    <TextField
+                                        type="date"
+                                        size="small"
+                                        label={t('common.start_date')}
+                                        InputLabelProps={{ shrink: true }}
+                                        value={dateRange.start}
+                                        onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+                                        sx={{
+                                            flex: 1,
+                                            '& .MuiOutlinedInput-root': { borderRadius: '12px', bgcolor: 'background.paper' },
+                                            '& .MuiInputLabel-root': { fontWeight: 700 }
+                                        }}
+                                    />
+                                    <TextField
+                                        type="date"
+                                        size="small"
+                                        label={t('common.end_date')}
+                                        InputLabelProps={{ shrink: true }}
+                                        value={dateRange.end}
+                                        onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+                                        sx={{
+                                            flex: 1,
+                                            '& .MuiOutlinedInput-root': { borderRadius: '12px', bgcolor: 'background.paper' },
+                                            '& .MuiInputLabel-root': { fontWeight: 700 }
+                                        }}
+                                    />
                                 </Stack>
                             </Grid>
 
@@ -278,15 +308,15 @@ const CustomersPage = () => {
                                         input={<OutlinedInput label={t('customers.services')} sx={{ borderRadius: '12px' }} />}
                                         renderValue={(selected) => (
                                             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                                {selected.map((val) => {
+                                                {selectedServices.map((val) => {
                                                     const s = settings.services.find(x => x.name_tr === val || x.name_en === val);
-                                                    return <Chip key={val} label={lang === 'tr' ? s?.name_tr : (s?.name_en || s?.name_tr)} size="small" />;
+                                                    return <Chip key={val} label={getLocalizedLabel(s, 'service')} size="small" />;
                                                 })}
                                             </Box>
                                         )}
                                     >
                                         {settings.services.map((s) => (
-                                            <MenuItem key={s.id} value={lang === 'tr' ? s.name_tr : (s.name_en || s.name_tr)}>{lang === 'tr' ? s.name_tr : (s.name_en || s.name_tr)}</MenuItem>
+                                            <MenuItem key={s.id} value={lang === 'tr' ? s.name_tr : (s.name_en || s.name_tr)}>{getLocalizedLabel(s, 'service')}</MenuItem>
                                         ))}
                                     </Select>
                                 </FormControl>
@@ -302,13 +332,13 @@ const CustomersPage = () => {
                                             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                                                 {selected.map((val) => {
                                                     const tag = settings.tags.find(x => x.label_tr === val || x.label_en === val);
-                                                    return <Chip key={val} label={lang === 'tr' ? tag?.label_tr : (tag?.label_en || tag?.label_tr)} size="small" />;
+                                                    return <Chip key={val} label={getLocalizedLabel(tag)} size="small" />;
                                                 })}
                                             </Box>
                                         )}
                                     >
                                         {settings.tags.map((t) => (
-                                            <MenuItem key={t.id} value={lang === 'tr' ? t.label_tr : (t.label_en || t.label_tr)}>{lang === 'tr' ? t.label_tr : (t.label_en || t.label_tr)}</MenuItem>
+                                            <MenuItem key={t.id} value={lang === 'tr' ? t.label_tr : (t.label_en || t.label_tr)}>{getLocalizedLabel(t)}</MenuItem>
                                         ))}
                                     </Select>
                                 </FormControl>

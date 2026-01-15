@@ -30,6 +30,22 @@ const INITIAL_TAGS = [
     { id: '4', label_tr: 'Eski Müşteri', label_en: 'Old Customer', color: '#6b7280' },
 ];
 
+const INITIAL_FILE_CATEGORIES = [
+    { id: '1', label_tr: 'Kimlik Belgeleri', label_en: 'Identity Documents', color: '#312e81' },
+    { id: '2', label_tr: 'Tıbbi Raporlar', label_en: 'Medical Reports', color: '#ef4444' },
+    { id: '3', label_tr: 'Ödeme Makbuzları', label_en: 'Payment Receipts', color: '#10b981' },
+    { id: '4', label_tr: 'Fotoğraflar', label_en: 'Photos', color: '#f59e0b' },
+    { id: '5', label_tr: 'Uçuş ve Konaklama', label_en: 'Flight & Stay', color: '#6366f1' },
+    { id: '6', label_tr: 'Diğer', label_en: 'Other', color: '#64748b' },
+];
+
+const INITIAL_CATEGORIES = [
+    { id: '1', label_tr: 'Estetik', label_en: 'Aesthetics', color: '#a259ff' },
+    { id: '2', label_tr: 'Obezite', label_en: 'Obesity', color: '#3b82f6' },
+    { id: '3', label_tr: 'Diş', label_en: 'Dental', color: '#10b981' },
+    { id: '4', label_tr: 'Göz', label_en: 'Eye', color: '#f472b6' },
+];
+
 export const useCustomerSettingsStore = create(
     persist(
         (set, get) => ({
@@ -37,13 +53,24 @@ export const useCustomerSettingsStore = create(
             statuses: INITIAL_STATUSES,
             sources: INITIAL_SOURCES,
             tags: INITIAL_TAGS,
+            fileCategories: INITIAL_FILE_CATEGORIES,
+            categories: INITIAL_CATEGORIES,
 
-            // Migration helper to fix old data format in localStorage
             repairData: () => {
                 const state = get();
                 let needsUpdate = false;
 
-                const repairArray = (arr, nameKey) => {
+                const repairArray = (currentArr, initialArr, nameKey) => {
+                    let arr = currentArr || initialArr;
+
+                    // Eksik olanları ekle (ID üzerinden kontrol)
+                    const existingIds = new Set(arr.map(i => i.id));
+                    const missingItems = initialArr.filter(i => !existingIds.has(i.id));
+                    if (missingItems.length > 0) {
+                        needsUpdate = true;
+                        arr = [...arr, ...missingItems];
+                    }
+
                     return arr.map(item => {
                         const trKey = `${nameKey}_tr`;
                         const enKey = `${nameKey}_en`;
@@ -55,10 +82,12 @@ export const useCustomerSettingsStore = create(
                     });
                 };
 
-                const newServices = repairArray(state.services, 'name');
-                const newStatuses = repairArray(state.statuses, 'label');
-                const newSources = repairArray(state.sources, 'label');
-                const newTags = repairArray(state.tags, 'label');
+                const newServices = repairArray(state.services, INITIAL_SERVICES, 'name');
+                const newStatuses = repairArray(state.statuses, INITIAL_STATUSES, 'label');
+                const newSources = repairArray(state.sources, INITIAL_SOURCES, 'label');
+                const newTags = repairArray(state.tags, INITIAL_TAGS, 'label');
+                const newFileCategories = repairArray(state.fileCategories, INITIAL_FILE_CATEGORIES, 'label');
+                const newCategories = repairArray(state.categories, INITIAL_CATEGORIES, 'label');
 
                 if (needsUpdate) {
                     set({
@@ -66,53 +95,42 @@ export const useCustomerSettingsStore = create(
                         statuses: newStatuses,
                         sources: newSources,
                         tags: newTags,
+                        fileCategories: newFileCategories,
+                        categories: newCategories
                     });
                 }
             },
 
-            addService: (service) => set((state) => ({
-                services: [...state.services, { ...service, id: Date.now().toString() }]
-            })),
-            updateService: (id, updatedService) => set((state) => ({
-                services: state.services.map(s => s.id === id ? { ...s, ...updatedService } : s)
-            })),
-            deleteService: (id) => set((state) => ({
-                services: state.services.filter(s => s.id !== id)
-            })),
+            addService: (service) => set((state) => ({ services: [...state.services, { ...service, id: Date.now().toString() }] })),
+            updateService: (id, updated) => set((state) => ({ services: state.services.map(s => s.id === id ? { ...s, ...updated } : s) })),
+            deleteService: (id) => set((state) => ({ services: state.services.filter(s => s.id !== id) })),
 
-            addStatus: (status) => set((state) => ({
-                statuses: [...state.statuses, { ...status, id: Date.now().toString() }]
-            })),
-            updateStatus: (id, updatedStatus) => set((state) => ({
-                statuses: state.statuses.map(s => s.id === id ? { ...s, ...updatedStatus } : s)
-            })),
-            deleteStatus: (id) => set((state) => ({
-                statuses: state.statuses.filter(s => s.id !== id)
-            })),
+            addStatus: (status) => set((state) => ({ statuses: [...state.statuses, { ...status, id: Date.now().toString() }] })),
+            updateStatus: (id, updated) => set((state) => ({ statuses: state.statuses.map(s => s.id === id ? { ...s, ...updated } : s) })),
+            deleteStatus: (id) => set((state) => ({ statuses: state.statuses.filter(s => s.id !== id) })),
 
-            addSource: (source) => set((state) => ({
-                sources: [...state.sources, { ...source, id: Date.now().toString() }]
-            })),
-            updateSource: (id, updatedSource) => set((state) => ({
-                sources: state.sources.map(s => s.id === id ? { ...s, ...updatedSource } : s)
-            })),
-            deleteSource: (id) => set((state) => ({
-                sources: state.sources.filter(s => s.id !== id)
-            })),
+            addSource: (source) => set((state) => ({ sources: [...state.sources, { ...source, id: Date.now().toString() }] })),
+            updateSource: (id, updated) => set((state) => ({ sources: state.sources.map(s => s.id === id ? { ...s, ...updated } : s) })),
+            deleteSource: (id) => set((state) => ({ sources: state.sources.filter(s => s.id !== id) })),
 
-            addTag: (tag) => set((state) => ({
-                tags: [...state.tags, { ...tag, id: Date.now().toString() }]
-            })),
-            updateTag: (id, updatedTag) => set((state) => ({
-                tags: state.tags.map(t => t.id === id ? { ...t, ...updatedTag } : t)
-            })),
-            deleteTag: (id) => set((state) => ({
-                tags: state.tags.filter(t => t.id !== id)
-            })),
+            addTag: (tag) => set((state) => ({ tags: [...state.tags, { ...tag, id: Date.now().toString() }] })),
+            updateTag: (id, updated) => set((state) => ({ tags: state.tags.map(t => t.id === id ? { ...t, ...updated } : t) })),
+            deleteTag: (id) => set((state) => ({ tags: state.tags.filter(t => t.id !== id) })),
+
+            addFileCategory: (cat) => set((state) => ({ fileCategories: [...state.fileCategories, { ...cat, id: Date.now().toString() }] })),
+            updateFileCategory: (id, updated) => set((state) => ({ fileCategories: state.fileCategories.map(c => c.id === id ? { ...c, ...updated } : c) })),
+            deleteFileCategory: (id) => set((state) => ({ fileCategories: state.fileCategories.filter(c => c.id !== id) })),
+
+            addCategory: (cat) => set((state) => ({ categories: [...state.categories, { ...cat, id: Date.now().toString() }] })),
+            updateCategory: (id, updated) => set((state) => ({ categories: state.categories.map(c => c.id === id ? { ...c, ...updated } : c) })),
+            deleteCategory: (id) => set((state) => ({ categories: state.categories.filter(c => c.id !== id) })),
         }),
         {
             name: 'customer-settings-storage',
-            version: 1,
+            version: 2,
+            migrate: (persistedState, version) => {
+                return persistedState;
+            },
         }
     )
 );
