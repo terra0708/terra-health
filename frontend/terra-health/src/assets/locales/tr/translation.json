@@ -108,6 +108,7 @@
         "title": "Müşteri Yönetimi",
         "add_customer": "Yeni Müşteri Ekle",
         "edit_customer": "Müşteriyi Düzenle",
+        "customer_details": "Müşteri Bilgileri",
         "form_subtitle": "Müşteri bilgilerini girerek yeni kayıt oluşturun.",
         "total_customers": "TOPLAM MÜŞTERİ",
         "active_customers": "AKTİF MÜŞTERİ",

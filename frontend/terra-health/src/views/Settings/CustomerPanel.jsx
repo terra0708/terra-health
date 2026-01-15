@@ -31,14 +31,15 @@ import {
     Link,
     Tag as TagIcon,
     AlertTriangle,
-    ArrowRight
+    ArrowRight,
+    Languages
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useCustomerSettingsStore } from '../../modules/customers/hooks/useCustomerSettingsStore';
-import { mockCustomers } from '../../modules/customers/data/mockData'; // Not: Gerçek API olunca burası store'dan gelecek
+import { useCustomerStore } from '../../modules/customers/hooks/useCustomerStore';
 
 const CustomerPanel = () => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const theme = useTheme();
 
     // UI States
@@ -53,21 +54,32 @@ const CustomerPanel = () => {
     const [migrationTarget, setMigrationTarget] = useState('clear');
 
     const settings = useCustomerSettingsStore();
+    const { customers } = useCustomerStore();
 
-    // Silme öncesi etki analizi (Kaç müşteri bu alanı kullanıyor?)
+    // Veri uyumsuzluklarını otomatik onar (Legacy data support)
+    React.useEffect(() => {
+        if (settings.repairData) settings.repairData();
+    }, []); // Sadece ilk açılışta 1 kere çalışması yeterlidir.
+
+    // Silme öncesi etki analizi
     const usageCount = useMemo(() => {
         if (!itemToDelete) return 0;
         const typeKeys = ['services', 'status', 'source', 'tags'];
         const currentType = typeKeys[tabValue];
-        const valueToMatch = itemToDelete.value || itemToDelete.name || itemToDelete.label;
 
-        return mockCustomers.filter(c => {
+        // Eşleşme için unique değerleri kullanıyoruz
+        let valueToMatch = '';
+        if (tabValue === 0) valueToMatch = itemToDelete.name_tr; // Hizmetler için isim üzerinden
+        else if (tabValue === 1) valueToMatch = itemToDelete.value; // Durumlar için value
+        else if (tabValue === 2) valueToMatch = itemToDelete.value; // Kaynaklar için value
+        else if (tabValue === 3) valueToMatch = itemToDelete.label_tr; // Etiketler için label
+
+        return customers.filter(c => {
             const val = c[currentType];
             if (Array.isArray(val)) return val.includes(valueToMatch);
-            if (typeof val === 'object' && val !== null) return val.value === valueToMatch || val.type === valueToMatch;
             return val === valueToMatch;
         }).length;
-    }, [itemToDelete, tabValue]);
+    }, [itemToDelete, tabValue, customers]);
 
     const handleTabChange = (event, newValue) => setTabValue(newValue);
 
@@ -77,7 +89,13 @@ const CustomerPanel = () => {
             setCurrentItem(item);
         } else {
             setEditMode(false);
-            setCurrentItem({ name: '', label: '', color: '#a259ff', category: '', value: '' });
+            if (tabValue === 0) {
+                setCurrentItem({ name_tr: '', name_en: '', color: '#a259ff', category: '' });
+            } else if (tabValue === 1 || tabValue === 2) {
+                setCurrentItem({ label_tr: '', label_en: '', value: '', color: '#a259ff' });
+            } else {
+                setCurrentItem({ label_tr: '', label_en: '', color: '#a259ff' });
+            }
         }
         setDialogOpen(true);
     };
@@ -96,8 +114,9 @@ const CustomerPanel = () => {
             update(currentItem.id, currentItem);
         } else {
             const newItem = { ...currentItem };
-            if (!newItem.value && newItem.label) {
-                newItem.value = newItem.label.toLowerCase().replace(/ /g, '_');
+            // Otomatik value oluşturma (durum ve kaynak için)
+            if ((tabValue === 1 || tabValue === 2) && !newItem.value && newItem.label_en) {
+                newItem.value = newItem.label_en.toLowerCase().replace(/ /g, '_');
             }
             add(newItem);
         }
@@ -106,7 +125,7 @@ const CustomerPanel = () => {
 
     const confirmDelete = (item) => {
         setItemToDelete(item);
-        setMigrationTarget(''); // Zorunlu seçim için boş başlatıyoruz
+        setMigrationTarget('');
         setDeleteDialogOpen(true);
     };
 
@@ -117,12 +136,6 @@ const CustomerPanel = () => {
             settings.deleteSource,
             settings.deleteTag,
         ];
-
-        // --- BURADA MIGRATION LOGIC ÇALIŞACAK ---
-        // Not: Şu an mockData olduğu için state güncellemesi yapmıyoruz 
-        // ama yapı hazır. API entegrasyonunda burası tetiklenecek.
-        console.log(`Action: ${migrationTarget} for customers using ${itemToDelete.label || itemToDelete.name}`);
-
         deleteMap[tabValue](itemToDelete.id);
         setDeleteDialogOpen(false);
         setItemToDelete(null);
@@ -134,6 +147,17 @@ const CustomerPanel = () => {
         { key: 'source', label: t('customers.source'), icon: <Link size={18} />, data: settings.sources },
         { key: 'tags', label: t('customers.tags'), icon: <TagIcon size={18} />, data: settings.tags },
     ];
+
+    const getDisplayName = (item) => {
+        const lang = i18n.language;
+        // Fallback to name/label if localized versions are missing (Legacy Support)
+        if (tabValue === 0) {
+            const val = lang === 'tr' ? item.name_tr : (item.name_en || item.name_tr);
+            return val || item.name || '-';
+        }
+        const val = lang === 'tr' ? item.label_tr : (item.label_en || item.label_tr);
+        return val || item.label || '-';
+    };
 
     return (
         <Box sx={{ animation: 'fadeIn 0.5s ease', p: 3 }}>
@@ -176,8 +200,10 @@ const CustomerPanel = () => {
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                                         {item.color && <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: item.color, boxShadow: `0 0 8px ${alpha(item.color, 0.4)}` }} />}
                                         <Box>
-                                            <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>{item.name || item.label}</Typography>
-                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>{item.category || item.value}</Typography>
+                                            <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>{getDisplayName(item)}</Typography>
+                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+                                                {item.category || item.value || (i18n.language === 'tr' ? item.label_en || item.name_en : item.label_tr || item.name_tr)}
+                                            </Typography>
                                         </Box>
                                     </Box>
                                     <Box sx={{ display: 'flex', gap: 0.5 }}>
@@ -201,12 +227,12 @@ const CustomerPanel = () => {
                     <Box sx={{ p: 1, bgcolor: alpha(theme.palette.error.main, 0.1), borderRadius: '12px', color: 'error.main', display: 'flex' }}>
                         <AlertTriangle size={24} />
                     </Box>
-                    {t('common.delete')} - {itemToDelete?.label || itemToDelete?.name}
+                    {t('common.delete')} - {itemToDelete && getDisplayName(itemToDelete)}
                 </DialogTitle>
                 <DialogContent>
                     <Stack spacing={3} sx={{ mt: 1 }}>
                         <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-                            {t('customers.delete_confirm_text', { name: itemToDelete?.label || itemToDelete?.name })}
+                            {t('customers.delete_confirm_text', { name: itemToDelete && getDisplayName(itemToDelete) })}
                         </Typography>
 
                         {usageCount > 0 ? (
@@ -233,14 +259,13 @@ const CustomerPanel = () => {
                                     >
                                         <MenuItem value="" disabled><em>{t('common.select')}</em></MenuItem>
                                         <MenuItem value="clear">{t('customers.clear_and_leave_empty')}</MenuItem>
-                                        {/* Mevcut diğer seçeneklere aktar */}
                                         {tabsContent[tabValue].data
                                             .filter(i => i.id !== itemToDelete?.id)
                                             .map(i => (
                                                 <MenuItem key={i.id} value={i.id}>
                                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                         <ArrowRight size={14} />
-                                                        {t('customers.migrate_to')}: {i.label || i.name}
+                                                        {t('customers.migrate_to')}: {getDisplayName(i)}
                                                     </Box>
                                                 </MenuItem>
                                             ))
@@ -271,13 +296,42 @@ const CustomerPanel = () => {
                 </DialogActions>
             </Dialog>
 
-            {/* Add/Edit Dialog (Same as before but combined) */}
-            <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} PaperProps={{ sx: { borderRadius: '24px', width: '100%', maxWidth: 400 } }}>
-                <DialogTitle sx={{ fontWeight: 900, px: 3, pt: 3 }}>{editMode ? t('common.edit') : t('common.add_new')}</DialogTitle>
-                <DialogContent sx={{ px: 3, pb: 3 }}>
+            {/* Add/Edit Dialog */}
+            <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} PaperProps={{ sx: { borderRadius: '24px', width: '100%', maxWidth: 450 } }}>
+                <DialogTitle sx={{ fontWeight: 900, px: 3, pt: 3 }}>
+                    {editMode ? t('common.edit') : t('common.add_new')}
+                </DialogTitle>
+                <DialogContent sx={{ px: 3, pb: 2 }}>
                     <Stack spacing={3} sx={{ mt: 1 }}>
-                        <TextField fullWidth label={tabValue === 0 ? t('common.name') : t('common.label')} value={tabValue === 0 ? currentItem?.name : currentItem?.label} onChange={(e) => setCurrentItem({ ...currentItem, [tabValue === 0 ? 'name' : 'label']: e.target.value })} />
+                        {/* TR Name */}
+                        <TextField
+                            fullWidth
+                            label={tabValue === 0 ? "Hizmet İsmi (TR)" : tabValue === 1 ? "Durum İsmi (TR)" : tabValue === 2 ? "Kaynak İsmi (TR)" : "Etiket İsmi (TR)"}
+                            value={tabValue === 0 ? currentItem?.name_tr : currentItem?.label_tr}
+                            onChange={(e) => setCurrentItem({ ...currentItem, [tabValue === 0 ? 'name_tr' : 'label_tr']: e.target.value })}
+                            InputProps={{ startAdornment: <Languages size={18} style={{ marginRight: 8, opacity: 0.5 }} /> }}
+                        />
+                        {/* EN Name */}
+                        <TextField
+                            fullWidth
+                            label={tabValue === 0 ? "Hizmet İsmi (EN)" : tabValue === 1 ? "Durum İsmi (EN)" : tabValue === 2 ? "Kaynak İsmi (EN)" : "Etiket İsmi (EN)"}
+                            value={tabValue === 0 ? currentItem?.name_en : currentItem?.label_en}
+                            onChange={(e) => setCurrentItem({ ...currentItem, [tabValue === 0 ? 'name_en' : 'label_en']: e.target.value })}
+                            InputProps={{ startAdornment: <Languages size={18} style={{ marginRight: 8, opacity: 0.5 }} /> }}
+                        />
+
                         {tabValue === 0 && <TextField fullWidth label={t('customers.category')} value={currentItem?.category} onChange={(e) => setCurrentItem({ ...currentItem, category: e.target.value })} />}
+                        {(tabValue === 1 || tabValue === 2) && (
+                            <TextField
+                                fullWidth
+                                label="System Value (ID)"
+                                placeholder="e.g. facebook_ads"
+                                value={currentItem?.value}
+                                onChange={(e) => setCurrentItem({ ...currentItem, value: e.target.value })}
+                                helperText="Sistem arka planda bu değeri kullanır. Boş bırakırsanız EN isminden oluşur."
+                            />
+                        )}
+
                         <Box>
                             <Typography variant="caption" sx={{ fontWeight: 800, mb: 1, display: 'block' }}>{t('customers.select_color')}</Typography>
                             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>

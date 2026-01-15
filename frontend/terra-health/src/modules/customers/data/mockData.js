@@ -1,4 +1,4 @@
-// Mock data for customers
+// Mock data for customers - Multi-language compatible with TR/EN stores
 export const mockCustomers = [
     {
         id: 1,
@@ -8,7 +8,7 @@ export const mockCustomers = [
         phone: '+90 532 123 4567',
         source: 'google_ads',
         status: 'active',
-        services: ['Saç Ekimi'],
+        services: ['Saç Ekimi'], // stored in TR as master, translated on fly
         tags: ['VIP']
     },
     {
@@ -81,9 +81,9 @@ export const mockCustomers = [
         id: 8,
         registrationDate: '2024-02-03',
         country: 'AE',
-        name: 'عبدالله المنصouri',
+        name: 'عبدالله المنصوري',
         phone: '+971 50 123 4567',
-        source: 'tiktok_ads',
+        source: 'manual',
         status: 'pending',
         services: ['Saç Ekimi'],
         tags: ['VIP']

@@ -5,16 +5,26 @@ import { mockCustomers } from '../data/mockData';
 export const useCustomerStore = create(
     persist(
         (set, get) => ({
-            customers: mockCustomers, // İlk kurulumda temel veriler
+            customers: mockCustomers,
 
-            // Eğer localStorage'da veri varsa, mock verilerindeki yeni alanları (tags gibi) 
-            // mevcut verilere enjekte eden bir metod (Sadece geliştirme/demo için yararlı)
+            // Geliştirme aşamasında mock verilerle güncel kalmak için
             syncWithMockData: () => {
                 const currentCustomers = get().customers;
-                const merged = currentCustomers.map(cc => {
-                    const mock = mockCustomers.find(m => m.id === cc.id);
-                    if (mock && !cc.tags) return { ...cc, tags: mock.tags };
-                    return cc;
+                const merged = mockCustomers.map(mock => {
+                    const existing = currentCustomers.find(c => c.id === mock.id);
+                    if (existing) {
+                        // Eğer mevcut veride eksiklik varsa veya yapı değiştiyse (geliştirme amaçlı zorla güncelleme)
+                        // Sadece isim ve telefon gibi 'gerçek' kullanıcı verilerini koruyup, 
+                        // ayar bazlı alanları mock verisinden güncelleyebiliriz.
+                        return {
+                            ...existing,
+                            services: mock.services,
+                            tags: mock.tags,
+                            status: mock.status,
+                            source: mock.source
+                        };
+                    }
+                    return mock;
                 });
                 set({ customers: merged });
             },
@@ -23,7 +33,7 @@ export const useCustomerStore = create(
                 const customerWithId = {
                     ...newCustomer,
                     id: Date.now(),
-                    registrationDate: new Date().toISOString() // Standard ISO format
+                    registrationDate: new Date().toISOString()
                 };
                 set((state) => ({
                     customers: [customerWithId, ...state.customers]
@@ -42,7 +52,6 @@ export const useCustomerStore = create(
                 }));
             },
 
-            // Migration logic for settings (Sizin istediğiniz toplu güncelleme alanı)
             migrateField: (type, oldValue, newValue) => {
                 set((state) => ({
                     customers: state.customers.map(c => {

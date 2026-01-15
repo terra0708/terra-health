@@ -108,6 +108,7 @@
         "title": "Customer Management",
         "add_customer": "Add New Customer",
         "edit_customer": "Edit Customer",
+        "customer_details": "Customer Details",
         "form_subtitle": "Create a new record by entering customer information.",
         "total_customers": "TOTAL CUSTOMERS",
         "active_customers": "ACTIVE CUSTOMERS",
