@@ -148,6 +148,7 @@ const CustomersPage = () => {
         setDetailsOpen(true);
     };
 
+
     const onDelete = (id) => {
         deleteCustomer(id);
         setSnackbar({ open: true, message: t('common.success_delete'), severity: 'success' });

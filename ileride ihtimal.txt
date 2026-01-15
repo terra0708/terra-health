@@ -77,3 +77,13 @@ Mesajları veritabanına kaydetme, medya dosyalarını yönetme gibi işleri oto
 
 Evolution API sana WhatsApp Web’i değil, WhatsApp’ın kendisini API olarak verir.
 Yani CRM içinde kendi chat arayüzünü yazarsın. Embed yok, iframe yok.
+
+
+
+5 - Mesajlar Mailler
+
+Dosya Yönetimi:
+WhatsApp üzerinden gönderilen resim ve PDF'ler, müşterinin dosya klasörüne (Files tab) otomatik olarak kaydedilip "Gönderilen Belgeler" etiketiyle işaretlenebilir.
+
+Mesaj Şablonları (Templates):
+Sık kullanılan mesajlar (randevu hatırlatma, hoş geldin mesajı vb.) için bir şablon sistemi kurulabilir. Kullanıcı tek tıkla hazır metni yükleyebilir.
