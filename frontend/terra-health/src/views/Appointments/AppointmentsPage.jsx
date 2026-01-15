@@ -58,15 +58,19 @@ const AppointmentsPage = () => {
     }, [appointments, selectedDoctorId]);
 
     // --- HANDLERS ---
-    const handleDateClick = (arg) => {
-        // Create new appointment at clicked time
-        const start = arg.date;
-        const end = new Date(start);
-        end.setMinutes(end.getMinutes() + 30); // Default 30 mins
+    const handleSelect = (selectionInfo) => {
+        // Create new appointment at selected range
+        const start = selectionInfo.start;
+        const end = selectionInfo.end;
+
+        // FullCalendar selection might return midnight-to-midnight for day view, but for timeGrid it returns time range.
+        // If it's allDay, we might want to set specific hours?
+        // But usually timeGrid selection is precise.
 
         setSelectedAppointment({
             start: start.toISOString(),
-            end: end.toISOString()
+            end: end.toISOString(),
+            doctorId: selectedDoctorId // Pre-select current doctor
         });
         setDrawerOpen(true);
     };
@@ -157,8 +161,9 @@ const AppointmentsPage = () => {
                 {selectedDoctorId ? (
                     <AppointmentCalendar
                         events={calendarEvents}
-                        onDateClick={handleDateClick}
+                        onSelect={handleSelect}
                         onEventClick={handleEventClick}
+                        clearSelection={!drawerOpen}
                     />
                 ) : (
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
@@ -174,6 +179,8 @@ const AppointmentsPage = () => {
                 onDelete={handleDelete}
                 appointment={selectedAppointment}
                 doctor={selectedDoctor}
+                doctors={doctors}
+                onDoctorChange={setSelectedDoctorId}
                 t={t}
             />
 

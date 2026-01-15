@@ -58,7 +58,8 @@
         "confirm_termination": "Confirm Termination",
         "change_language": "Change Language",
         "dark_mode": "Dark Mode",
-        "light_mode": "Light Mode"
+        "light_mode": "Light Mode",
+        "new": "NEW"
     },
     "menu": {
         "dashboard": "Dashboard",
@@ -195,7 +196,9 @@
         "new_appointment": "New Appointment",
         "edit_appointment": "Edit Appointment",
         "select_doctor_msg": "Please select a doctor to view the calendar.",
+        "active_view": "Active View",
         "guest_patient": "Guest Patient / Manual Entry",
+        "doctor": "Doctor",
         "conflict_error": "There is another appointment in the selected time range!"
     },
     "permissions": {

@@ -10,16 +10,24 @@ import { useTranslation } from 'react-i18next';
 
 const fieldStyles = {
     '& .MuiOutlinedInput-root': { borderRadius: '12px' },
-    '& .MuiInputLabel-root': { fontWeight: 600 }
+    '& .MuiInputLabel-root': {
+        fontWeight: 800,
+        color: 'text.primary',
+        opacity: 1,
+        fontSize: '0.9rem'
+    }
 };
 
-export const AppointmentDrawer = ({ open, onClose, onSave, onDelete, appointment, doctor }) => {
+import { Autocomplete } from '@mui/material';
+
+export const AppointmentDrawer = ({ open, onClose, onSave, onDelete, appointment, doctor, doctors = [], onDoctorChange }) => {
     const theme = useTheme();
     const { t, i18n } = useTranslation();
     const { customers } = useCustomerStore();
 
     // Initial State
     const [formData, setFormData] = useState({
+        doctorId: '',
         patientId: '',
         patientName: '', // Fallback for manual entry or display
         start: '',
@@ -37,6 +45,7 @@ export const AppointmentDrawer = ({ open, onClose, onSave, onDelete, appointment
             const endDate = new Date(appointment.end);
 
             setFormData({
+                doctorId: appointment.doctorId || doctor?.id || '',
                 patientId: appointment.patientId || '',
                 patientName: appointment.patientName || '',
                 start: startDate.toISOString().split('T')[0],
@@ -57,6 +66,7 @@ export const AppointmentDrawer = ({ open, onClose, onSave, onDelete, appointment
             const timeString = now.toTimeString().slice(0, 5);
 
             setFormData({
+                doctorId: doctor?.id || '',
                 patientId: '',
                 patientName: '',
                 start: nowString,
@@ -68,20 +78,17 @@ export const AppointmentDrawer = ({ open, onClose, onSave, onDelete, appointment
                 notes: ''
             });
         }
-    }, [open, appointment]);
+    }, [open, appointment, doctor]);
 
     const handleSave = () => {
         const startDateTime = new Date(`${formData.start}T${formData.startTime}`);
-        const endDateTime = new Date(`${formData.end}T${formData.endTime || formData.startTime}`); // Fallback if user cleared end time
-
-        // Basic Logic: if end time < start time, assume next day? No, just validation usually.
-        // For simplicity let's accept as is.
+        const endDateTime = new Date(`${formData.end}T${formData.endTime || formData.startTime}`);
 
         const customer = customers.find(c => c.id === formData.patientId);
 
         const payload = {
             ...appointment, // ID if exists
-            doctorId: doctor?.id,
+            doctorId: formData.doctorId,
             patientId: formData.patientId,
             patientName: customer ? customer.name : formData.patientName,
             start: startDateTime.toISOString(),
@@ -110,37 +117,90 @@ export const AppointmentDrawer = ({ open, onClose, onSave, onDelete, appointment
             </Box>
 
             <Box sx={{ p: 3, overflowY: 'auto', maxHeight: 'calc(100vh - 140px)' }}>
+                {/* DOCTOR SELECTION */}
+                <Box sx={{ mb: 3 }}>
+                    <Autocomplete
+                        options={doctors}
+                        getOptionLabel={(option) => option.name || ''}
+                        value={doctors.find(d => d.id === formData.doctorId) || null}
+                        onChange={(_, newValue) => {
+                            const newId = newValue ? newValue.id : '';
+                            setFormData({ ...formData, doctorId: newId });
+                            if (onDoctorChange) onDoctorChange(newId);
+                        }}
+                        renderInput={(params) => (
+                            <TextField
+                                {...params}
+                                label={t('appointments.doctor', 'Doctor')}
+                                sx={fieldStyles}
+                                InputLabelProps={{ shrink: true }}
+                            />
+                        )}
+                        renderOption={(props, option) => (
+                            <Box component="li" {...props} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                <Box sx={{
+                                    width: 32, height: 32, borderRadius: '50%',
+                                    bgcolor: alpha(theme.palette.primary.main, 0.1),
+                                    color: theme.palette.primary.main,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    fontWeight: 700, fontSize: '0.8rem'
+                                }}>
+                                    {option.name.charAt(0)}
+                                </Box>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>{option.name}</Typography>
+                            </Box>
+                        )}
+                    />
+                </Box>
+
                 {/* PATIENT SELECTION */}
                 <Box sx={{ mb: 3 }}>
-                    <TextField
-                        select
-                        fullWidth
-                        label={t('customers.customer')}
-                        value={formData.patientId}
-                        onChange={(e) => {
-                            const pid = e.target.value;
-                            const cust = customers.find(c => c.id === pid);
-                            setFormData({ ...formData, patientId: pid, patientName: cust?.name || '' });
+                    <Autocomplete
+                        options={customers}
+                        getOptionLabel={(option) => option.name || ''}
+                        value={customers.find(c => c.id === formData.patientId) || null}
+                        onChange={(_, newValue) => {
+                            setFormData({
+                                ...formData,
+                                patientId: newValue ? newValue.id : '',
+                                patientName: newValue ? newValue.name : ''
+                            });
                         }}
-                        sx={fieldStyles}
-                        InputProps={{ startAdornment: <User size={18} style={{ marginRight: 8, opacity: 0.7 }} /> }}
-                    >
-                        <MenuItem value=""><em>{t('common.select')}</em></MenuItem>
-                        {customers.map(c => (
-                            <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
-                        ))}
-                    </TextField>
-                    {/* Fallback Name Input if ID not selected (Optional, but kept for mock consistency) */}
-                    {!formData.patientId && (
-                        <TextField
-                            fullWidth
-                            label={t('appointments.guest_patient')}
-                            placeholder={t('common.name')}
-                            value={formData.patientName}
-                            onChange={(e) => setFormData({ ...formData, patientName: e.target.value })}
-                            sx={{ mt: 2, ...fieldStyles }}
-                        />
-                    )}
+                        renderInput={(params) => (
+                            <TextField
+                                {...params}
+                                label={t('customers.customer')}
+                                sx={fieldStyles}
+                                InputProps={{
+                                    ...params.InputProps,
+                                    startAdornment: (
+                                        <>
+                                            <User size={18} style={{ marginRight: 8, opacity: 0.7 }} />
+                                            {params.InputProps.startAdornment}
+                                        </>
+                                    )
+                                }}
+                                InputLabelProps={{ shrink: true }}
+                            />
+                        )}
+                        renderOption={(props, option) => (
+                            <Box component="li" {...props} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                <Box sx={{
+                                    width: 32, height: 32, borderRadius: '50%',
+                                    bgcolor: alpha(theme.palette.secondary.main, 0.1),
+                                    color: theme.palette.secondary.main,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    fontWeight: 700, fontSize: '0.8rem'
+                                }}>
+                                    {option.name.charAt(0)}
+                                </Box>
+                                <Box>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>{option.name}</Typography>
+                                    {option.phone && <Typography variant="caption" color="text.secondary">{option.phone}</Typography>}
+                                </Box>
+                            </Box>
+                        )}
+                    />
                 </Box>
 
                 {/* DATE TIME */}
@@ -165,6 +225,10 @@ export const AppointmentDrawer = ({ open, onClose, onSave, onDelete, appointment
                             onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
                             sx={fieldStyles}
                             InputLabelProps={{ shrink: true }}
+                            inputProps={{ lang: i18n.language.startsWith('tr') ? 'tr-TR' : 'en-US' }}
+                            helperText={!i18n.language.startsWith('tr') && formData.startTime ?
+                                new Date(`2000-01-01T${formData.startTime}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+                                : ''}
                         />
                     </Grid>
                     <Grid item xs={6}>
@@ -176,6 +240,10 @@ export const AppointmentDrawer = ({ open, onClose, onSave, onDelete, appointment
                             onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
                             sx={fieldStyles}
                             InputLabelProps={{ shrink: true }}
+                            inputProps={{ lang: i18n.language.startsWith('tr') ? 'tr-TR' : 'en-US' }}
+                            helperText={!i18n.language.startsWith('tr') && formData.endTime ?
+                                new Date(`2000-01-01T${formData.endTime}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+                                : ''}
                         />
                     </Grid>
                 </Grid>
@@ -190,6 +258,7 @@ export const AppointmentDrawer = ({ open, onClose, onSave, onDelete, appointment
                             value={formData.type}
                             onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                             sx={fieldStyles}
+                            InputLabelProps={{ shrink: true }}
                         >
                             {APPOINTMENT_TYPES.map(type => (
                                 <MenuItem key={type.id} value={type.id}>
@@ -209,6 +278,7 @@ export const AppointmentDrawer = ({ open, onClose, onSave, onDelete, appointment
                             value={formData.status}
                             onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                             sx={fieldStyles}
+                            InputLabelProps={{ shrink: true }}
                         >
                             {APPOINTMENT_STATUSES.map(status => (
                                 <MenuItem key={status.id} value={status.id}>
@@ -228,6 +298,7 @@ export const AppointmentDrawer = ({ open, onClose, onSave, onDelete, appointment
                     value={formData.notes}
                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                     sx={fieldStyles}
+                    InputLabelProps={{ shrink: true }}
                     InputProps={{ startAdornment: <FileText size={18} style={{ marginRight: 8, marginTop: 4, opacity: 0.7 }} /> }}
                 />
             </Box>

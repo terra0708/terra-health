@@ -8,7 +8,7 @@ import { Box, useTheme, Typography, alpha } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { APPOINTMENT_TYPES, APPOINTMENT_STATUSES } from '../data/mockData';
 
-export const AppointmentCalendar = ({ events, onDateClick, onEventClick }) => {
+export const AppointmentCalendar = ({ events, onDateClick, onEventClick, onSelect, clearSelection }) => {
     const { t, i18n } = useTranslation();
     const theme = useTheme();
     const calendarRef = useRef(null);
@@ -20,15 +20,63 @@ export const AppointmentCalendar = ({ events, onDateClick, onEventClick }) => {
         }
     }, [events]);
 
+    // Handle external unselect request
+    useEffect(() => {
+        if (clearSelection && calendarRef.current) {
+            calendarRef.current.getApi().unselect();
+        }
+    }, [clearSelection]);
+
+    const handleSelect = (selectInfo) => {
+        if (onSelect) {
+            onSelect({
+                start: selectInfo.start,
+                end: selectInfo.end,
+                allDay: selectInfo.allDay,
+                view: selectInfo.view
+            });
+        }
+    };
+
     const renderEventContent = (eventInfo) => {
-        const { event } = eventInfo;
+        const { event, isMirror } = eventInfo;
+
+        // --- SELECTION MIRROR (DRAGGING) ---
+        if (isMirror) {
+            return (
+                <Box sx={{
+                    width: '100%',
+                    height: '100%',
+                    bgcolor: alpha(theme.palette.primary.main, 0.08),
+                    border: `2px dashed ${theme.palette.primary.main}`,
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    animation: 'selection-anim 1.5s infinite ease-in-out',
+                    boxShadow: `0 0 10px ${alpha(theme.palette.primary.main, 0.2)}`
+                }}>
+                    <Typography variant="subtitle2" sx={{
+                        color: theme.palette.primary.main,
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        fontSize: '0.75rem'
+                    }}>
+                        {t('common.new', 'NEW')}
+                    </Typography>
+                </Box>
+            );
+        }
+
+        // --- NORMAL EVENTS ---
         const typeId = event.extendedProps.type;
         const statusId = event.extendedProps.status;
 
         const typeDef = APPOINTMENT_TYPES.find(t => t.id === typeId) || APPOINTMENT_TYPES[0];
         const statusDef = APPOINTMENT_STATUSES.find(s => s.id === statusId);
 
-        const typeLabel = i18n.language === 'tr' ? typeDef.label_tr : typeDef.label_en;
+        const typeLabel = i18n.language.startsWith('tr') ? typeDef.label_tr : typeDef.label_en;
 
         return (
             <Box sx={{
@@ -60,6 +108,12 @@ export const AppointmentCalendar = ({ events, onDateClick, onEventClick }) => {
             '& .fc': {
                 fontFamily: 'inherit'
             },
+            '& .fc-toolbar-title': {
+                fontSize: '1.25rem !important',
+                fontWeight: 800,
+                color: theme.palette.text.primary,
+                textTransform: 'capitalize'
+            },
             '& .fc-col-header-cell': {
                 backgroundColor: theme.palette.background.paper, // Match background
                 borderColor: theme.palette.divider
@@ -70,7 +124,7 @@ export const AppointmentCalendar = ({ events, onDateClick, onEventClick }) => {
                 fontWeight: 700,
                 textTransform: 'uppercase',
                 fontSize: '0.75rem',
-                textDecoration: 'none !important' // Remove any links styling
+                textDecoration: 'none !important'
             },
             '& .fc-timegrid-slot-label-cushion': {
                 color: theme.palette.text.secondary,
@@ -121,6 +175,21 @@ export const AppointmentCalendar = ({ events, onDateClick, onEventClick }) => {
                 borderColor: `${theme.palette.primary.main} !important`,
             }
         }}>
+            <style>{`
+                @keyframes selection-anim {
+                    0% { background-color: ${alpha(theme.palette.primary.main, 0.05)}; border-color: ${theme.palette.primary.main}; opacity: 0.8; }
+                    50% { background-color: ${alpha(theme.palette.primary.main, 0.15)}; border-color: ${theme.palette.secondary.main}; opacity: 1; }
+                    100% { background-color: ${alpha(theme.palette.primary.main, 0.05)}; border-color: ${theme.palette.primary.main}; opacity: 0.8; }
+                }
+
+                .fc-highlight {
+                    background-color: ${alpha(theme.palette.primary.main, 0.1)} !important;
+                    border: 2px dashed ${theme.palette.primary.main} !important;
+                    animation: selection-anim 1.5s infinite ease-in-out !important;
+                    z-index: 3 !important;
+                    border-radius: 4px;
+                }
+            `}</style>
             <FullCalendar
                 ref={calendarRef}
                 plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
@@ -131,9 +200,13 @@ export const AppointmentCalendar = ({ events, onDateClick, onEventClick }) => {
                     right: 'dayGridMonth,timeGridWeek,timeGridDay'
                 }}
                 locales={[trLocale]}
-                locale={i18n.language === 'tr' ? 'tr' : 'en'}
+                locale={i18n.language.startsWith('tr') ? 'tr' : 'en'}
                 events={events}
-                dateClick={onDateClick}
+                dateClick={onDateClick ? onDateClick : undefined}
+                select={handleSelect}
+                selectable={true}
+                selectMirror={true}
+                unselectAuto={false} // Preserve highlight when drawer opens
                 eventClick={onEventClick}
                 slotMinTime="08:00:00"
                 slotMaxTime="20:00:00"
@@ -143,6 +216,19 @@ export const AppointmentCalendar = ({ events, onDateClick, onEventClick }) => {
                 expandRows={true}
                 stickyHeaderDates={true}
                 nowIndicator={true}
+                dayHeaderFormat={{ weekday: 'short', day: 'numeric', month: 'numeric' }}
+                slotLabelFormat={{
+                    hour: i18n.language.startsWith('tr') ? '2-digit' : 'numeric',
+                    minute: '2-digit',
+                    hour12: !i18n.language.startsWith('tr'),
+                    meridiem: i18n.language.startsWith('tr') ? false : 'short'
+                }}
+                eventTimeFormat={{
+                    hour: i18n.language.startsWith('tr') ? '2-digit' : 'numeric',
+                    minute: '2-digit',
+                    hour12: !i18n.language.startsWith('tr'),
+                    meridiem: i18n.language.startsWith('tr') ? false : 'short'
+                }}
             />
         </Box>
     );

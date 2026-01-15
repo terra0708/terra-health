@@ -58,7 +58,8 @@
         "confirm_termination": "Çıkışı Onayla",
         "change_language": "Dili Değiştir",
         "dark_mode": "Karanlık Mod",
-        "light_mode": "Aydınlık Mod"
+        "light_mode": "Aydınlık Mod",
+        "new": "YENİ"
     },
     "menu": {
         "dashboard": "Dashboard",
@@ -195,7 +196,9 @@
         "new_appointment": "Yeni Randevu",
         "edit_appointment": "Randevu Düzenle",
         "select_doctor_msg": "Takvimi görüntülemek için lütfen bir doktor seçiniz.",
+        "active_view": "Aktif Görünüm",
         "guest_patient": "Misafir Hasta / Manuel Giriş",
+        "doctor": "Doktor",
         "conflict_error": "Seçilen saat aralığında başka bir randevu bulunmaktadır!"
     },
     "permissions": {

@@ -5,9 +5,35 @@ filtrelemelerde db ullan ama gösterirken jsondan göster.
 bunun için telefon kod, kısaltması, ülke adı, ülke kodu, id ve bayrak linki.
 
 
+2 -Radevu tarih uyumluluğu turkçe ve ingilizcede.
+
+Backend tek format kullanır:
+24 saat, ISO DateTime, mümkünse timezone’lu (UTC veya +03:00).
+2026-01-15T21:00:00+03:00
+
+Dil saati etkilemez.
+Türkçe / İngilizce sadece gösterim formatıdır.
+
+Frontend’de kullanıcı yazmaz, seçer.
+Date picker + time picker.
+String parse yok, pm/am mantığı yok.
+
+Gösterim frontend işi:
+
+TR → 21:00
+EN → 9:00 PM
+
+DB’ye her zaman aynı saat gider.
+Dil değişse bile veri değişmez.
+
+Timezone’u baştan düşün.
+Kaydet → UTC
+Göster → kullanıcının saat dilimi
 
 
-2 - Marketing Email
+
+
+3 - Marketing Email
 
 ticari ileti izni olduğu bilinmelidir.
 
@@ -33,7 +59,7 @@ Bir mail fail olursa sistem durmaz, sadece o alıcı için hata kaydı oluşur.
 
 
 
-3 - Whatsapp
+4  - Whatsapp
 Baileys (Temel Kütüphane)Baileys, 
 Node.js ile yazılmış, WhatsApp Web protokolünü tersine mühendislik (reverse engineering) ile çözen bir kütüphanedir.
 Doğrudan Kodlama: Bir yazılımcıysanız, Baileys'i projenize dahil eder ve tüm mantığı (bağlantı yönetimi, mesaj saklama, QR kod oluşturma) kendiniz yazarsınız.
