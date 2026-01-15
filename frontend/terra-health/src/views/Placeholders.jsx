@@ -29,3 +29,5 @@ export const Ads = () => <PlaceholderView titleKey="ads" />;
 export const Statistics = () => <PlaceholderView titleKey="statistics" />;
 export const Notifications = () => <PlaceholderView titleKey="notifications" />;
 export const Settings = () => <PlaceholderView titleKey="settings" />;
+export const CustomerPanel = () => <PlaceholderView titleKey="customer_panel" />;
+

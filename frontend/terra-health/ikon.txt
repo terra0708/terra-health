@@ -129,3 +129,26 @@ CUSTOM ICON
     stroke="light"
     style="width:250px;height:250px">
 </lord-icon>
+
+
+13 - Müşteri panel
+
+<script src="https://cdn.lordicon.com/lordicon.js"></script>
+<lord-icon
+    src="https://cdn.lordicon.com/hfftmgac.json"
+    trigger="hover"
+    stroke="light"
+    style="width:250px;height:250px">
+</lord-icon>
+
+
+
+14 - sistem ayarları
+
+<script src="https://cdn.lordicon.com/lordicon.js"></script>
+<lord-icon
+    src="https://cdn.lordicon.com/itwlmliw.json"
+    trigger="hover"
+    stroke="light"
+    style="width:250px;height:250px">
+</lord-icon>

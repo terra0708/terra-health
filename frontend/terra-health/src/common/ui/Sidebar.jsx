@@ -1,7 +1,8 @@
+import { useState } from 'react';
 import { styled, useTheme } from '@mui/material/styles';
 import MuiDrawer from '@mui/material/Drawer';
-import { List, ListItem, ListItemButton, ListItemIcon, ListItemText, IconButton, Box, Divider, Typography, useMediaQuery } from '@mui/material';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { List, ListItem, ListItemButton, ListItemIcon, ListItemText, IconButton, Box, Divider, Typography, useMediaQuery, Collapse } from '@mui/material';
+import { ChevronLeft, ChevronRight, X, ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSettingsStore } from '@core';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -77,6 +78,8 @@ const ICON_DATA = {
     users: 'https://cdn.lordicon.com/ntfaoelc.json',
     permissions: 'https://cdn.lordicon.com/ojgowmvw.json',
     settings: 'https://cdn.lordicon.com/eduzjjfi.json',
+    system_settings: 'https://cdn.lordicon.com/itwlmliw.json',
+    customer_panel: 'https://cdn.lordicon.com/hfftmgac.json',
     logo: 'https://cdn.lordicon.com/qlrjanhh.json',
 };
 
@@ -155,6 +158,163 @@ const NavItem = ({ icon, text, open, active, path, onClick }) => {
     );
 };
 
+const DropdownNavItem = ({ icon, text, open, subItems, currentPath, onClick }) => {
+    const theme = useTheme();
+    const navigate = useNavigate();
+    const isAnySubItemActive = subItems.some(item => currentPath === item.path);
+    const [expanded, setExpanded] = useState(isAnySubItemActive);
+
+    const activeColor = theme.palette.mode === 'light' ? '#7c3aed' : '#c084fc';
+    const secondaryColor = isAnySubItemActive ? theme.palette.secondary.main : theme.palette.text.secondary;
+
+    const handleToggle = () => {
+        setExpanded(!expanded);
+    };
+
+    const handleSubItemClick = (path) => {
+        navigate(path);
+        if (onClick) onClick();
+    };
+
+    return (
+        <>
+            <ListItem disablePadding sx={{ display: 'block' }}>
+                <ListItemButton
+                    onClick={handleToggle}
+                    sx={[
+                        {
+                            minHeight: 52,
+                            px: 2.5,
+                            mx: 1.5,
+                            borderRadius: 3,
+                            mb: 0.8,
+                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        },
+                        open ? { justifyContent: 'initial' } : { justifyContent: 'center' },
+                        isAnySubItemActive && {
+                            bgcolor: (theme) =>
+                                theme.palette.mode === 'light'
+                                    ? 'rgba(162, 89, 255, 0.04)'
+                                    : 'rgba(162, 89, 255, 0.12)',
+                            color: activeColor,
+                            '&:hover': {
+                                bgcolor: (theme) => theme.palette.mode === 'light' ? 'rgba(162, 89, 255, 0.08)' : 'rgba(162, 89, 255, 0.18)',
+                            }
+                        }
+                    ]}
+                >
+                    <ListItemIcon
+                        sx={[
+                            {
+                                minWidth: 0,
+                                justifyContent: 'center',
+                            },
+                            open ? { mr: 2.5 } : { mr: 'auto' },
+                        ]}
+                    >
+                        <Box sx={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <lord-icon
+                                src={ICON_DATA[icon]}
+                                trigger={isAnySubItemActive ? 'loop' : 'hover'}
+                                colors={`primary:${isAnySubItemActive ? activeColor : theme.palette.text.secondary},secondary:${secondaryColor}`}
+                                stroke="bold"
+                                style={{ width: '34px', height: '34px' }}
+                            />
+                        </Box>
+                    </ListItemIcon>
+                    <ListItemText
+                        primary={text}
+                        sx={[
+                            open ? { opacity: 1 } : { opacity: 0 },
+                            {
+                                '& .MuiTypography-root': {
+                                    fontWeight: isAnySubItemActive ? 700 : 500,
+                                    fontSize: '0.9rem',
+                                    color: isAnySubItemActive ? activeColor : 'inherit'
+                                }
+                            }
+                        ]}
+                    />
+                    {open && (
+                        <ChevronDown
+                            size={18}
+                            style={{
+                                transition: 'transform 0.3s ease',
+                                transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                                color: theme.palette.text.secondary
+                            }}
+                        />
+                    )}
+                </ListItemButton>
+            </ListItem>
+
+            {open && (
+                <Collapse in={expanded} timeout="auto" unmountOnExit>
+                    <List component="div" disablePadding>
+                        {subItems.map((subItem) => {
+                            const isActive = currentPath === subItem.path;
+                            return (
+                                <ListItem key={subItem.key} disablePadding sx={{ display: 'block' }}>
+                                    <ListItemButton
+                                        onClick={() => handleSubItemClick(subItem.path)}
+                                        sx={{
+                                            minHeight: 44,
+                                            pl: 4,
+                                            pr: 2.5,
+                                            mx: 1.5,
+                                            borderRadius: 3,
+                                            mb: 0.5,
+                                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                            ...(isActive && {
+                                                bgcolor: (theme) =>
+                                                    theme.palette.mode === 'light'
+                                                        ? 'rgba(162, 89, 255, 0.08)'
+                                                        : 'rgba(162, 89, 255, 0.15)',
+                                                color: activeColor,
+                                                '&:hover': {
+                                                    bgcolor: (theme) => theme.palette.mode === 'light' ? 'rgba(162, 89, 255, 0.12)' : 'rgba(162, 89, 255, 0.2)',
+                                                }
+                                            })
+                                        }}
+                                    >
+                                        <ListItemIcon
+                                            sx={{
+                                                minWidth: 0,
+                                                mr: 2,
+                                                justifyContent: 'center',
+                                            }}
+                                        >
+                                            <Box sx={{ width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                <lord-icon
+                                                    src={ICON_DATA[subItem.icon]}
+                                                    trigger={isActive ? 'loop' : 'hover'}
+                                                    colors={`primary:${isActive ? activeColor : theme.palette.text.secondary},secondary:${isActive ? theme.palette.secondary.main : theme.palette.text.secondary}`}
+                                                    stroke="bold"
+                                                    style={{ width: '26px', height: '26px' }}
+                                                />
+                                            </Box>
+                                        </ListItemIcon>
+                                        <ListItemText
+                                            primary={subItem.label}
+                                            sx={{
+                                                '& .MuiTypography-root': {
+                                                    fontWeight: isActive ? 600 : 500,
+                                                    fontSize: '0.85rem',
+                                                    color: isActive ? activeColor : 'inherit'
+                                                }
+                                            }}
+                                        />
+                                    </ListItemButton>
+                                </ListItem>
+                            );
+                        })}
+                    </List>
+                </Collapse>
+            )}
+        </>
+    );
+};
+
 const Sidebar = () => {
     const { t } = useTranslation();
     const theme = useTheme();
@@ -172,10 +332,19 @@ const Sidebar = () => {
         { key: 'ads', icon: 'ads', label: t('menu.ads'), path: '/ads' },
         { key: 'statistics', icon: 'statistics', label: t('menu.statistics'), path: '/statistics' },
         { key: 'notifications', icon: 'notifications', label: t('menu.notifications'), path: '/notifications' },
-        { key: 'users', icon: 'users', label: t('menu.users'), path: '/users' },
-        { key: 'permissions', icon: 'permissions', label: t('menu.permissions'), path: '/permissions' },
-        { key: 'settings', icon: 'settings', label: t('menu.settings'), path: '/settings' },
     ];
+
+    const settingsDropdown = {
+        key: 'settings',
+        icon: 'settings',
+        label: t('menu.settings'),
+        subItems: [
+            { key: 'users', icon: 'users', label: t('menu.users'), path: '/users' },
+            { key: 'permissions', icon: 'permissions', label: t('menu.permissions'), path: '/permissions' },
+            { key: 'system_settings', icon: 'system_settings', label: t('menu.system_settings'), path: '/settings' },
+            { key: 'customer_panel', icon: 'customer_panel', label: t('menu.customer_panel'), path: '/customer-panel' },
+        ]
+    };
 
     const sidebarHeader = (
         <DrawerHeader sx={{
@@ -250,6 +419,16 @@ const Sidebar = () => {
                         onClick={isMobile ? toggleSidebar : undefined}
                     />
                 ))}
+
+                <DropdownNavItem
+                    key={settingsDropdown.key}
+                    icon={settingsDropdown.icon}
+                    text={settingsDropdown.label}
+                    open={isMobile ? true : sidebarOpen}
+                    subItems={settingsDropdown.subItems}
+                    currentPath={location.pathname}
+                    onClick={isMobile ? toggleSidebar : undefined}
+                />
             </List>
 
             <Box sx={{ flexGrow: 1 }} />

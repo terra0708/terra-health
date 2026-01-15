@@ -1,4 +1,4 @@
-﻿{
+{
     "auth": {
         "login_title": "Giriş Yap",
         "email": "E-posta Adresi",
@@ -24,9 +24,7 @@
         "notifications": "Bildirimler",
         "users": "Kullanıcılar",
         "permissions": "Roller & Yetkiler",
-        "settings": "Ayarlar",
-        "system_settings": "Sistem Ayarları",
-        "customer_panel": "Müşteri Panel"
+        "settings": "Ayarlar"
     },
     "common": {
         "profile": "Profil",
@@ -119,8 +117,6 @@
         "country": "Ülke",
         "source": "Kaynak",
         "services": "Hizmetler",
-        "tags": "Etiketler",
-        "services_and_tags": "Hizmetler ve Etiketler",
         "basic_info": "Temel Bilgiler",
         "assignment_info": "Atama Bilgileri",
         "campaign": "Kampanya",
@@ -128,17 +124,6 @@
         "source_ad": "Reklam",
         "source_referral": "Tavsiye",
         "source_website": "Web Sitesi",
-        "panel_subtitle": "Sistemdeki tüm dinamik değerleri (hizmetler, durumlar, kaynaklar ve etiketler) buradan yönetin.",
-        "category": "Kategori",
-        "select_color": "Renk Seçin",
-        "label": "Görünen İsim",
-        "delete_confirm_text": "{{name}} öğesini silmek istediğinizden emin misiniz?",
-        "item_in_use_warning": "Uyarı: Bu seçenek şu anda {{count}} müşteri kaydında kullanılıyor!",
-        "migration_instruction": "Silme işleminden önce bu müşterileri başka bir seçeneğe aktarabilir veya o alanı boş bırakmayı seçebilirsiniz.",
-        "action_to_take": "Yapılacak İşlem",
-        "clear_and_leave_empty": "Müşteri kayıtlarından sil (Boş bırak)",
-        "migrate_to": "Şuraya aktar",
-        "no_usage_safe_to_delete": "Bu seçenek şu an hiçbir müşteride kullanılmıyor. Güvenle silebilirsiniz.",
         "status": {
             "active": "Aktif",
             "pending": "Beklemede",
@@ -148,5 +133,8 @@
         "filter": {
             "all": "Tümü"
         }
+    },
+    "common": {
+        "rows_per_page": "Sayfa başına satır"
     }
 }

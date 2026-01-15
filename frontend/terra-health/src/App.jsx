@@ -5,6 +5,8 @@ import MainLayout from './app/MainLayout';
 import * as Views from './views/Placeholders';
 import UsersPage from './views/Users/UsersPage';
 import PermissionsPage from './views/Users/PermissionsPage';
+import CustomersPage from './views/Customers/CustomersPage';
+import CustomerPanel from './views/Settings/CustomerPanel';
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
@@ -28,13 +30,14 @@ function App() {
       >
         <Route index element={<Views.Dashboard />} />
         <Route path="appointments" element={<Views.Appointments />} />
-        <Route path="customers" element={<Views.Customers />} />
+        <Route path="customers" element={<CustomersPage />} />
         <Route path="ads" element={<Views.Ads />} />
         <Route path="statistics" element={<Views.Statistics />} />
         <Route path="notifications" element={<Views.Notifications />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="permissions" element={<PermissionsPage />} />
         <Route path="settings" element={<Views.Settings />} />
+        <Route path="customer-panel" element={<CustomerPanel />} />
       </Route>
 
       {/* 404 - Tanımsız rotaları login'e yönlendir */}
