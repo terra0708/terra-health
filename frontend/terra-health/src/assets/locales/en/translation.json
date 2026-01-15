@@ -59,7 +59,10 @@
         "search": "Search...",
         "edit": "Edit",
         "delete": "Delete",
-        "rows_per_page": "Rows per page"
+        "rows_per_page": "Rows per page",
+        "success_save": "Successfully saved!",
+        "success_delete": "Successfully deleted!",
+        "error_general": "An error occurred!"
     },
     "users": {
         "title": "User Management",

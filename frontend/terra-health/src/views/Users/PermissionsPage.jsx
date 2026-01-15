@@ -20,7 +20,9 @@ import {
     Tabs,
     Tab,
     useMediaQuery,
-    Pagination
+    Pagination,
+    Snackbar,
+    Alert
 } from '@mui/material';
 import {
     Search,
@@ -37,7 +39,6 @@ import {
 import { useTranslation } from 'react-i18next';
 import {
     PERMISSION_MODULES,
-    MOCK_PACKAGES,
     PermissionCard,
     CreateDrawer,
     usePermissions
@@ -49,6 +50,7 @@ const PermissionsPage = () => {
     const isDark = theme.palette.mode === 'dark';
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const isSmall = useMediaQuery(theme.breakpoints.down('sm'));
+    const [snackbar, setSnackbar] = React.useState({ open: false, message: '', severity: 'success' });
 
     // --- LOGIC HOOK ---
     const {
@@ -69,15 +71,39 @@ const PermissionsPage = () => {
         totalCount,
         page,
         setPage,
-        itemsPerPage
+        itemsPerPage,
+        handleCreate,
+        store
     } = usePermissions();
 
+    if (!selectedItem) return null;
+
     const handleTogglePermission = (permissionId) => {
-        console.log("Toggle permission:", permissionId);
+        store.togglePermissionInPackage(selectedId, permissionId);
+        setSnackbar({ open: true, message: t('common.success_save'), severity: 'success' });
     };
 
     const handleTogglePackageInRole = (packageId) => {
-        console.log("Toggle package in role:", packageId);
+        store.togglePackageInRole(selectedId, packageId);
+        setSnackbar({ open: true, message: t('common.success_save'), severity: 'success' });
+    };
+
+    const handleDelete = () => {
+        if (tabValue === 0) store.deletePackage(selectedId);
+        else store.deleteRole(selectedId);
+        setSnackbar({ open: true, message: t('common.success_delete'), severity: 'success' });
+    };
+
+    const handleUpdate = () => {
+        // Simple update for now if name or description changes in some UI
+        // In this UI we mainly toggle items which auto-saves in zustand
+        setSnackbar({ open: true, message: t('common.success_save'), severity: 'success' });
+        console.log("Update triggered");
+    };
+
+    const onSaveNew = () => {
+        handleCreate();
+        setSnackbar({ open: true, message: t('common.success_save'), severity: 'success' });
     };
 
     return (
@@ -249,6 +275,7 @@ const PermissionsPage = () => {
                                 <Box sx={{ display: 'flex', gap: 1.5, width: isSmall ? '100%' : 'auto' }}>
                                     <Button
                                         fullWidth={isSmall}
+                                        onClick={handleDelete}
                                         variant="outlined" color="error" startIcon={<Trash2 size={18} />}
                                         sx={{ borderRadius: '14px', fontWeight: 700, textTransform: 'none' }}
                                     >
@@ -256,6 +283,7 @@ const PermissionsPage = () => {
                                     </Button>
                                     <Button
                                         fullWidth={isSmall}
+                                        onClick={handleUpdate}
                                         variant="contained" startIcon={<Save size={18} />}
                                         sx={{
                                             borderRadius: '14px', fontWeight: 800, textTransform: 'none', px: 3,
@@ -304,7 +332,7 @@ const PermissionsPage = () => {
                                             <Layers size={20} /> {t('permissions.assigned_packages')}
                                         </Typography>
                                         <Grid container spacing={isSmall ? 1.5 : 2}>
-                                            {MOCK_PACKAGES.map((pkg) => {
+                                            {store.packages.map((pkg) => {
                                                 const isAtanan = selectedItem.packages.includes(pkg.id);
                                                 return (
                                                     <Grid item xs={12} sm={6} key={pkg.id}>
@@ -342,6 +370,7 @@ const PermissionsPage = () => {
             <CreateDrawer
                 open={drawerOpen}
                 onClose={() => setDrawerOpen(false)}
+                onSave={onSaveNew}
                 type={tabValue === 0 ? 'package' : 'role'}
                 formData={formData}
                 setFormData={setFormData}
@@ -349,6 +378,17 @@ const PermissionsPage = () => {
                 t={t}
                 isMobile={isSmall}
             />
+
+            <Snackbar
+                open={snackbar.open}
+                autoHideDuration={3000}
+                onClose={() => setSnackbar({ ...snackbar, open: false })}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            >
+                <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} sx={{ width: '100%', borderRadius: '12px', fontWeight: 600 }}>
+                    {snackbar.message}
+                </Alert>
+            </Snackbar>
 
             <style>{` @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } } `}</style>
         </Box>

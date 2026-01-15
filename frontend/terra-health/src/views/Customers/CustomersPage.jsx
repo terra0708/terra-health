@@ -4,18 +4,19 @@ import {
     TableHead, TableRow, IconButton, Button, TextField,
     Chip, useTheme, alpha, Grid, Tooltip, useMediaQuery, TablePagination,
     Stack, MenuItem, FormControl, InputLabel, Select, OutlinedInput,
-    Badge, Collapse, Divider
+    Badge, Collapse, Divider, Snackbar, Alert
 } from '@mui/material';
 import {
     Search, Edit3, Trash2, UserPlus, Users as UsersIcon, CheckCircle,
     Clock, Calendar, Tag as TagIcon, Filter, Circle, Copy, Link as LinkIcon,
-    ChevronDown, ChevronUp, RotateCcw, Info
+    ChevronDown, ChevronUp, RotateCcw, Info, UserCheck
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { CustomerDrawer, StatCard, CustomerMobileCard, CustomerDetailsDialog } from '../../modules/customers';
 import { useCustomerSettingsStore } from '../../modules/customers/hooks/useCustomerSettingsStore';
 import { useCustomerStore } from '../../modules/customers/hooks/useCustomerStore';
 import { formatLocaleDate, ALL_COUNTRIES } from '../../modules/customers/data/countries';
+import { MOCK_USERS } from '../../modules/users';
 
 const CustomersPage = () => {
     const { t, i18n } = useTranslation();
@@ -23,6 +24,7 @@ const CustomersPage = () => {
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const settings = useCustomerSettingsStore();
     const { customers, deleteCustomer, syncWithMockData } = useCustomerStore();
+    const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
     // Verilerin (etiketler vb.) her zaman mock ve ayarlar ile senkron kalmasını sağla
     React.useEffect(() => {
@@ -138,6 +140,11 @@ const CustomersPage = () => {
     const handleInfo = (customer) => {
         setInfoTarget(customer);
         setDetailsOpen(true);
+    };
+
+    const onDelete = (id) => {
+        deleteCustomer(id);
+        setSnackbar({ open: true, message: t('common.success_delete'), severity: 'success' });
     };
 
     return (
@@ -327,6 +334,7 @@ const CustomersPage = () => {
                                     <TableCell sx={{ fontWeight: 800, fontSize: '0.7rem', color: 'text.secondary', pl: 4 }}>{t('customers.registration_date').toUpperCase()}</TableCell>
                                     <TableCell sx={{ fontWeight: 800, fontSize: '0.7rem', color: 'text.secondary' }}>{t('customers.country').toUpperCase()}</TableCell>
                                     <TableCell sx={{ fontWeight: 800, fontSize: '0.7rem', color: 'text.secondary' }}>{t('customers.customer').toUpperCase()}</TableCell>
+                                    <TableCell sx={{ fontWeight: 800, fontSize: '0.7rem', color: 'text.secondary' }}>{t('customers.consultant').toUpperCase()}</TableCell>
                                     <TableCell sx={{ fontWeight: 800, fontSize: '0.7rem', color: 'text.secondary' }}>{t('customers.phone').toUpperCase()}</TableCell>
                                     <TableCell sx={{ fontWeight: 800, fontSize: '0.7rem', color: 'text.secondary' }}>{t('customers.source').toUpperCase()}</TableCell>
                                     <TableCell sx={{ fontWeight: 800, fontSize: '0.7rem', color: 'text.secondary' }}>{t('common.status').toUpperCase()}</TableCell>
@@ -350,6 +358,14 @@ const CustomersPage = () => {
                                             </Tooltip>
                                         </TableCell>
                                         <TableCell><Typography variant="body2" sx={{ fontWeight: 800 }}>{c.name}</Typography></TableCell>
+                                        <TableCell>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <UserCheck size={14} color={theme.palette.secondary.main} />
+                                                <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                                                    {MOCK_USERS.find(u => u.id === c.consultantId)?.name || '-'}
+                                                </Typography>
+                                            </Box>
+                                        </TableCell>
                                         <TableCell>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                 <Typography variant="body2" sx={{ fontWeight: 700, color: 'primary.main' }}>{c.phone || '-'}</Typography>
@@ -397,7 +413,7 @@ const CustomersPage = () => {
                                             <Stack direction="row" spacing={1} justifyContent="flex-end">
                                                 <IconButton onClick={() => handleInfo(c)} sx={{ bgcolor: alpha(theme.palette.info.main, 0.05), color: 'info.main', borderRadius: '10px' }} size="small"><Info size={16} /></IconButton>
                                                 <IconButton onClick={() => handleEdit(c)} sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05), color: 'primary.main', borderRadius: '10px' }} size="small"><Edit3 size={16} /></IconButton>
-                                                <IconButton onClick={() => deleteCustomer(c.id)} sx={{ bgcolor: alpha(theme.palette.error.main, 0.05), color: 'error.main', borderRadius: '10px' }} size="small"><Trash2 size={16} /></IconButton>
+                                                <IconButton onClick={() => onDelete(c.id)} sx={{ bgcolor: alpha(theme.palette.error.main, 0.05), color: 'error.main', borderRadius: '10px' }} size="small"><Trash2 size={16} /></IconButton>
                                             </Stack>
                                         </TableCell>
                                     </TableRow>
@@ -411,6 +427,18 @@ const CustomersPage = () => {
 
             <CustomerDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} customer={editTarget} t={t} />
             <CustomerDetailsDialog open={detailsOpen} onClose={() => setDetailsOpen(false)} customer={infoTarget} />
+
+            <Snackbar
+                open={snackbar.open}
+                autoHideDuration={3000}
+                onClose={() => setSnackbar({ ...snackbar, open: false })}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            >
+                <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} sx={{ width: '100%', borderRadius: '12px', fontWeight: 600 }}>
+                    {snackbar.message}
+                </Alert>
+            </Snackbar>
+
             <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }`}</style>
         </Box>
     );

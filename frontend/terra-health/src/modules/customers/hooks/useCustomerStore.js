@@ -21,7 +21,8 @@ export const useCustomerStore = create(
                             services: mock.services,
                             tags: mock.tags,
                             status: mock.status,
-                            source: mock.source
+                            source: mock.source,
+                            consultantId: mock.consultantId
                         };
                     }
                     return mock;

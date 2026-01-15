@@ -8,7 +8,8 @@ export const mockCustomers = [
         phone: '+90 532 123 4567',
         source: 'google_ads',
         status: 'active',
-        services: ['Saç Ekimi'], // stored in TR as master, translated on fly
+        consultantId: 4, // Selin Yıldız
+        services: ['Saç Ekimi'],
         tags: ['VIP']
     },
     {
@@ -19,6 +20,7 @@ export const mockCustomers = [
         phone: '+49 151 234 5678',
         source: 'manual',
         status: 'pending',
+        consultantId: 6, // Buse Aydın
         services: ['Diş Tedavisi'],
         tags: ['Tekrar Eden Müşteri']
     },
@@ -30,6 +32,7 @@ export const mockCustomers = [
         phone: '+966 50 123 4567',
         source: 'facebook_ads',
         status: 'active',
+        consultantId: 4,
         services: ['Rinoplasti'],
         tags: ['VIP']
     },
@@ -41,6 +44,7 @@ export const mockCustomers = [
         phone: '+44 7700 900123',
         source: 'referral',
         status: 'completed',
+        consultantId: 6,
         services: ['Saç Ekimi'],
         tags: ['Eski Müşteri']
     },
@@ -52,6 +56,7 @@ export const mockCustomers = [
         phone: '+33 6 12 34 56 78',
         source: 'instagram_ads',
         status: 'active',
+        consultantId: 4,
         services: ['Liposuction'],
         tags: ['VIP']
     },
@@ -63,6 +68,7 @@ export const mockCustomers = [
         phone: '+964 770 123 4567',
         source: 'manual',
         status: 'cancelled',
+        consultantId: 6,
         services: ['Diş Tedavisi'],
         tags: ['Sıkıntılı Kayıt']
     },
@@ -74,6 +80,7 @@ export const mockCustomers = [
         phone: '+31 6 12345678',
         source: 'google_ads',
         status: 'active',
+        consultantId: 4,
         services: ['Diş Tedavisi'],
         tags: ['Tekrar Eden Müşteri']
     },
@@ -85,6 +92,7 @@ export const mockCustomers = [
         phone: '+971 50 123 4567',
         source: 'manual',
         status: 'pending',
+        consultantId: 6,
         services: ['Saç Ekimi'],
         tags: ['VIP']
     }

@@ -1,7 +1,9 @@
 import { useState, useMemo } from 'react';
-import { MOCK_PACKAGES, MOCK_ROLES, COLORS } from '../data/mockData';
+import { usePermissionStore } from './usePermissionStore';
+import { COLORS } from '../data/mockData';
 
 export const usePermissions = () => {
+    const store = usePermissionStore();
     const [tabValue, setTabValue] = useState(0); // 0: Yetki Paketleri, 1: Roller
     const [selectedId, setSelectedId] = useState(1);
     const [searchTerm, setSearchTerm] = useState('');
@@ -14,14 +16,14 @@ export const usePermissions = () => {
     const itemsPerPage = 8;
 
     const selectedItem = useMemo(() => {
-        return tabValue === 0
-            ? MOCK_PACKAGES.find(p => p.id === selectedId) || MOCK_PACKAGES[0]
-            : MOCK_ROLES.find(r => r.id === selectedId) || MOCK_ROLES[0];
-    }, [tabValue, selectedId]);
+        const list = tabValue === 0 ? store.packages : store.roles;
+        return list.find(i => i.id === selectedId) || list[0] || null;
+    }, [tabValue, selectedId, store.packages, store.roles]);
 
     const handleTabChange = (event, newValue) => {
         setTabValue(newValue);
-        setSelectedId(1);
+        const nextList = newValue === 0 ? store.packages : store.roles;
+        setSelectedId(nextList[0]?.id || null);
         setShowDetail(false);
         setPage(0);
     };
@@ -34,13 +36,23 @@ export const usePermissions = () => {
     };
 
     const allFilteredItems = useMemo(() => {
-        const items = tabValue === 0 ? MOCK_PACKAGES : MOCK_ROLES;
+        const items = tabValue === 0 ? store.packages : store.roles;
         return items.filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase()));
-    }, [tabValue, searchTerm]);
+    }, [tabValue, searchTerm, store.packages, store.roles]);
 
     const paginatedItems = useMemo(() => {
         return allFilteredItems.slice(page * itemsPerPage, (page + 1) * itemsPerPage);
     }, [allFilteredItems, page]);
+
+    const handleCreate = () => {
+        if (tabValue === 0) {
+            store.addPackage(formData);
+        } else {
+            store.addRole(formData);
+        }
+        setDrawerOpen(false);
+        setFormData({ name: '', description: '', color: COLORS[1] });
+    };
 
     return {
         tabValue,
@@ -60,6 +72,8 @@ export const usePermissions = () => {
         totalCount: allFilteredItems.length,
         page,
         setPage,
-        itemsPerPage
+        itemsPerPage,
+        handleCreate,
+        store // Pass full store for direct actions in UI
     };
 };

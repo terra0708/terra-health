@@ -59,7 +59,10 @@
         "search": "Ara...",
         "edit": "Düzenle",
         "delete": "Sil",
-        "rows_per_page": "Sayfa başına satır"
+        "rows_per_page": "Sayfa başına satır",
+        "success_save": "Başarıyla kaydedildi!",
+        "success_delete": "Başarıyla silindi!",
+        "error_general": "Bir hata oluştu!"
     },
     "users": {
         "title": "Kullanıcı Yönetimi",

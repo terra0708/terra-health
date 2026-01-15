@@ -10,6 +10,8 @@ import {
 import { useCustomerSettingsStore } from '../hooks/useCustomerSettingsStore';
 import { formatLocaleDate, ALL_COUNTRIES } from '../data/countries';
 import { useTranslation } from 'react-i18next';
+import { MOCK_USERS } from '../../users';
+import { UserCheck } from 'lucide-react';
 
 export const CustomerDetailsDialog = ({ open, onClose, customer }) => {
     const theme = useTheme();
@@ -20,6 +22,7 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }) => {
     if (!customer) return null;
 
     const country = ALL_COUNTRIES.find(c => c.code === customer.country);
+    const consultant = MOCK_USERS.find(u => u.id === customer.consultantId);
 
     const getLocalizedLabel = (def, type) => {
         if (!def) return '-';
@@ -101,6 +104,12 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }) => {
                                 color={settings.sources.find(s => s.value === customer.source)?.color}
                             />
                             <InfoRow icon={Calendar} label={t('customers.registration_date')} value={formatLocaleDate(customer.registrationDate, lang)} />
+                            <InfoRow
+                                icon={UserCheck}
+                                label={t('customers.consultant')}
+                                value={consultant?.name || '-'}
+                                color={theme.palette.secondary.main}
+                            />
                         </Grid>
                     </Grid>
 

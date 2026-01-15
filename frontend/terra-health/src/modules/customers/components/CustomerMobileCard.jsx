@@ -1,9 +1,10 @@
 import React from 'react';
 import { Box, Paper, Typography, Chip, IconButton, alpha, Stack } from '@mui/material';
-import { Edit3, Trash2, Calendar, Phone, Tag, Info } from 'lucide-react';
+import { Edit3, Trash2, Calendar, Phone, Tag, Info, UserCheck } from 'lucide-react';
 import { countryFlags } from '../data/mockData';
 import { useCustomerSettingsStore } from '../hooks/useCustomerSettingsStore';
 import { useTranslation } from 'react-i18next';
+import { MOCK_USERS } from '../../users';
 
 export const CustomerMobileCard = ({ customer, t, theme, onEdit, onInfo, getStatusChip }) => {
     const { i18n } = useTranslation();
@@ -68,6 +69,12 @@ export const CustomerMobileCard = ({ customer, t, theme, onEdit, onInfo, getStat
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Tag size={14} strokeWidth={2.5} color={theme.palette.text.secondary} />
                     <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>{getSourceLabel(customer.source)}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <UserCheck size={14} strokeWidth={2.5} color={theme.palette.text.secondary} />
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                        {MOCK_USERS.find(u => u.id === customer.consultantId)?.name || '-'}
+                    </Typography>
                 </Box>
             </Stack>
 

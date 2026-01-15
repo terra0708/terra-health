@@ -3,7 +3,7 @@ import { Box, Typography, IconButton, Button, TextField, Drawer, Divider, alpha 
 import { X } from 'lucide-react';
 import { COLORS } from '../data/mockData';
 
-export const CreateDrawer = ({ open, onClose, type, formData, setFormData, theme, t, isMobile }) => {
+export const CreateDrawer = ({ open, onClose, onSave, type, formData, setFormData, theme, t, isMobile }) => {
     const isDark = theme.palette.mode === 'dark';
     return (
         <Drawer
@@ -56,7 +56,9 @@ export const CreateDrawer = ({ open, onClose, type, formData, setFormData, theme
                 </Box>
                 <Box sx={{ p: 3, borderTop: `1px solid ${theme.palette.divider}`, display: 'flex', gap: 2, bgcolor: 'background.paper' }}>
                     <Button fullWidth variant="outlined" onClick={(e) => { onClose(); e.currentTarget.blur(); }} sx={{ borderRadius: '12px', py: 1.5, color: 'text.primary', borderColor: 'divider' }}>{t('common.cancel')}</Button>
-                    <Button fullWidth variant="contained" sx={{ borderRadius: '12px', py: 1.5, fontWeight: 800, background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)` }}>{t('permissions.add_package')}</Button>
+                    <Button fullWidth variant="contained" onClick={onSave} sx={{ borderRadius: '12px', py: 1.5, fontWeight: 800, background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)` }}>
+                        {type === 'package' ? t('permissions.add_package') : t('permissions.add_role')}
+                    </Button>
                 </Box>
             </Box>
         </Drawer>

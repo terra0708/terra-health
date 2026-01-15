@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import {
     Drawer, Box, Typography, TextField, Button, IconButton, Stack,
     MenuItem, FormControl, InputLabel, Select, OutlinedInput, Chip,
-    alpha, useTheme, Divider
+    alpha, useTheme, Divider, Snackbar, Alert
 } from '@mui/material';
 import { X, Save, User, Phone } from 'lucide-react';
 import { useCustomerSettingsStore } from '../hooks/useCustomerSettingsStore';
 import { useCustomerStore } from '../hooks/useCustomerStore';
 import { ALL_COUNTRIES } from '../data/countries';
 import { useTranslation } from 'react-i18next';
+import { MOCK_USERS } from '../../users';
 
 export const CustomerDrawer = ({ open, onClose, customer, t }) => {
     const theme = useTheme();
@@ -23,9 +24,12 @@ export const CustomerDrawer = ({ open, onClose, customer, t }) => {
         country: 'TR',
         source: '',
         status: 'active',
+        consultantId: '',
         services: [],
         tags: []
     });
+
+    const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
     useEffect(() => {
         if (customer) {
@@ -35,6 +39,7 @@ export const CustomerDrawer = ({ open, onClose, customer, t }) => {
                 name: '', phone: '', country: 'TR',
                 source: settings.sources[0]?.value || '',
                 status: settings.statuses[0]?.value || 'active',
+                consultantId: '',
                 services: [], tags: []
             });
         }
@@ -50,7 +55,8 @@ export const CustomerDrawer = ({ open, onClose, customer, t }) => {
         } else {
             addCustomer(formData);
         }
-        onClose();
+        setSnackbar({ open: true, message: t('common.success_save'), severity: 'success' });
+        setTimeout(() => onClose(), 800);
     };
 
     const getLocalizedLabel = (item) => {
@@ -135,6 +141,15 @@ export const CustomerDrawer = ({ open, onClose, customer, t }) => {
                                     ))}
                                 </TextField>
                             </Box>
+                            <TextField
+                                select fullWidth label={t('customers.consultant')}
+                                value={formData.consultantId} onChange={handleChange('consultantId')}
+                            >
+                                <MenuItem value=""><em>Hemen Atama Yapma</em></MenuItem>
+                                {MOCK_USERS.filter(u => u.role === 'consultant').map((u) => (
+                                    <MenuItem key={u.id} value={u.id}>{u.name}</MenuItem>
+                                ))}
+                            </TextField>
                         </Stack>
                     </Box>
 
@@ -193,6 +208,17 @@ export const CustomerDrawer = ({ open, onClose, customer, t }) => {
                     </Button>
                 </Stack>
             </Box>
+
+            <Snackbar
+                open={snackbar.open}
+                autoHideDuration={3000}
+                onClose={() => setSnackbar({ ...snackbar, open: false })}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            >
+                <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} sx={{ width: '100%', borderRadius: '12px', fontWeight: 600 }}>
+                    {snackbar.message}
+                </Alert>
+            </Snackbar>
         </Drawer>
     );
 };

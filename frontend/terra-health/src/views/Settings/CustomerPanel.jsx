@@ -20,7 +20,8 @@ import {
     Alert,
     Select,
     FormControl,
-    InputLabel
+    InputLabel,
+    Snackbar
 } from '@mui/material';
 import {
     Plus,
@@ -45,7 +46,8 @@ const CustomerPanel = () => {
     // UI States
     const [tabValue, setTabValue] = useState(0);
     const [dialogOpen, setDialogOpen] = useState(false);
-    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [deleteConfirm, setDeleteConfirm] = useState({ open: false, item: null });
+    const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
     // Data States
     const [editMode, setEditMode] = useState(false);
@@ -121,15 +123,17 @@ const CustomerPanel = () => {
             add(newItem);
         }
         setDialogOpen(false);
+        setSnackbar({ open: true, message: t('common.success_save'), severity: 'success' });
     };
 
     const confirmDelete = (item) => {
         setItemToDelete(item);
         setMigrationTarget('');
-        setDeleteDialogOpen(true);
+        setDeleteConfirm({ open: true, item: item }); // Use setDeleteConfirm here
     };
 
     const executeDelete = () => {
+        if (!deleteConfirm.item) return;
         const deleteMap = [
             settings.deleteService,
             settings.deleteStatus,
@@ -137,8 +141,9 @@ const CustomerPanel = () => {
             settings.deleteTag,
         ];
         deleteMap[tabValue](itemToDelete.id);
-        setDeleteDialogOpen(false);
+        setDeleteConfirm({ open: false, item: null });
         setItemToDelete(null);
+        setSnackbar({ open: true, message: t('common.success_delete'), severity: 'success' });
     };
 
     const tabsContent = [
@@ -219,8 +224,8 @@ const CustomerPanel = () => {
 
             {/* Smart Delete Dialog */}
             <Dialog
-                open={deleteDialogOpen}
-                onClose={() => setDeleteDialogOpen(false)}
+                open={deleteConfirm.open}
+                onClose={() => setDeleteConfirm({ open: false, item: null })}
                 PaperProps={{ sx: { borderRadius: '24px', maxWidth: 450 } }}
             >
                 <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, fontWeight: 900, pt: 3 }}>
@@ -281,7 +286,7 @@ const CustomerPanel = () => {
                     </Stack>
                 </DialogContent>
                 <DialogActions sx={{ p: 3, pt: 0 }}>
-                    <Button onClick={() => setDeleteDialogOpen(false)} sx={{ fontWeight: 700, color: 'text.secondary' }}>
+                    <Button onClick={() => setDeleteConfirm({ open: false, item: null })} sx={{ fontWeight: 700, color: 'text.secondary' }}>
                         {t('common.cancel')}
                     </Button>
                     <Button
