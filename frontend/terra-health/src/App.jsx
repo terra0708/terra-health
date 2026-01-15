@@ -7,6 +7,7 @@ import UsersPage from './views/Users/UsersPage';
 import PermissionsPage from './views/Users/PermissionsPage';
 import CustomersPage from './views/Customers/CustomersPage';
 import CustomerPanel from './views/Settings/CustomerPanel';
+import AppointmentsPage from './views/Appointments/AppointmentsPage';
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
@@ -29,7 +30,7 @@ function App() {
         }
       >
         <Route index element={<Views.Dashboard />} />
-        <Route path="appointments" element={<Views.Appointments />} />
+        <Route path="appointments" element={<AppointmentsPage />} />
         <Route path="customers" element={<CustomersPage />} />
         <Route path="ads" element={<Views.Ads />} />
         <Route path="statistics" element={<Views.Statistics />} />

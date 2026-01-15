@@ -1,0 +1,53 @@
+1 - ÜLKELER
+bütün ülke bilgileri çekilmeli. buunn için db ve json dosyası beraber kullanılmalı.
+Json ile önyüzde göstermek kolay ama filtreleme yaparken analiz yaparken bu zor olur bu nedenle,
+filtrelemelerde db ullan ama gösterirken jsondan göster.
+bunun için telefon kod, kısaltması, ülke adı, ülke kodu, id ve bayrak linki.
+
+
+
+
+2 - Marketing Email
+
+ticari ileti izni olduğu bilinmelidir.
+
+veritabanından sadece marketing_consent = true olan adresleri seçer. 
+Her alıcı için ayrı bir kayıt oluşturulur. 
+Bunun sebebi çok önemlidir: her mailin durumu ayrı ayrı takip edilmelidir. 
+Kimine gitti, kimine gitmedi, kim unsubscribe oldu — bunların hepsi tek tek bilinmelidir. 
+BCC ile toplu mail bu yüzden yasaktır.
+
+Gmail SMTP gibi servisler bu iş için uygun değildir. 
+Profesyonel bir mail servisinden, kendi domain’inle gönderim yapılır. 
+Amazon SES bu iş için idealdir çünkü ucuzdur, ölçeklenir ve Spring Boot ile sorunsuz çalışır. 
+Bu servis sadece maili taşır; kime, ne zaman, kaç kere gönderileceğine CRM karar verir
+
+unsubscribe mekanizmasıdır. Her marketing mailinin içinde tek tıklık bir çıkış linki bulunur. 
+Bu link login istemez, form sormaz. 
+Tıklandığında ilgili e-posta adresinin marketing izni kapatılır ve sistem bunu kalıcı olarak kaydeder. 
+Bundan sonra o adrese marketing maili asla gönderilmez. Bu hem hukuki zorunluluktur hem de spam itibarını korur.
+
+Marketing maili HTTP request içinde gönderilmez. Kullanıcı “gönder” butonuna bastığında backend sadece işi başlatır. 
+Asıl mail gönderme işlemi arka planda çalışan bir worker tarafından yapılır. Bunun sebebi hem performans hem de hata yönetimidir. 
+Bir mail fail olursa sistem durmaz, sadece o alıcı için hata kaydı oluşur.
+
+
+
+3 - Whatsapp
+Baileys (Temel Kütüphane)Baileys, 
+Node.js ile yazılmış, WhatsApp Web protokolünü tersine mühendislik (reverse engineering) ile çözen bir kütüphanedir.
+Doğrudan Kodlama: Bir yazılımcıysanız, Baileys'i projenize dahil eder ve tüm mantığı (bağlantı yönetimi, mesaj saklama, QR kod oluşturma) kendiniz yazarsınız.
+Performans: Çok hafiftir ve kaynak tüketimi düşüktür çünkü arada ek bir katman yoktur.
+Esneklik: Tamamen kontrol sizdedir. Ancak WhatsApp protokolü değiştiğinde kodunuzu sürekli güncellemeniz gerekir.Kullanım Amacı: 
+Kendi WhatsApp botunuzu veya özel uygulamanızı sıfırdan geliştirmek istiyorsanız kullanılır.
+
+Evolution API (Hazır Yönetim Paneli ve API)Evolution API, arka planda Baileys (ve bazen alternatiflerini) kullanan, 
+ancak üzerine gelişmiş bir yönetim katmanı eklenmiş bir sistemdir.Tak-Çalıştır: Bir Docker komutuyla kurarsınız. Size hazır bir REST API sunar. 
+PHP, Python, C# gibi dillerle, kütüphaneye girmeden sadece HTTP istekleri (GET/POST) atarak WhatsApp'ı yönetirsiniz.Yönetim Paneli: Kendi içinde bir arayüzü vardır. 
+Birden fazla WhatsApp numarasını (instance) tek bir panelden yönetebilir, 
+QR kodları oradan okutabilirsiniz.Webhook Desteği: Mesaj geldiğinde sizin belirlediğiniz bir URL'ye (CRM'inize) anında bilgi gönderir. 
+Bu özelliği Baileys'te sizin kodlamanız gerekir, Evolution'da ise hazırdır.Ekstra Özellikler: Typebot, Chatwoot gibi araçlarla doğrudan entegrasyonu vardır. 
+Mesajları veritabanına kaydetme, medya dosyalarını yönetme gibi işleri otomatik yapar.
+
+Evolution API sana WhatsApp Web’i değil, WhatsApp’ın kendisini API olarak verir.
+Yani CRM içinde kendi chat arayüzünü yazarsın. Embed yok, iframe yok.

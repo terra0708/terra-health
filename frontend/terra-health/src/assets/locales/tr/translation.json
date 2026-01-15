@@ -39,6 +39,12 @@
         "password": "Şifre",
         "set_password": "Şifre Belirle",
         "password_confirm": "Şifre Tekrar",
+        "date": "Tarih",
+        "start_time": "Başlangıç Saati",
+        "end_time": "Bitiş Saati",
+        "type": "Tür",
+        "notes": "Notlar",
+        "select": "Seçiniz",
         "user_info": "Kullanıcı Bilgileri",
         "copy": "Kopyala",
         "copied": "Kopyalandı",
@@ -49,7 +55,10 @@
         "termination_dialog_desc": "Bu işlem personeli silmez, sadece işten çıkış tarihini işleyerek pasife alır.",
         "exit_date": "İşten Çıkış Tarihi",
         "exit_reason": "Çıkış Nedeni",
-        "confirm_termination": "Çıkışı Onayla"
+        "confirm_termination": "Çıkışı Onayla",
+        "change_language": "Dili Değiştir",
+        "dark_mode": "Karanlık Mod",
+        "light_mode": "Aydınlık Mod"
     },
     "menu": {
         "dashboard": "Dashboard",
@@ -93,6 +102,7 @@
         "consultant": "Danışman",
         "customer": "Müşteri",
         "country": "Ülke",
+        "city": "Şehir",
         "phone": "Telefon Numarası",
         "source": "Kaynak",
         "services": "Hizmetler",
@@ -180,6 +190,13 @@
             "note_placeholder": "Not ekle...",
             "click_to_select": "Dosya Seçmek İçin Tıklayın"
         }
+    },
+    "appointments": {
+        "new_appointment": "Yeni Randevu",
+        "edit_appointment": "Randevu Düzenle",
+        "select_doctor_msg": "Takvimi görüntülemek için lütfen bir doktor seçiniz.",
+        "guest_patient": "Misafir Hasta / Manuel Giriş",
+        "conflict_error": "Seçilen saat aralığında başka bir randevu bulunmaktadır!"
     },
     "permissions": {
         "title": "Roller & Yetkiler",

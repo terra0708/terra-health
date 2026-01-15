@@ -39,6 +39,12 @@
         "password": "Password",
         "set_password": "Set Password",
         "password_confirm": "Confirm Password",
+        "date": "Date",
+        "start_time": "Start Time",
+        "end_time": "End Time",
+        "type": "Type",
+        "notes": "Notes",
+        "select": "Select",
         "user_info": "User Information",
         "copy": "Copy",
         "copied": "Copied",
@@ -49,7 +55,10 @@
         "termination_dialog_desc": "This action does not delete the staff member, but sets the exit date and deactivates them.",
         "exit_date": "Exit Date",
         "exit_reason": "Exit Reason",
-        "confirm_termination": "Confirm Termination"
+        "confirm_termination": "Confirm Termination",
+        "change_language": "Change Language",
+        "dark_mode": "Dark Mode",
+        "light_mode": "Light Mode"
     },
     "menu": {
         "dashboard": "Dashboard",
@@ -93,6 +102,7 @@
         "consultant": "Consultant",
         "customer": "Customer",
         "country": "Country",
+        "city": "City",
         "phone": "Phone Number",
         "source": "Source",
         "services": "Services",
@@ -180,6 +190,13 @@
             "note_placeholder": "Add note...",
             "click_to_select": "Click to Select Files"
         }
+    },
+    "appointments": {
+        "new_appointment": "New Appointment",
+        "edit_appointment": "Edit Appointment",
+        "select_doctor_msg": "Please select a doctor to view the calendar.",
+        "guest_patient": "Guest Patient / Manual Entry",
+        "conflict_error": "There is another appointment in the selected time range!"
     },
     "permissions": {
         "title": "Roles & Permissions",
