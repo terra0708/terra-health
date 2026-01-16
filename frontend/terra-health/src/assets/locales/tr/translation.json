@@ -72,6 +72,7 @@
         "permissions": "Roller & Yetkiler",
         "settings": "Ayarlar",
         "customer_panel": "Müşteri Parametreleri",
+        "service_categories": "Hizmet Kategorileri",
         "system_settings": "Sistem Ayarları"
     },
     "users": {
@@ -118,7 +119,9 @@
         "source_website": "Web Sitesi",
         "panel_subtitle": "Sistem genelindeki müşteri parametrelerini, hizmetleri ve kategorileri buradan yönetebilirsiniz.",
         "category": "Kategori",
+        "service_category": "Hizmet Kategorisi",
         "select_color": "Renk Seçin",
+        "custom_color_picker": "Özel Renk Seçici",
         "save_changes": "Değişiklikleri Kaydet",
         "system_value_helper": "Sistem arka planda bu değeri kullanır. Boş bırakırsanız EN isminden otomatik oluşur.",
         "delete_confirm_text": "{{name}} öğesini silmek istediğinize emin misiniz?",
@@ -157,6 +160,10 @@
         "no_notes": "Henüz not eklenmemiş.",
         "duplicate_phone": "Bu telefon numarası zaten kayıtlı!",
         "duplicate_email": "Bu e-posta adresi zaten kayıtlı!",
+        "new_reminder": "Yeni Hatırlatıcı",
+        "set_reminder": "Hatırlatıcıyı Kaydet",
+        "scheduled_reminders": "Hatırlatıcı Listesi",
+        "no_reminders": "Henüz hatırlatıcı eklenmemiş",
         "drag_drop_text": "Dosyaları buraya sürükleyin veya seçmek için tıklayın",
         "drop_to_upload": "Yüklemek için bırakın",
         "payments": "Ödemeler",

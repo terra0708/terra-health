@@ -62,8 +62,10 @@ export const CustomerDrawer = ({ open, onClose, customer, t }) => {
     const [duplicates, setDuplicates] = useState({ phone: false, email: false });
     const [newNote, setNewNote] = useState('');
     const [newReminderNote, setNewReminderNote] = useState('');
+    const [newReminderTime, setNewReminderTime] = useState('');
     const [newPaymentNote, setNewPaymentNote] = useState('');
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+    const [editingNote, setEditingNote] = useState({ id: null, text: '', type: null, reminderTime: '' }); // type: 'personal', 'reminder', 'payment'
 
     useEffect(() => {
         if (customer) {
@@ -180,10 +182,34 @@ export const CustomerDrawer = ({ open, onClose, customer, t }) => {
     };
 
     const handleAddReminderNote = () => {
-        if (!newReminderNote.trim()) return;
-        const note = { id: Date.now(), text: newReminderNote, date: new Date().toLocaleString() };
-        setFormData({ ...formData, reminder: { ...formData.reminder, notes: [note, ...formData.reminder.notes] } });
+        if (!newReminderNote.trim() || !newReminderTime) return;
+        const note = {
+            id: Date.now(),
+            text: newReminderNote,
+            reminderTime: newReminderTime,
+            date: new Date().toLocaleString(),
+            completed: false
+        };
+        setFormData({
+            ...formData,
+            reminder: {
+                ...formData.reminder,
+                active: true,
+                notes: [note, ...formData.reminder.notes]
+            }
+        });
         setNewReminderNote('');
+        setNewReminderTime('');
+    };
+
+    const toggleReminderStatus = (noteId) => {
+        setFormData({
+            ...formData,
+            reminder: {
+                ...formData.reminder,
+                notes: formData.reminder.notes.map(n => n.id === noteId ? { ...n, completed: !n.completed } : n)
+            }
+        });
     };
 
     const handleAddPaymentNote = () => {
@@ -191,6 +217,35 @@ export const CustomerDrawer = ({ open, onClose, customer, t }) => {
         const note = { id: Date.now(), text: newPaymentNote, date: new Date().toLocaleString() };
         setFormData({ ...formData, payments: [note, ...formData.payments] });
         setNewPaymentNote('');
+    };
+
+    const handleSaveEdit = () => {
+        if (!editingNote.text.trim()) return;
+
+        const updateNoteInArray = (arr) => arr.map(n => n.id === editingNote.id ? {
+            ...n,
+            text: editingNote.text,
+            reminderTime: editingNote.type === 'reminder' ? editingNote.reminderTime : n.reminderTime,
+            date: new Date().toLocaleString() + ' (Düzenlendi)'
+        } : n);
+
+        if (editingNote.type === 'personal') {
+            setFormData({ ...formData, notes: updateNoteInArray(formData.notes) });
+        } else if (editingNote.type === 'reminder') {
+            setFormData({ ...formData, reminder: { ...formData.reminder, notes: updateNoteInArray(formData.reminder.notes) } });
+        } else if (editingNote.type === 'payment') {
+            setFormData({ ...formData, payments: updateNoteInArray(formData.payments) });
+        }
+
+        setEditingNote({ id: null, text: '', type: null, reminderTime: '' });
+    };
+
+    const handleStartEdit = (note, type) => {
+        setEditingNote({ id: note.id, text: note.text, type, reminderTime: note.reminderTime || '' });
+    };
+
+    const handleCancelEdit = () => {
+        setEditingNote({ id: null, text: '', type: null, reminderTime: '' });
     };
 
     const handleSave = () => {
@@ -331,12 +386,31 @@ export const CustomerDrawer = ({ open, onClose, customer, t }) => {
                                         </Stack>
                                         <Stack spacing={1.5}>
                                             {formData.notes.map((note) => (
-                                                <Paper key={note.id} elevation={0} sx={{ p: 2, borderRadius: '16px', bgcolor: alpha(theme.palette.primary.main, 0.02), border: `1px solid ${theme.palette.divider}`, display: 'flex', justifyContent: 'space-between' }}>
-                                                    <Box sx={{ flex: 1, pr: 1 }}>
-                                                        <Typography variant="body2" sx={{ fontWeight: 700, wordBreak: 'break-word' }}>{note.text}</Typography>
-                                                        <Typography variant="caption" sx={{ display: 'block', mt: 0.5 }}>{note.date}</Typography>
-                                                    </Box>
-                                                    <IconButton size="small" color="error" onClick={() => setFormData({ ...formData, notes: formData.notes.filter(n => n.id !== note.id) })} sx={{ alignSelf: 'flex-start' }}><Trash2 size={14} /></IconButton>
+                                                <Paper key={note.id} elevation={0} sx={{ p: 2, borderRadius: '16px', bgcolor: alpha(theme.palette.primary.main, 0.02), border: `1px solid ${theme.palette.divider}` }}>
+                                                    {editingNote.id === note.id && editingNote.type === 'personal' ? (
+                                                        <Box>
+                                                            <TextField
+                                                                fullWidth multiline rows={2} size="small" value={editingNote.text}
+                                                                onChange={(e) => setEditingNote({ ...editingNote, text: e.target.value })}
+                                                                sx={{ mb: 1, '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
+                                                            />
+                                                            <Stack direction="row" spacing={1} justifyContent="flex-end">
+                                                                <Button size="small" variant="outlined" onClick={handleCancelEdit} sx={{ borderRadius: '8px' }}>{t('common.cancel')}</Button>
+                                                                <Button size="small" variant="contained" onClick={handleSaveEdit} sx={{ borderRadius: '8px' }}>{t('common.save')}</Button>
+                                                            </Stack>
+                                                        </Box>
+                                                    ) : (
+                                                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                            <Box sx={{ flex: 1, pr: 1 }}>
+                                                                <Typography variant="body2" sx={{ fontWeight: 700, wordBreak: 'break-word' }}>{note.text}</Typography>
+                                                                <Typography variant="caption" sx={{ display: 'block', mt: 0.5 }}>{note.date}</Typography>
+                                                            </Box>
+                                                            <Stack direction="row" spacing={0.5} sx={{ alignSelf: 'flex-start' }}>
+                                                                <IconButton size="small" color="primary" onClick={() => handleStartEdit(note, 'personal')}><Edit2 size={14} /></IconButton>
+                                                                <IconButton size="small" color="error" onClick={() => setFormData({ ...formData, notes: formData.notes.filter(n => n.id !== note.id) })}><Trash2 size={14} /></IconButton>
+                                                            </Stack>
+                                                        </Box>
+                                                    )}
                                                 </Paper>
                                             ))}
                                         </Stack>
@@ -355,7 +429,38 @@ export const CustomerDrawer = ({ open, onClose, customer, t }) => {
                                     </TextField>
                                     <FormControl fullWidth>
                                         <InputLabel>{t('customers.services')}</InputLabel>
-                                        <Select multiple value={formData.services} onChange={handleChange('services')} input={<OutlinedInput label={t('customers.services')} sx={{ borderRadius: '16px' }} />} renderValue={(selected) => <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>{selected.map((val) => <Chip key={val} label={val} size="small" />)}</Box>}>
+                                        <Select
+                                            multiple
+                                            value={formData.services}
+                                            onChange={handleChange('services')}
+                                            input={<OutlinedInput label={t('customers.services')} sx={{ borderRadius: '16px' }} />}
+                                            renderValue={(selected) => (
+                                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                                    {selected.map((val) => (
+                                                        <Chip
+                                                            key={val}
+                                                            label={val}
+                                                            size="small"
+                                                            onDelete={(e) => {
+                                                                e.stopPropagation();
+                                                                setFormData(prev => ({
+                                                                    ...prev,
+                                                                    services: prev.services.filter(s => s !== val)
+                                                                }));
+                                                            }}
+                                                            onMouseDown={(e) => e.stopPropagation()}
+                                                            sx={{
+                                                                borderRadius: '8px',
+                                                                '& .MuiChip-deleteIcon': {
+                                                                    color: 'error.main',
+                                                                    '&:hover': { color: 'error.dark' }
+                                                                }
+                                                            }}
+                                                        />
+                                                    ))}
+                                                </Box>
+                                            )}
+                                        >
                                             {settings.services.map((s) => <MenuItem key={s.id} value={s.name_tr}>{getLocalizedLabel(s)}</MenuItem>)}
                                         </Select>
                                     </FormControl>
@@ -371,19 +476,161 @@ export const CustomerDrawer = ({ open, onClose, customer, t }) => {
                             )}
 
                             {tabValue === 2 && (
-                                <Stack spacing={4}>
-                                    <Paper elevation={0} sx={{ p: { xs: 3, sm: 4 }, borderRadius: '24px', bgcolor: alpha(theme.palette.warning.main, 0.04) }}>
-                                        <FormControlLabel control={<Switch checked={formData.reminder.active} onChange={handleReminderChange('active')} color="warning" />} label={<Typography variant="body1" sx={{ fontWeight: 700 }}>{t('customers.reminder_active')}</Typography>} />
-                                        <TextField fullWidth type="datetime-local" label={t('customers.reminder_time')} value={formData.reminder.time} onChange={handleReminderChange('time')} InputLabelProps={{ shrink: true }} disabled={!formData.reminder.active} sx={{ mt: 3 }} />
-                                    </Paper>
-                                    <Box>
-                                        <Typography variant="subtitle2" sx={{ fontWeight: 900, mb: 2 }}>{t('customers.reminder_note')}</Typography>
-                                        {formData.reminder.notes.map((note) => (
-                                            <Paper key={note.id} elevation={0} sx={{ p: 2, mb: 1.5, borderRadius: '16px', border: `1px solid ${theme.palette.divider}` }}>
-                                                <Typography variant="body2">{note.text}</Typography>
-                                                <Typography variant="caption">{note.date}</Typography>
-                                            </Paper>
-                                        ))}
+                                <Stack spacing={3}>
+                                    {/* Create Reminder Section - Simplified */}
+                                    <Box sx={{
+                                        p: 3,
+                                        borderRadius: '24px',
+                                        bgcolor: theme.palette.mode === 'dark' ? alpha('#fff', 0.02) : alpha(theme.palette.warning.main, 0.03),
+                                        border: `1px solid ${theme.palette.divider}`,
+                                        position: 'relative'
+                                    }}>
+                                        <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 2, display: 'flex', alignItems: 'center', gap: 1, color: 'warning.main' }}>
+                                            <Bell size={18} />
+                                            {t('customers.new_reminder') || 'Yeni Hatırlatıcı'}
+                                        </Typography>
+
+                                        <Stack spacing={2}>
+                                            <TextField
+                                                fullWidth
+                                                type="datetime-local"
+                                                label={t('customers.reminder_time')}
+                                                value={newReminderTime}
+                                                onChange={(e) => setNewReminderTime(e.target.value)}
+                                                InputLabelProps={{ shrink: true }}
+                                                size="small"
+                                                sx={{
+                                                    '& .MuiInputBase-root': { borderRadius: '12px' },
+                                                    '& .MuiInputBase-input::-webkit-calendar-picker-indicator': {
+                                                        filter: theme.palette.mode === 'dark' ? 'invert(1)' : 'none',
+                                                        cursor: 'pointer'
+                                                    }
+                                                }}
+                                                inputProps={{
+                                                    style: { colorScheme: theme.palette.mode }
+                                                }}
+                                            />
+                                            <TextField
+                                                fullWidth
+                                                multiline
+                                                rows={2}
+                                                placeholder={t('customers.reminder_note')}
+                                                value={newReminderNote}
+                                                onChange={(e) => setNewReminderNote(e.target.value)}
+                                                size="small"
+                                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
+                                            />
+                                            <Button
+                                                variant="contained"
+                                                color="warning"
+                                                disableElevation
+                                                startIcon={<Plus size={18} />}
+                                                onClick={handleAddReminderNote}
+                                                disabled={!newReminderNote.trim() || !newReminderTime}
+                                                sx={{ borderRadius: '12px', py: 1, fontWeight: 800, textTransform: 'none' }}
+                                            >
+                                                {t('customers.set_reminder') || 'Hatırlatıcı Kaydet'}
+                                            </Button>
+                                        </Stack>
+                                    </Box>
+
+                                    {/* Reminders List - Refined */}
+                                    <Box sx={{ mt: 1 }}>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                                            <Typography variant="overline" sx={{ fontWeight: 900, color: 'text.secondary', letterSpacing: '0.1em' }}>
+                                                {t('customers.scheduled_reminders') || 'Hatırlatıcı Listesi'}
+                                            </Typography>
+                                            <Chip
+                                                label={formData.reminder.notes.length}
+                                                size="small"
+                                                sx={{ height: 20, fontSize: '0.7rem', fontWeight: 900, bgcolor: 'divider' }}
+                                            />
+                                        </Box>
+
+                                        <Stack spacing={1.5}>
+                                            {formData.reminder.notes.length > 0 ? formData.reminder.notes.map((note) => (
+                                                <Paper
+                                                    key={note.id}
+                                                    elevation={0}
+                                                    sx={{
+                                                        p: 2,
+                                                        borderRadius: '16px',
+                                                        border: `1px solid ${theme.palette.divider}`,
+                                                        bgcolor: note.completed ? alpha(theme.palette.action.disabledBackground, 0.1) : 'background.paper',
+                                                        opacity: note.completed ? 0.6 : 1,
+                                                        transition: 'all 0.2s ease',
+                                                        '&:hover': { bgcolor: alpha(theme.palette.warning.main, 0.02) }
+                                                    }}
+                                                >
+                                                    {editingNote.id === note.id && editingNote.type === 'reminder' ? (
+                                                        <Box>
+                                                            <TextField
+                                                                fullWidth type="datetime-local" size="small" value={editingNote.reminderTime}
+                                                                onChange={(e) => setEditingNote({ ...editingNote, reminderTime: e.target.value })}
+                                                                sx={{ mb: 1.5, '& .MuiOutlinedInput-root': { borderRadius: '10px' } }}
+                                                                inputProps={{ style: { colorScheme: theme.palette.mode } }}
+                                                            />
+                                                            <TextField
+                                                                fullWidth multiline rows={2} size="small" value={editingNote.text}
+                                                                onChange={(e) => setEditingNote({ ...editingNote, text: e.target.value })}
+                                                                sx={{ mb: 1.5, '& .MuiOutlinedInput-root': { borderRadius: '10px' } }}
+                                                            />
+                                                            <Stack direction="row" spacing={1} justifyContent="flex-end">
+                                                                <Button size="small" color="inherit" onClick={handleCancelEdit} sx={{ textTransform: 'none', fontWeight: 700 }}>{t('common.cancel')}</Button>
+                                                                <Button size="small" variant="contained" color="warning" onClick={handleSaveEdit} sx={{ textTransform: 'none', fontWeight: 700, borderRadius: '8px' }}>{t('common.save')}</Button>
+                                                            </Stack>
+                                                        </Box>
+                                                    ) : (
+                                                        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+                                                            <IconButton
+                                                                size="small"
+                                                                onClick={() => toggleReminderStatus(note.id)}
+                                                                sx={{
+                                                                    width: 24, height: 24,
+                                                                    color: note.completed ? 'success.main' : 'text.disabled',
+                                                                    border: `1px solid ${note.completed ? theme.palette.success.main : theme.palette.divider}`,
+                                                                    bgcolor: note.completed ? alpha(theme.palette.success.main, 0.1) : 'transparent',
+                                                                    '&:hover': { bgcolor: alpha(theme.palette.success.main, 0.2) }
+                                                                }}
+                                                            >
+                                                                <Check size={14} />
+                                                            </IconButton>
+
+                                                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                                                                    <Typography variant="caption" sx={{ fontWeight: 800, color: 'warning.main', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                                        <Calendar size={12} />
+                                                                        {note.reminderTime ? new Date(note.reminderTime).toLocaleString(i18n.language, {
+                                                                            day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                                                                        }) : note.date}
+                                                                    </Typography>
+                                                                    <Stack direction="row">
+                                                                        <IconButton size="small" onClick={() => handleStartEdit(note, 'reminder')} sx={{ opacity: 0.5, '&:hover': { opacity: 1 } }}><Edit2 size={12} /></IconButton>
+                                                                        <IconButton size="small" color="error" onClick={() => setFormData({ ...formData, reminder: { ...formData.reminder, notes: formData.reminder.notes.filter(n => n.id !== note.id) } })} sx={{ opacity: 0.5, '&:hover': { opacity: 1 } }}><Trash2 size={12} /></IconButton>
+                                                                    </Stack>
+                                                                </Box>
+                                                                <Typography
+                                                                    variant="body2"
+                                                                    sx={{
+                                                                        fontWeight: 600,
+                                                                        textDecoration: note.completed ? 'line-through' : 'none',
+                                                                        color: note.completed ? 'text.disabled' : 'text.primary',
+                                                                        wordBreak: 'break-word'
+                                                                    }}
+                                                                >
+                                                                    {note.text}
+                                                                </Typography>
+                                                            </Box>
+                                                        </Box>
+                                                    )}
+                                                </Paper>
+                                            )) : (
+                                                <Box sx={{ py: 4, textAlign: 'center', opacity: 0.5 }}>
+                                                    <Bell size={32} style={{ marginBottom: 8, opacity: 0.3 }} />
+                                                    <Typography variant="body2">{t('customers.no_reminders') || 'Henüz hatırlatıcı yok'}</Typography>
+                                                </Box>
+                                            )}
+                                        </Stack>
                                     </Box>
                                 </Stack>
                             )}
@@ -496,9 +743,43 @@ export const CustomerDrawer = ({ open, onClose, customer, t }) => {
                                         </Stack>
                                         <Stack spacing={1.5}>
                                             {formData.payments.map((note) => (
-                                                <Paper key={note.id} elevation={0} sx={{ p: 2.5, mb: 1, borderRadius: '16px', border: `1px solid ${alpha(theme.palette.success.main, 0.1)}`, bgcolor: alpha(theme.palette.success.main, 0.02) }}>
-                                                    <Typography variant="body2" sx={{ fontWeight: 700 }}>{note.text}</Typography>
-                                                    <Typography variant="caption" sx={{ display: 'block', mt: 0.5 }}>{note.date}</Typography>
+                                                <Paper
+                                                    key={note.id}
+                                                    elevation={0}
+                                                    sx={{
+                                                        p: 2,
+                                                        mb: 1.5,
+                                                        borderRadius: '16px',
+                                                        border: `1px solid ${theme.palette.divider}`,
+                                                        bgcolor: alpha(theme.palette.success.main, 0.02),
+                                                        transition: 'all 0.2s ease',
+                                                        '&:hover': { bgcolor: alpha(theme.palette.success.main, 0.04) }
+                                                    }}
+                                                >
+                                                    {editingNote.id === note.id && editingNote.type === 'payment' ? (
+                                                        <Box>
+                                                            <TextField
+                                                                fullWidth multiline rows={2} size="small" value={editingNote.text}
+                                                                onChange={(e) => setEditingNote({ ...editingNote, text: e.target.value })}
+                                                                sx={{ mb: 1, '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
+                                                            />
+                                                            <Stack direction="row" spacing={1} justifyContent="flex-end">
+                                                                <Button size="small" variant="outlined" color="success" onClick={handleCancelEdit} sx={{ borderRadius: '8px' }}>{t('common.cancel')}</Button>
+                                                                <Button size="small" variant="contained" color="success" onClick={handleSaveEdit} sx={{ borderRadius: '8px' }}>{t('common.save')}</Button>
+                                                            </Stack>
+                                                        </Box>
+                                                    ) : (
+                                                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                            <Box sx={{ flex: 1, pr: 1 }}>
+                                                                <Typography variant="body2" sx={{ fontWeight: 700, wordBreak: 'break-word' }}>{note.text}</Typography>
+                                                                <Typography variant="caption" sx={{ display: 'block', mt: 0.5 }}>{note.date}</Typography>
+                                                            </Box>
+                                                            <Stack direction="row" spacing={0.5} sx={{ alignSelf: 'flex-start' }}>
+                                                                <IconButton size="small" color="success" onClick={() => handleStartEdit(note, 'payment')}><Edit2 size={14} /></IconButton>
+                                                                <IconButton size="small" color="error" onClick={() => setFormData({ ...formData, payments: formData.payments.filter(n => n.id !== note.id) })}><Trash2 size={14} /></IconButton>
+                                                            </Stack>
+                                                        </Box>
+                                                    )}
                                                 </Paper>
                                             ))}
                                         </Stack>

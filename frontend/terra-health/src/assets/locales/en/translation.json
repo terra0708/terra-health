@@ -72,6 +72,7 @@
         "permissions": "Roles & Permissions",
         "settings": "Settings",
         "customer_panel": "Customer Parameters",
+        "service_categories": "Service Categories",
         "system_settings": "System Settings"
     },
     "users": {
@@ -118,7 +119,9 @@
         "source_website": "Website",
         "panel_subtitle": "Manage customer parameters, services, and categories across the system here.",
         "category": "Category",
+        "service_category": "Service Category",
         "select_color": "Select Color",
+        "custom_color_picker": "Custom Color Picker",
         "save_changes": "Save Changes",
         "system_value_helper": "The system uses this value in the background. If left blank, it will be automatically generated from the EN name.",
         "delete_confirm_text": "Are you sure you want to delete {{name}}?",
@@ -157,6 +160,10 @@
         "no_notes": "No notes added yet.",
         "duplicate_phone": "This phone number is already registered!",
         "duplicate_email": "This email address is already registered!",
+        "new_reminder": "New Reminder",
+        "set_reminder": "Save Reminder",
+        "scheduled_reminders": "Reminder List",
+        "no_reminders": "No reminders added yet",
         "drag_drop_text": "Drag and drop files here or click to select",
         "drop_to_upload": "Drop to upload",
         "payments": "Payments",
