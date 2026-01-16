@@ -8,6 +8,10 @@ import PermissionsPage from './views/Users/PermissionsPage';
 import CustomersPage from './views/Customers/CustomersPage';
 import CustomerPanel from './views/Settings/CustomerPanel';
 import AppointmentsPage from './views/Appointments/AppointmentsPage';
+import AdsDashboard from './views/Ads/AdsDashboard';
+import AdsCampaigns from './views/Ads/AdsCampaigns';
+import AdsAttribution from './views/Ads/AdsAttribution';
+import AdsCampaignDetail from './views/Ads/AdsCampaignDetail';
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
@@ -32,7 +36,12 @@ function App() {
         <Route index element={<Views.Dashboard />} />
         <Route path="appointments" element={<AppointmentsPage />} />
         <Route path="customers" element={<CustomersPage />} />
-        <Route path="ads" element={<Views.Ads />} />
+        <Route path="ads">
+          <Route path="dashboard" element={<AdsDashboard />} />
+          <Route path="campaigns" element={<AdsCampaigns />} />
+          <Route path="campaigns/:id" element={<AdsCampaignDetail />} />
+          <Route path="attribution" element={<AdsAttribution />} />
+        </Route>
         <Route path="statistics" element={<Views.Statistics />} />
         <Route path="notifications" element={<Views.Notifications />} />
         <Route path="users" element={<UsersPage />} />

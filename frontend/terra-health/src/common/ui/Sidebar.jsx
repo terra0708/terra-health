@@ -329,10 +329,20 @@ const Sidebar = () => {
         { key: 'dashboard', icon: 'dashboard', label: t('menu.dashboard'), path: '/' },
         { key: 'appointments', icon: 'appointments', label: t('menu.appointments'), path: '/appointments' },
         { key: 'customers', icon: 'customers', label: t('menu.customers'), path: '/customers' },
-        { key: 'ads', icon: 'ads', label: t('menu.ads'), path: '/ads' },
         { key: 'statistics', icon: 'statistics', label: t('menu.statistics'), path: '/statistics' },
         { key: 'notifications', icon: 'notifications', label: t('menu.notifications'), path: '/notifications' },
     ];
+
+    const adsDropdown = {
+        key: 'ads',
+        icon: 'ads',
+        label: t('ads.title'),
+        subItems: [
+            { key: 'ads_dashboard', icon: 'dashboard', label: t('ads.dashboard'), path: '/ads/dashboard' },
+            { key: 'ads_campaigns', icon: 'statistics', label: t('ads.campaigns'), path: '/ads/campaigns' },
+            { key: 'ads_attribution', icon: 'customer_panel', label: t('ads.attribution'), path: '/ads/attribution' },
+        ]
+    };
 
     const settingsDropdown = {
         key: 'settings',
@@ -419,6 +429,16 @@ const Sidebar = () => {
                         onClick={isMobile ? toggleSidebar : undefined}
                     />
                 ))}
+
+                <DropdownNavItem
+                    key={adsDropdown.key}
+                    icon={adsDropdown.icon}
+                    text={adsDropdown.label}
+                    open={isMobile ? true : sidebarOpen}
+                    subItems={adsDropdown.subItems}
+                    currentPath={location.pathname}
+                    onClick={isMobile ? toggleSidebar : undefined}
+                />
 
                 <DropdownNavItem
                     key={settingsDropdown.key}
