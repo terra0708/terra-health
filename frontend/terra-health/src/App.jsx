@@ -12,6 +12,11 @@ import AdsDashboard from './views/Ads/AdsDashboard';
 import AdsCampaigns from './views/Ads/AdsCampaigns';
 import AdsAttribution from './views/Ads/AdsAttribution';
 import AdsCampaignDetail from './views/Ads/AdsCampaignDetail';
+import NotificationsPage from './views/Notifications/NotificationsPage';
+import DashboardPage from './views/Dashboard/DashboardPage';
+import RemindersPage from './views/Reminders/RemindersPage';
+import ReminderSettingsPage from './views/Settings/ReminderSettingsPage';
+import { Box } from '@mui/material';
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
@@ -33,20 +38,23 @@ function App() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<Views.Dashboard />} />
+        <Route index element={<DashboardPage />} />
         <Route path="appointments" element={<AppointmentsPage />} />
         <Route path="customers" element={<CustomersPage />} />
+        <Route path="reminders" element={<RemindersPage />} />
         <Route path="ads">
+          <Route index element={<Navigate to="/ads/dashboard" replace />} />
           <Route path="dashboard" element={<AdsDashboard />} />
           <Route path="campaigns" element={<AdsCampaigns />} />
           <Route path="campaigns/:id" element={<AdsCampaignDetail />} />
           <Route path="attribution" element={<AdsAttribution />} />
         </Route>
         <Route path="statistics" element={<Views.Statistics />} />
-        <Route path="notifications" element={<Views.Notifications />} />
+        <Route path="notifications" element={<NotificationsPage />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="permissions" element={<PermissionsPage />} />
         <Route path="settings" element={<Views.Settings />} />
+        <Route path="settings/reminders" element={<ReminderSettingsPage />} />
         <Route path="customer-panel" element={<CustomerPanel />} />
       </Route>
 

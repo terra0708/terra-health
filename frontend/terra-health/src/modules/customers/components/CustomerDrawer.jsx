@@ -15,6 +15,7 @@ import { useCustomerStore } from '../hooks/useCustomerStore';
 import { ALL_COUNTRIES } from '../data/countries';
 import { useTranslation } from 'react-i18next';
 import { MOCK_USERS } from '../../users';
+import { useNotificationStore } from '@modules/notifications/hooks/useNotificationStore';
 
 export const CustomerDrawer = ({ open, onClose, customer, t }) => {
     const theme = useTheme();
@@ -71,7 +72,7 @@ export const CustomerDrawer = ({ open, onClose, customer, t }) => {
         if (customer) {
             setFormData({
                 ...customer,
-                notes: customer.notes || [],
+                notes: Array.isArray(customer.notes) ? customer.notes : [],
                 reminder: customer.reminder || { active: false, time: '', notes: [] },
                 files: customer.files || [],
                 payments: customer.payments || []
@@ -176,7 +177,7 @@ export const CustomerDrawer = ({ open, onClose, customer, t }) => {
 
     const handleAddNote = () => {
         if (!newNote.trim()) return;
-        const note = { id: Date.now(), text: newNote, date: new Date().toLocaleString() };
+        const note = { id: Date.now(), text: newNote, date: new Date().toLocaleString(i18n.language.startsWith('tr') ? 'tr-TR' : 'en-US', { dateStyle: 'short', timeStyle: 'short' }) };
         setFormData({ ...formData, notes: [note, ...formData.notes] });
         setNewNote('');
     };
@@ -187,7 +188,7 @@ export const CustomerDrawer = ({ open, onClose, customer, t }) => {
             id: Date.now(),
             text: newReminderNote,
             reminderTime: newReminderTime,
-            date: new Date().toLocaleString(),
+            date: new Date().toLocaleString(i18n.language.startsWith('tr') ? 'tr-TR' : 'en-US', { dateStyle: 'short', timeStyle: 'short' }),
             completed: false
         };
         setFormData({
@@ -214,7 +215,7 @@ export const CustomerDrawer = ({ open, onClose, customer, t }) => {
 
     const handleAddPaymentNote = () => {
         if (!newPaymentNote.trim()) return;
-        const note = { id: Date.now(), text: newPaymentNote, date: new Date().toLocaleString() };
+        const note = { id: Date.now(), text: newPaymentNote, date: new Date().toLocaleString(i18n.language.startsWith('tr') ? 'tr-TR' : 'en-US', { dateStyle: 'short', timeStyle: 'short' }) };
         setFormData({ ...formData, payments: [note, ...formData.payments] });
         setNewPaymentNote('');
     };
@@ -226,7 +227,7 @@ export const CustomerDrawer = ({ open, onClose, customer, t }) => {
             ...n,
             text: editingNote.text,
             reminderTime: editingNote.type === 'reminder' ? editingNote.reminderTime : n.reminderTime,
-            date: new Date().toLocaleString() + ' (Düzenlendi)'
+            date: new Date().toLocaleString(i18n.language.startsWith('tr') ? 'tr-TR' : 'en-US', { dateStyle: 'short', timeStyle: 'short' }) + ' (' + (i18n.language.startsWith('tr') ? 'Düzenlendi' : 'Edited') + ')'
         } : n);
 
         if (editingNote.type === 'personal') {
@@ -253,10 +254,41 @@ export const CustomerDrawer = ({ open, onClose, customer, t }) => {
             setSnackbar({ open: true, message: t('customers.error_check_fields'), severity: 'warning' });
             return;
         }
+
+        // 3. @Mention Sistemi Kontrolü (Sadece kaydet butonuna basınca bildirir)
+        const allNotes = [...formData.notes, ...(formData.reminder?.notes || []), ...formData.payments];
+        const mentionRegex = /@(\w+)/g;
+        let mentionedUsers = new Set();
+
+        allNotes.forEach(note => {
+            let match;
+            while ((match = mentionRegex.exec(note.text)) !== null) {
+                mentionedUsers.add(match[1]);
+            }
+        });
+
+        mentionedUsers.forEach(user => {
+            useNotificationStore.getState().addNotification({
+                title: 'Senden Bahsedildi',
+                message: `${formData.name} hakkındaki bir notta senden bahsedildi.`,
+                type: 'system',
+                priority: 'medium',
+                link: '/customers'
+            });
+        });
+
         if (customer) {
             updateCustomer(customer.id, formData);
         } else {
             addCustomer(formData);
+            // Yeni müşteri bildirimi tetikle
+            useNotificationStore.getState().addNotification({
+                title: t('notifications.new_leads'),
+                message: `${formData.name} isimli yeni bir müşteri kaydı oluşturuldu.`,
+                type: 'new_lead',
+                priority: 'high',
+                link: '/customers'
+            });
         }
         setSnackbar({ open: true, message: t('common.success_save'), severity: 'success' });
         setTimeout(() => onClose(), 800);

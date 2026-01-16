@@ -1,3 +1,22 @@
+💡 Sistemdeki Diğer Eksikler ve Fikirler:
+A. Email/SMS Bildirimleri
+Müşteriye randevu hatırlatma SMS'i
+Email ile kampanya gönderme (ileride ihtimal.txt'de var)
+B. Gelişmiş Filtreleme
+Müşteri listesinde "Bu hafta eklenenler"
+"Uzun süredir aranmayanlar" filtresi
+Kaynak bazlı segmentasyon
+C. Raporlama
+Aylık performans raporu (PDF export)
+Danışman bazlı karşılaştırma
+Lead kaynak analizi
+D. Takvim İyileştirmeleri
+Randevu çakışma kontrolü (şu an var ama görsel uyarı eklenebilir)
+Tekrarlayan randevular
+Randevu onay sistemi
+E. Müşteri Yolculuğu
+
+
 1 - ÜLKELER
 bütün ülke bilgileri çekilmeli. buunn için db ve json dosyası beraber kullanılmalı.
 Json ile önyüzde göstermek kolay ama filtreleme yaparken analiz yaparken bu zor olur bu nedenle,

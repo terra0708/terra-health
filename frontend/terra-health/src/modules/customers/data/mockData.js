@@ -1,105 +1,157 @@
-// Mock data for customers - Multi-language compatible with TR/EN stores
 export const mockCustomers = [
     {
         id: 1,
-        registrationDate: '2024-01-15',
+        name: 'Ahmet Yılmaz',
+        phone: '+90 555 123 45 67',
         country: 'TR',
-        name: 'Mehmet Demir',
-        phone: '+90 532 123 4567',
-        source: 'google_ads',
-        status: 'active',
-        consultantId: 4, // Selin Yıldız
-        services: ['Saç Ekimi'],
-        tags: ['VIP']
+        city: 'İstanbul',
+        job: 'Mühendis',
+        email: 'ahmet.yilmaz@example.com',
+        registrationDate: '2023-11-15',
+        consultantId: 1,
+        status: 'new',
+        source: 'instagram_ads',
+        services: ['sac_ekimi'],
+        tags: ['vip', 'oncelikli'],
+        avatar: '',
+        notes: 'Saç ekimi için 3000 greft planlandı.',
+
+        // YENİ STANDART HATIRLATICI YAPISI
+        reminder: {
+            active: true,
+            notes: [
+                {
+                    id: 'rem_1',
+                    title: 'Ön Görüşme Yapılacak',
+                    note: 'Müşteri ile operasyon detayları netleştirilecek.',
+                    date: '2025-01-20',
+                    time: '14:30',
+                    statusId: 'pending',
+                    categoryId: 'customer',
+                    subCategoryId: '',
+                    isCompleted: false,
+                    type: 'customer'
+                },
+                {
+                    id: 'rem_2',
+                    title: 'Depozito Kontrolü',
+                    note: 'Muhasebeden ödeme onayı alınacak.',
+                    date: '2025-01-18',
+                    time: '09:00',
+                    statusId: 'completed',
+                    categoryId: 'customer', // Müşteri kategorisi
+                    subCategoryId: '',
+                    isCompleted: true,
+                    type: 'customer'
+                }
+            ]
+        }
     },
     {
         id: 2,
-        registrationDate: '2024-01-18',
-        country: 'DE',
-        name: 'Hans Mueller',
-        phone: '+49 151 234 5678',
-        source: 'manual',
-        status: 'pending',
-        consultantId: 6, // Buse Aydın
-        services: ['Diş Tedavisi'],
-        tags: ['Tekrar Eden Müşteri']
+        name: 'Sarah Smith',
+        phone: '+44 7700 900077',
+        country: 'GB',
+        city: 'London',
+        job: 'Designer',
+        email: 'sarah.smith@example.com',
+        registrationDate: '2023-12-01',
+        consultantId: 2,
+        status: 'process',
+        source: 'google_ads',
+        services: ['dis_beyazlatma', 'gulus_tasarimi'],
+        tags: ['ingilizce'],
+        avatar: '',
+        notes: 'Interested in hollywood smile.',
+
+        reminder: {
+            active: true,
+            notes: [
+                {
+                    id: 'rem_3',
+                    title: 'Flight Ticket Confirmation',
+                    note: 'Check arrival time using PN P8X99.',
+                    date: '2025-01-25',
+                    time: '10:00',
+                    statusId: 'pending',
+                    categoryId: 'customer',
+                    subCategoryId: '',
+                    isCompleted: false,
+                    type: 'customer'
+                }
+            ]
+        }
     },
     {
         id: 3,
-        registrationDate: '2024-01-20',
-        country: 'SA',
-        name: 'محمد العلي',
-        phone: '+966 50 123 4567',
-        source: 'facebook_ads',
-        status: 'active',
-        consultantId: 4,
-        services: ['Rinoplasti'],
-        tags: ['VIP']
+        name: 'Mohammed Al-Fayed',
+        phone: '+971 50 123 4567',
+        country: 'AE',
+        city: 'Dubai',
+        job: 'Businessman',
+        email: 'mohammed.al@example.com',
+        registrationDate: '2024-01-10',
+        consultantId: 1,
+        status: 'contacted',
+        source: 'referral',
+        services: ['sac_ekimi'],
+        tags: ['vip', 'arapca'],
+        avatar: '',
+        // Hatırlatıcı yok
+        reminder: {
+            active: false,
+            notes: []
+        }
     },
     {
         id: 4,
-        registrationDate: '2024-01-22',
-        country: 'GB',
-        name: 'John Smith',
-        phone: '+44 7700 900123',
-        source: 'referral',
-        status: 'completed',
-        consultantId: 6,
-        services: ['Saç Ekimi'],
-        tags: ['Eski Müşteri']
+        name: 'Elena Ivanova',
+        phone: '+7 900 123 45 67',
+        country: 'RU',
+        city: 'Moscow',
+        email: 'elena.ivanova@example.com',
+        registrationDate: '2024-01-05',
+        consultantId: 3,
+        status: 'appointment',
+        source: 'facebook_ads',
+        services: ['estetik_cerrahi', 'burun_estetigi'],
+        tags: ['rusca'],
+        avatar: '',
+        reminder: {
+            active: true,
+            notes: [
+                {
+                    id: 'rem_4',
+                    title: 'Doctor Consultation',
+                    note: 'Online meeting with Dr. Kaya.',
+                    date: '2025-01-16',
+                    time: '16:00',
+                    statusId: 'cancelled',
+                    categoryId: 'customer',
+                    subCategoryId: '',
+                    isCompleted: true,
+                    type: 'customer'
+                }
+            ]
+        }
     },
     {
         id: 5,
-        registrationDate: '2024-01-25',
-        country: 'FR',
-        name: 'Marie Dubois',
-        phone: '+33 6 12 34 56 78',
-        source: 'instagram_ads',
-        status: 'active',
-        consultantId: 4,
-        services: ['Liposuction'],
-        tags: ['VIP']
-    },
-    {
-        id: 6,
-        registrationDate: '2024-01-28',
-        country: 'IQ',
-        name: 'أحمد حسين',
-        phone: '+964 770 123 4567',
+        name: 'Hans Müller',
+        phone: '+49 151 12345678',
+        country: 'DE',
+        city: 'Berlin',
+        email: 'hans.mueller@example.com',
+        registrationDate: '2023-11-20',
+        consultantId: 2,
+        status: 'post_op',
         source: 'manual',
-        status: 'cancelled',
-        consultantId: 6,
-        services: ['Diş Tedavisi'],
-        tags: ['Sıkıntılı Kayıt']
-    },
-    {
-        id: 7,
-        registrationDate: '2024-02-01',
-        country: 'NL',
-        name: 'Jan van der Berg',
-        phone: '+31 6 12345678',
-        source: 'google_ads',
-        status: 'active',
-        consultantId: 4,
-        services: ['Diş Tedavisi'],
-        tags: ['Tekrar Eden Müşteri']
-    },
-    {
-        id: 8,
-        registrationDate: '2024-02-03',
-        country: 'AE',
-        name: 'عبدالله المنصوري',
-        phone: '+971 50 123 4567',
-        source: 'manual',
-        status: 'pending',
-        consultantId: 6,
-        services: ['Saç Ekimi'],
-        tags: ['VIP']
+        services: ['sac_ekimi'],
+        tags: ['almanca'],
+        avatar: '',
+        reminder: {
+            active: true,
+            notes: []
+        }
     }
 ];
-
-// Country code to flag emoji mapping
-export const countryFlags = {
-    'TR': '🇹🇷', 'DE': '🇩🇪', 'SA': '🇸🇦', 'GB': '🇬🇧', 'FR': '🇫🇷',
-    'IQ': '🇮🇶', 'NL': '🇳🇱', 'AE': '🇦🇪', 'US': '🇺🇸', 'IT': '🇮🇹', 'ES': '🇪🇸'
-};

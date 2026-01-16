@@ -2,17 +2,24 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 const INITIAL_SERVICES = [
-    { id: '1', name_tr: 'Saç Ekimi', name_en: 'Hair Transplant', category: 'Estetik', color: '#a259ff' },
-    { id: '2', name_tr: 'Diş Tedavisi', name_en: 'Dental Treatment', category: 'Diş', color: '#3b82f6' },
-    { id: '3', name_tr: 'Rinoplasti', name_en: 'Rhinoplasty', category: 'Estetik', color: '#10b981' },
-    { id: '4', name_tr: 'Liposuction', name_en: 'Liposuction', category: 'Estetik', color: '#f472b6' },
+    { id: '1', name_tr: 'Saç Ekimi', name_en: 'Hair Transplant', value: 'sac_ekimi', category: 'Estetik', color: '#a259ff' },
+    { id: '2', name_tr: 'Diş Tedavisi', name_en: 'Dental Treatment', value: 'dis_tedavisi', category: 'Diş', color: '#3b82f6' },
+    { id: '3', name_tr: 'Rinoplasti', name_en: 'Rhinoplasty', value: 'rinoplasti', category: 'Estetik', color: '#10b981' },
+    { id: '4', name_tr: 'Liposuction', name_en: 'Liposuction', value: 'liposuction', category: 'Estetik', color: '#f472b6' },
+    { id: '5', name_tr: 'Diş Beyazlatma', name_en: 'Teeth Whitening', value: 'dis_beyazlatma', category: 'Diş', color: '#06b6d4' },
+    { id: '6', name_tr: 'Gülüş Tasarımı', name_en: 'Smile Design', value: 'gulus_tasarimi', category: 'Diş', color: '#f59e0b' },
+    { id: '7', name_tr: 'Estetik Cerrahi', name_en: 'Plastic Surgery', value: 'estetik_cerrahi', category: 'Estetik', color: '#ec4899' },
+    { id: '8', name_tr: 'Burun Estetiği', name_en: 'Nose Job', value: 'burun_estetigi', category: 'Estetik', color: '#8b5cf6' },
 ];
 
 const INITIAL_STATUSES = [
-    { id: '1', label_tr: 'Aktif', label_en: 'Active', value: 'active', color: '#10b981' },
-    { id: '2', label_tr: 'Beklemede', label_en: 'Pending', value: 'pending', color: '#f59e0b' },
-    { id: '3', label_tr: 'Tamamlandı', label_en: 'Completed', value: 'completed', color: '#3b82f6' },
-    { id: '4', label_tr: 'İptal', label_en: 'Cancelled', value: 'cancelled', color: '#ef4444' },
+    { id: '1', label_tr: 'Yeni', label_en: 'New', value: 'new', color: '#3b82f6' },
+    { id: '2', label_tr: 'İşlemde', label_en: 'In Process', value: 'process', color: '#f59e0b' },
+    { id: '3', label_tr: 'İletişime Geçildi', label_en: 'Contacted', value: 'contacted', color: '#8b5cf6' },
+    { id: '4', label_tr: 'Randevu', label_en: 'Appointment', value: 'appointment', color: '#10b981' },
+    { id: '5', label_tr: 'Operasyon Sonrası', label_en: 'Post Op', value: 'post_op', color: '#6366f1' },
+    { id: '6', label_tr: 'Kaybedildi', label_en: 'Lost', value: 'lost', color: '#ef4444' },
+    { id: '7', label_tr: 'Satış', label_en: 'Sale', value: 'sale', color: '#10b981' },
 ];
 
 const INITIAL_SOURCES = [
@@ -24,10 +31,12 @@ const INITIAL_SOURCES = [
 ];
 
 const INITIAL_TAGS = [
-    { id: '1', label_tr: 'VIP', label_en: 'VIP', color: '#8b5cf6' },
-    { id: '2', label_tr: 'Tekrar Eden Müşteri', label_en: 'Returning Customer', color: '#ec4899' },
-    { id: '3', label_tr: 'Sıkıntılı Kayıt', label_en: 'Problematic Record', color: '#f97316' },
-    { id: '4', label_tr: 'Eski Müşteri', label_en: 'Old Customer', color: '#6b7280' },
+    { id: '1', label_tr: 'VIP', label_en: 'VIP', value: 'vip', color: '#8b5cf6' },
+    { id: '2', label_tr: 'Öncelikli', label_en: 'Priority', value: 'oncelikli', color: '#ef4444' },
+    { id: '3', label_tr: 'İngilizce', label_en: 'English', value: 'ingilizce', color: '#3b82f6' },
+    { id: '4', label_tr: 'Arapça', label_en: 'Arabic', value: 'arapca', color: '#10b981' },
+    { id: '5', label_tr: 'Rusça', label_en: 'Russian', value: 'rusca', color: '#f43f5e' },
+    { id: '6', label_tr: 'Almanca', label_en: 'German', value: 'almanca', color: '#f59e0b' },
 ];
 
 const INITIAL_FILE_CATEGORIES = [
@@ -58,47 +67,46 @@ export const useCustomerSettingsStore = create(
 
             repairData: () => {
                 const state = get();
-                let needsUpdate = false;
+                const currentVersion = 3; // Version bump to force update or handle manually
 
-                const repairArray = (currentArr, initialArr, nameKey) => {
-                    let arr = currentArr || initialArr;
+                // Basit bir onarım/birleştirme mantığı:
+                // Eğer store'daki veri eksikse (örn: value alanı yoksa) veya 
+                // listede eksik elemanlar varsa INITIAL listelerden tamamla.
 
-                    // Eksik olanları ekle (ID üzerinden kontrol)
-                    const existingIds = new Set(arr.map(i => i.id));
-                    const missingItems = initialArr.filter(i => !existingIds.has(i.id));
-                    if (missingItems.length > 0) {
-                        needsUpdate = true;
-                        arr = [...arr, ...missingItems];
-                    }
+                const mergeData = (current, initial, keyField = 'value') => {
+                    if (!current) return initial;
 
-                    return arr.map(item => {
-                        const trKey = `${nameKey}_tr`;
-                        const enKey = `${nameKey}_en`;
-                        if (!item[trKey] && item[nameKey]) {
-                            needsUpdate = true;
-                            return { ...item, [trKey]: item[nameKey], [enKey]: item[nameKey] };
-                        }
+                    // 1. Value alanı olmayan eski kayıtları temizle veya güncelle
+                    // (Burada basitçe: initial listede varsa oradan al, yoksa manuel eklenmiştir elleme)
+                    const updatedCurrent = current.map(item => {
+                        // Eğer 'value' yoksa ama bir şekilde eşleşiyorsa güncelle (karmaşık olmasın diye şimdilik atlıyorum)
+                        // Basit yöntem: Initial listedeki değerlere göre güncelleme:
+                        const match = initial.find(i => i.id === item.id);
+                        if (match) return { ...item, ...match }; // Yeni alanları (value vb) ekle
                         return item;
                     });
+
+                    // 2. Eksik olan varsayılanları ekle
+                    const existingIds = new Set(updatedCurrent.map(i => i.id));
+                    const missing = initial.filter(i => !existingIds.has(i.id));
+
+                    return [...updatedCurrent, ...missing];
                 };
 
-                const newServices = repairArray(state.services, INITIAL_SERVICES, 'name');
-                const newStatuses = repairArray(state.statuses, INITIAL_STATUSES, 'label');
-                const newSources = repairArray(state.sources, INITIAL_SOURCES, 'label');
-                const newTags = repairArray(state.tags, INITIAL_TAGS, 'label');
-                const newFileCategories = repairArray(state.fileCategories, INITIAL_FILE_CATEGORIES, 'label');
-                const newCategories = repairArray(state.categories, INITIAL_CATEGORIES, 'label');
+                const newServices = mergeData(state.services, INITIAL_SERVICES);
+                const newStatuses = mergeData(state.statuses, INITIAL_STATUSES);
+                const newSources = mergeData(state.sources, INITIAL_SOURCES);
+                const newTags = mergeData(state.tags, INITIAL_TAGS);
 
-                if (needsUpdate) {
-                    set({
-                        services: newServices,
-                        statuses: newStatuses,
-                        sources: newSources,
-                        tags: newTags,
-                        fileCategories: newFileCategories,
-                        categories: newCategories
-                    });
-                }
+                // State'i güncelle (Sadece fark varsa güncellemek daha iyi ama basitlik için set ediyoruz)
+                set({
+                    services: newServices,
+                    statuses: newStatuses,
+                    sources: newSources,
+                    tags: newTags,
+                    fileCategories: state.fileCategories || INITIAL_FILE_CATEGORIES,
+                    categories: state.categories || INITIAL_CATEGORIES
+                });
             },
 
             addService: (service) => set((state) => ({ services: [...state.services, { ...service, id: Date.now().toString() }] })),
@@ -126,11 +134,8 @@ export const useCustomerSettingsStore = create(
             deleteCategory: (id) => set((state) => ({ categories: state.categories.filter(c => c.id !== id) })),
         }),
         {
-            name: 'customer-settings-storage',
-            version: 2,
-            migrate: (persistedState, version) => {
-                return persistedState;
-            },
+            name: 'customer-settings-storage-v3', // Version bump to reset/force update structure
+            version: 3
         }
     )
 );

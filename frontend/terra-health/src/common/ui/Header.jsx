@@ -4,6 +4,7 @@ import { SettingsSwitchers } from '@common/ui';
 import useAuthStore from '../../modules/auth/hooks/useAuthStore';
 import { useSettingsStore } from '@core';
 import { useTranslation } from 'react-i18next';
+import NotificationCenter from '../../modules/notifications/NotificationCenter';
 
 /**
  * Uygulamanın ana Header bileşeni.
@@ -61,6 +62,7 @@ const Header = ({ onLogout }) => {
                 {/* SAĞ TARAF - AYARLAR & PROFIL */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2.5 } }}>
                     <SettingsSwitchers />
+                    <NotificationCenter />
 
                     <Divider orientation="vertical" flexItem sx={{ mx: 0.5, height: 24, alignSelf: 'center', opacity: 0.5, display: { xs: 'none', sm: 'block' } }} />
 

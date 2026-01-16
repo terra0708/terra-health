@@ -72,6 +72,7 @@ const ICON_DATA = {
     dashboard: 'https://cdn.lordicon.com/jgeruqwm.json',
     appointments: 'https://cdn.lordicon.com/aksvbzmu.json',
     customers: 'https://cdn.lordicon.com/eaivqdbn.json',
+    reminders: 'https://cdn.lordicon.com/pkmkagva.json',
     ads: 'https://cdn.lordicon.com/wyaqzesp.json',
     statistics: 'https://cdn.lordicon.com/sqqsmbzs.json',
     notifications: 'https://cdn.lordicon.com/zyylfmfm.json',
@@ -329,6 +330,7 @@ const Sidebar = () => {
         { key: 'dashboard', icon: 'dashboard', label: t('menu.dashboard'), path: '/' },
         { key: 'appointments', icon: 'appointments', label: t('menu.appointments'), path: '/appointments' },
         { key: 'customers', icon: 'customers', label: t('menu.customers'), path: '/customers' },
+        { key: 'reminders', icon: 'reminders', label: t('menu.reminders'), path: '/reminders' },
         { key: 'statistics', icon: 'statistics', label: t('menu.statistics'), path: '/statistics' },
         { key: 'notifications', icon: 'notifications', label: t('menu.notifications'), path: '/notifications' },
     ];
@@ -351,6 +353,7 @@ const Sidebar = () => {
         subItems: [
             { key: 'users', icon: 'users', label: t('menu.users'), path: '/users' },
             { key: 'permissions', icon: 'permissions', label: t('menu.permissions'), path: '/permissions' },
+            { key: 'reminder_settings', icon: 'settings', label: t('settings.reminder_settings', 'Hatırlatıcı Ayarları'), path: '/settings/reminders' },
             { key: 'system_settings', icon: 'system_settings', label: t('menu.system_settings'), path: '/settings' },
             { key: 'customer_panel', icon: 'customer_panel', label: t('menu.customer_panel'), path: '/customer-panel' },
         ]

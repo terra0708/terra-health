@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Dialog, DialogTitle, DialogContent, Box, Typography, IconButton,
-    Grid, Chip, alpha, useTheme, Divider, Stack, Tabs, Tab, Paper, List, ListItem, ListItemText, ListItemIcon
+    Grid, Chip, alpha, useTheme, Divider, Stack, Tabs, Tab, Paper, List, ListItem, ListItemText, ListItemIcon, TablePagination
 } from '@mui/material';
 import {
     X, User, Phone, Globe, Link as LinkIcon, Calendar, Mail,
@@ -19,7 +19,23 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }) => {
     const { t, i18n } = useTranslation();
     const settings = useCustomerSettingsStore();
     const [activeTab, setActiveTab] = useState(0);
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(5);
     const lang = i18n.language;
+
+    // Reset pagination when tab changes or dialog opens
+    useEffect(() => {
+        setPage(0);
+    }, [activeTab, open]);
+
+    const handleChangePage = (event, newPage) => {
+        setPage(newPage);
+    };
+
+    const handleChangeRowsPerPage = (event) => {
+        setRowsPerPage(parseInt(event.target.value, 10));
+        setPage(0);
+    };
 
     if (!customer) return null;
 
@@ -114,7 +130,7 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }) => {
                 <Tab label={t('customers.payments')} />
             </Tabs>
 
-            <DialogContent sx={{ p: 4 }}>
+            <DialogContent sx={{ p: 4, display: 'flex', flexDirection: 'column' }}>
                 {activeTab === 0 && (
                     <Grid container spacing={4}>
                         <Grid item xs={12} md={6}>
@@ -127,7 +143,7 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }) => {
                                 <SectionTitle icon={Briefcase} title={t('customers.services')} count={customer.services?.length} />
                                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                                     {customer.services?.map((sName, i) => {
-                                        const def = settings.services.find(s => s.name_tr === sName || s.name_en === sName || s.name === sName);
+                                        const def = settings.services.find(s => s.value === sName || s.name_tr === sName || s.name_en === sName || s.name === sName);
                                         const color = def?.color || theme.palette.secondary.main;
                                         return (
                                             <Chip
@@ -166,7 +182,7 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }) => {
                                 <SectionTitle icon={TagIcon} title={t('customers.tags')} count={customer.tags?.length} />
                                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                                     {customer.tags?.map((tName, i) => {
-                                        const def = settings.tags.find(t => t.label_tr === tName || t.label_en === tName || t.label === tName);
+                                        const def = settings.tags.find(t => t.value === tName || t.label_tr === tName || t.label_en === tName || t.label === tName);
                                         const color = def?.color || theme.palette.text.secondary;
                                         return (
                                             <Chip
@@ -184,87 +200,167 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }) => {
                 )}
 
                 {activeTab === 1 && (
-                    <Stack spacing={3}>
+                    <Stack spacing={3} sx={{ flex: 1 }}>
                         <SectionTitle icon={FileText} title={t('customers.notes')} count={customer.notes?.length} />
-                        {customer.notes?.length > 0 ? customer.notes.map((note) => (
-                            <Paper key={note.id} elevation={0} sx={{ p: 2.5, borderRadius: '16px', border: `1px solid ${theme.palette.divider}`, bgcolor: alpha(theme.palette.primary.main, 0.01) }}>
-                                <Typography variant="body2" sx={{ fontWeight: 600, mb: 1, whiteSpace: 'pre-wrap' }}>{note.text}</Typography>
-                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700 }}>{note.date}</Typography>
-                            </Paper>
-                        )) : (
-                            <Box sx={{ py: 8, textAlign: 'center', opacity: 0.3 }}>
-                                <FileText size={48} style={{ marginBottom: 16 }} />
-                                <Typography variant="body2" fontWeight={800}>{t('customers.no_notes')}</Typography>
-                            </Box>
-                        )}
+                        <Box sx={{ flex: 1, minHeight: 0 }}>
+                            {customer.notes?.length > 0 ? (
+                                <>
+                                    <Stack spacing={2}>
+                                        {customer.notes
+                                            .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                                            .map((note) => (
+                                                <Paper key={note.id} elevation={0} sx={{ p: 2.5, borderRadius: '16px', border: `1px solid ${theme.palette.divider}`, bgcolor: alpha(theme.palette.primary.main, 0.01) }}>
+                                                    <Typography variant="body2" sx={{ fontWeight: 600, mb: 1, whiteSpace: 'pre-wrap' }}>{note.text}</Typography>
+                                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700 }}>{note.date}</Typography>
+                                                </Paper>
+                                            ))}
+                                    </Stack>
+                                    <TablePagination
+                                        component="div"
+                                        count={customer.notes.length}
+                                        page={page}
+                                        onPageChange={handleChangePage}
+                                        rowsPerPage={rowsPerPage}
+                                        onRowsPerPageChange={handleChangeRowsPerPage}
+                                        labelRowsPerPage={t('common.rows_per_page')}
+                                        rowsPerPageOptions={[5, 10, 25]}
+                                    />
+                                </>
+                            ) : (
+                                <Box sx={{ py: 8, textAlign: 'center', opacity: 0.3 }}>
+                                    <FileText size={48} style={{ marginBottom: 16 }} />
+                                    <Typography variant="body2" fontWeight={800}>{t('customers.no_notes')}</Typography>
+                                </Box>
+                            )}
+                        </Box>
                     </Stack>
                 )}
 
                 {activeTab === 2 && (
-                    <Stack spacing={3}>
+                    <Stack spacing={3} sx={{ flex: 1 }}>
                         <SectionTitle icon={Bell} title={t('customers.scheduled_reminders')} count={customer.reminder?.notes?.length} />
-                        {customer.reminder?.notes?.length > 0 ? customer.reminder.notes.map((rem) => (
-                            <Paper key={rem.id} elevation={0} sx={{ p: 2.5, borderRadius: '20px', border: `1px solid ${theme.palette.divider}`, bgcolor: rem.completed ? alpha(theme.palette.success.main, 0.02) : 'transparent' }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'warning.main' }}>
-                                        <Calendar size={16} />
-                                        <Typography variant="caption" sx={{ fontWeight: 900 }}>
-                                            {rem.reminderTime ? new Date(rem.reminderTime).toLocaleString(i18n.language) : rem.date}
-                                        </Typography>
-                                    </Box>
-                                    {rem.completed && <Chip icon={<CheckCircle2 size={12} />} label={t('customers.status.completed')} size="small" color="success" sx={{ height: 20, fontSize: '0.65rem', fontWeight: 800 }} />}
+                        <Box sx={{ flex: 1, minHeight: 0 }}>
+                            {customer.reminder?.notes?.length > 0 ? (
+                                <>
+                                    <Stack spacing={2}>
+                                        {customer.reminder.notes
+                                            .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                                            .map((rem) => (
+                                                <Paper key={rem.id} elevation={0} sx={{ p: 2.5, borderRadius: '20px', border: `1px solid ${theme.palette.divider}`, bgcolor: rem.completed ? alpha(theme.palette.success.main, 0.02) : 'transparent' }}>
+                                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'warning.main' }}>
+                                                            <Calendar size={16} />
+                                                            <Typography variant="caption" sx={{ fontWeight: 900 }}>
+                                                                {rem.reminderTime ? new Date(rem.reminderTime).toLocaleString(i18n.language) : rem.date}
+                                                            </Typography>
+                                                        </Box>
+                                                        {rem.completed && <Chip icon={<CheckCircle2 size={12} />} label={t('customers.status.completed')} size="small" color="success" sx={{ height: 20, fontSize: '0.65rem', fontWeight: 800 }} />}
+                                                    </Box>
+                                                    <Typography variant="body2" sx={{ fontWeight: 700, mb: 1 }}>{rem.text}</Typography>
+                                                </Paper>
+                                            ))}
+                                    </Stack>
+                                    <TablePagination
+                                        component="div"
+                                        count={customer.reminder.notes.length}
+                                        page={page}
+                                        onPageChange={handleChangePage}
+                                        rowsPerPage={rowsPerPage}
+                                        onRowsPerPageChange={handleChangeRowsPerPage}
+                                        labelRowsPerPage={t('common.rows_per_page')}
+                                        rowsPerPageOptions={[5, 10, 25]}
+                                    />
+                                </>
+                            ) : (
+                                <Box sx={{ py: 8, textAlign: 'center', opacity: 0.3 }}>
+                                    <Bell size={48} style={{ marginBottom: 16 }} />
+                                    <Typography variant="body2" fontWeight={800}>{t('customers.no_reminders')}</Typography>
                                 </Box>
-                                <Typography variant="body2" sx={{ fontWeight: 700, mb: 1 }}>{rem.text}</Typography>
-                            </Paper>
-                        )) : (
-                            <Box sx={{ py: 8, textAlign: 'center', opacity: 0.3 }}>
-                                <Bell size={48} style={{ marginBottom: 16 }} />
-                                <Typography variant="body2" fontWeight={800}>{t('customers.no_reminders')}</Typography>
-                            </Box>
-                        )}
+                            )}
+                        </Box>
                     </Stack>
                 )}
 
                 {activeTab === 3 && (
-                    <Stack spacing={2}>
+                    <Stack spacing={2} sx={{ flex: 1 }}>
                         <SectionTitle icon={File} title={t('customers.files_info')} count={customer.files?.length} />
-                        {customer.files?.length > 0 ? customer.files.map((file) => (
-                            <Paper key={file.id} elevation={0} sx={{ p: 2, borderRadius: '16px', border: `1px solid ${theme.palette.divider}`, display: 'flex', alignItems: 'center', gap: 2, '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.02) } }}>
-                                <Box sx={{ width: 40, height: 40, borderRadius: '10px', bgcolor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <FileText size={20} />
+                        <Box sx={{ flex: 1, minHeight: 0 }}>
+                            {customer.files?.length > 0 ? (
+                                <>
+                                    <Stack spacing={2}>
+                                        {customer.files
+                                            .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                                            .map((file) => (
+                                                <Paper key={file.id} elevation={0} sx={{ p: 2, borderRadius: '16px', border: `1px solid ${theme.palette.divider}`, display: 'flex', alignItems: 'center', gap: 2, '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.02) } }}>
+                                                    <Box sx={{ width: 40, height: 40, borderRadius: '10px', bgcolor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                        <FileText size={20} />
+                                                    </Box>
+                                                    <Box sx={{ flex: 1 }}>
+                                                        <Typography variant="body2" sx={{ fontWeight: 800 }}>{file.name}</Typography>
+                                                        <Typography variant="caption" color="text.secondary">{file.category} • {file.size} • {file.date}</Typography>
+                                                    </Box>
+                                                    <IconButton size="small"><Download size={18} /></IconButton>
+                                                </Paper>
+                                            ))}
+                                    </Stack>
+                                    <TablePagination
+                                        component="div"
+                                        count={customer.files.length}
+                                        page={page}
+                                        onPageChange={handleChangePage}
+                                        rowsPerPage={rowsPerPage}
+                                        onRowsPerPageChange={handleChangeRowsPerPage}
+                                        labelRowsPerPage={t('common.rows_per_page')}
+                                        rowsPerPageOptions={[5, 10, 25]}
+                                    />
+                                </>
+                            ) : (
+                                <Box sx={{ py: 8, textAlign: 'center', opacity: 0.3 }}>
+                                    <File size={48} style={{ marginBottom: 16 }} />
+                                    <Typography variant="body2" fontWeight={800}>{t('customers.no_files')}</Typography>
                                 </Box>
-                                <Box sx={{ flex: 1 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 800 }}>{file.name}</Typography>
-                                    <Typography variant="caption" color="text.secondary">{file.category} • {file.size} • {file.date}</Typography>
-                                </Box>
-                                <IconButton size="small"><Download size={18} /></IconButton>
-                            </Paper>
-                        )) : (
-                            <Box sx={{ py: 8, textAlign: 'center', opacity: 0.3 }}>
-                                <File size={48} style={{ marginBottom: 16 }} />
-                                <Typography variant="body2" fontWeight={800}>{t('customers.no_files')}</Typography>
-                            </Box>
-                        )}
+                            )}
+                        </Box>
                     </Stack>
                 )}
 
                 {activeTab === 4 && (
-                    <Stack spacing={3}>
+                    <Stack spacing={3} sx={{ flex: 1 }}>
                         <SectionTitle icon={CreditCard} title={t('customers.payments')} count={customer.payments?.length} />
-                        {customer.payments?.length > 0 ? customer.payments.map((pay) => (
-                            <Paper key={pay.id} elevation={0} sx={{ p: 2.5, borderRadius: '16px', border: `1px solid ${theme.palette.divider}`, bgcolor: alpha(theme.palette.success.main, 0.02) }}>
-                                <Typography variant="body2" sx={{ fontWeight: 700, mb: 1 }}>{pay.text}</Typography>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, opacity: 0.6 }}>
-                                    <Calendar size={14} />
-                                    <Typography variant="caption" sx={{ fontWeight: 800 }}>{pay.date}</Typography>
+                        <Box sx={{ flex: 1, minHeight: 0 }}>
+                            {customer.payments?.length > 0 ? (
+                                <>
+                                    <Stack spacing={2}>
+                                        {customer.payments
+                                            .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                                            .map((pay) => (
+                                                <Paper key={pay.id} elevation={0} sx={{ p: 2.5, borderRadius: '16px', border: `1px solid ${theme.palette.divider}`, bgcolor: alpha(theme.palette.success.main, 0.02) }}>
+                                                    <Typography variant="body2" sx={{ fontWeight: 700, mb: 1 }}>{pay.text}</Typography>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, opacity: 0.6 }}>
+                                                        <Calendar size={14} />
+                                                        <Typography variant="caption" sx={{ fontWeight: 800 }}>{pay.date}</Typography>
+                                                    </Box>
+                                                </Paper>
+                                            ))}
+                                    </Stack>
+                                    <TablePagination
+                                        component="div"
+                                        count={customer.payments.length}
+                                        page={page}
+                                        onPageChange={handleChangePage}
+                                        rowsPerPage={rowsPerPage}
+                                        onRowsPerPageChange={handleChangeRowsPerPage}
+                                        labelRowsPerPage={t('common.rows_per_page')}
+                                        rowsPerPageOptions={[5, 10, 25]}
+                                    />
+                                </>
+                            ) : (
+                                <Box sx={{ py: 8, textAlign: 'center', opacity: 0.3 }}>
+                                    <CreditCard size={48} style={{ marginBottom: 16 }} />
+                                    <Typography variant="body2" fontWeight={800}>{t('customers.no_payments')}</Typography>
                                 </Box>
-                            </Paper>
-                        )) : (
-                            <Box sx={{ py: 8, textAlign: 'center', opacity: 0.3 }}>
-                                <CreditCard size={48} style={{ marginBottom: 16 }} />
-                                <Typography variant="body2" fontWeight={800}>{t('customers.no_payments')}</Typography>
-                            </Box>
-                        )}
+                            )}
+                        </Box>
                     </Stack>
                 )}
             </DialogContent>

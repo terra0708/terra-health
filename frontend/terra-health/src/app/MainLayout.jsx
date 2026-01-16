@@ -5,6 +5,7 @@ import useAuthStore from '../modules/auth/hooks/useAuthStore';
 import React from 'react';
 import { useSettingsStore } from '@core';
 import { useTranslation } from 'react-i18next';
+import NotificationManager from '@modules/notifications/NotificationManager';
 
 const MainLayout = () => {
     const logout = useAuthStore((state) => state.logout);
@@ -22,6 +23,7 @@ const MainLayout = () => {
 
     return (
         <Box sx={{ display: 'flex', width: '100%', overflowX: 'hidden' }}>
+            <NotificationManager />
             <Sidebar />
             <Box
                 component="main"
