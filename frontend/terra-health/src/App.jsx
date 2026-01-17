@@ -8,10 +8,10 @@ import PermissionsPage from './views/Users/PermissionsPage';
 import CustomersPage from './views/Customers/CustomersPage';
 import CustomerPanel from './views/Settings/CustomerPanel';
 import AppointmentsPage from './views/Appointments/AppointmentsPage';
-import AdsDashboard from './views/Ads/AdsDashboard';
-import AdsCampaigns from './views/Ads/AdsCampaigns';
-import AdsAttribution from './views/Ads/AdsAttribution';
-import AdsCampaignDetail from './views/Ads/AdsCampaignDetail';
+import MarketingDashboard from './views/marketing/MarketingDashboard';
+import MarketingCampaigns from './views/marketing/MarketingCampaigns';
+import MarketingAttribution from './views/marketing/MarketingAttribution';
+import MarketingCampaignDetail from './views/marketing/MarketingCampaignDetail';
 import NotificationsPage from './views/Notifications/NotificationsPage';
 import DashboardPage from './views/Dashboard/DashboardPage';
 import RemindersPage from './views/Reminders/RemindersPage';
@@ -42,12 +42,12 @@ function App() {
         <Route path="appointments" element={<AppointmentsPage />} />
         <Route path="customers" element={<CustomersPage />} />
         <Route path="reminders" element={<RemindersPage />} />
-        <Route path="ads">
-          <Route index element={<Navigate to="/ads/dashboard" replace />} />
-          <Route path="dashboard" element={<AdsDashboard />} />
-          <Route path="campaigns" element={<AdsCampaigns />} />
-          <Route path="campaigns/:id" element={<AdsCampaignDetail />} />
-          <Route path="attribution" element={<AdsAttribution />} />
+        <Route path="marketing">
+          <Route index element={<Navigate to="/marketing/dashboard" replace />} />
+          <Route path="dashboard" element={<MarketingDashboard />} />
+          <Route path="campaigns" element={<MarketingCampaigns />} />
+          <Route path="campaigns/:id" element={<MarketingCampaignDetail />} />
+          <Route path="attribution" element={<MarketingAttribution />} />
         </Route>
         <Route path="statistics" element={<Views.Statistics />} />
         <Route path="notifications" element={<NotificationsPage />} />

@@ -79,6 +79,15 @@
         "delete_confirm": "Are you sure you want to delete this reminder?",
         "empty_state_desc": "No reminders scheduled yet. You can start by adding a new one."
     },
+    "settings": {
+        "reminder_settings": "Reminder Settings",
+        "reminder_settings_desc": "You can manage reminder categories, sub-categories, and statuses from here.",
+        "categories": "Categories",
+        "sub_categories": "Sub-Categories",
+        "statuses": "Statuses",
+        "mark_as_completed": "Mark as Completed",
+        "mark_as_completed_desc": "When this status is selected, the reminder will be marked as 'Completed'."
+    },
     "menu": {
         "dashboard": "Dashboard",
         "appointments": "Appointments",

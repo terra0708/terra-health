@@ -57,7 +57,7 @@ import {
     Bar,
     Cell
 } from 'recharts';
-import { MOCK_CAMPAIGNS, MOCK_DAILY_STATS_FULL, MOCK_ATTRIBUTION_DATA_FULL } from '../../mocks/adsMocks';
+import { MOCK_CAMPAIGNS, MOCK_DAILY_STATS_FULL, MOCK_ATTRIBUTION_DATA_FULL } from '../../mocks/marketingMocks';
 
 const DetailStatCard = ({ title, value, icon: Icon, color, trend, subtitle }) => {
     const theme = useTheme();
@@ -91,7 +91,7 @@ const DetailStatCard = ({ title, value, icon: Icon, color, trend, subtitle }) =>
     );
 };
 
-const AdsCampaignDetail = () => {
+const MarketingCampaignDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { t } = useTranslation();
@@ -140,7 +140,7 @@ const AdsCampaignDetail = () => {
         <Box sx={{ p: { xs: 2, md: 4 } }}>
             <Box sx={{ mb: 4 }}>
                 <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 3 }}>
-                    <IconButton onClick={() => navigate('/ads/campaigns')} sx={{ bgcolor: 'action.hover' }}>
+                    <IconButton onClick={() => navigate('/marketing/campaigns')} sx={{ bgcolor: 'action.hover' }}>
                         <ArrowLeft size={20} />
                     </IconButton>
                     <Typography variant="body2" fontWeight={700} color="text.secondary">{t('ads.campaigns')}</Typography>
@@ -329,4 +329,4 @@ const AdsCampaignDetail = () => {
     );
 };
 
-export default AdsCampaignDetail;
+export default MarketingCampaignDetail;

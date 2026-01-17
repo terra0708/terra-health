@@ -73,7 +73,7 @@ const ICON_DATA = {
     appointments: 'https://cdn.lordicon.com/aksvbzmu.json',
     customers: 'https://cdn.lordicon.com/eaivqdbn.json',
     reminders: 'https://cdn.lordicon.com/pkmkagva.json',
-    ads: 'https://cdn.lordicon.com/wyaqzesp.json',
+    marketing: 'https://cdn.lordicon.com/wyaqzesp.json',
     statistics: 'https://cdn.lordicon.com/sqqsmbzs.json',
     notifications: 'https://cdn.lordicon.com/zyylfmfm.json',
     users: 'https://cdn.lordicon.com/ntfaoelc.json',
@@ -335,14 +335,14 @@ const Sidebar = () => {
         { key: 'notifications', icon: 'notifications', label: t('menu.notifications'), path: '/notifications' },
     ];
 
-    const adsDropdown = {
-        key: 'ads',
-        icon: 'ads',
+    const marketingDropdown = {
+        key: 'marketing',
+        icon: 'marketing',
         label: t('ads.title'),
         subItems: [
-            { key: 'ads_dashboard', icon: 'dashboard', label: t('ads.dashboard'), path: '/ads/dashboard' },
-            { key: 'ads_campaigns', icon: 'statistics', label: t('ads.campaigns'), path: '/ads/campaigns' },
-            { key: 'ads_attribution', icon: 'customer_panel', label: t('ads.attribution'), path: '/ads/attribution' },
+            { key: 'marketing_dashboard', icon: 'dashboard', label: t('ads.dashboard'), path: '/marketing/dashboard' },
+            { key: 'marketing_campaigns', icon: 'statistics', label: t('ads.campaigns'), path: '/marketing/campaigns' },
+            { key: 'marketing_attribution', icon: 'customer_panel', label: t('ads.attribution'), path: '/marketing/attribution' },
         ]
     };
 
@@ -434,11 +434,11 @@ const Sidebar = () => {
                 ))}
 
                 <DropdownNavItem
-                    key={adsDropdown.key}
-                    icon={adsDropdown.icon}
-                    text={adsDropdown.label}
+                    key={marketingDropdown.key}
+                    icon={marketingDropdown.icon}
+                    text={marketingDropdown.label}
                     open={isMobile ? true : sidebarOpen}
-                    subItems={adsDropdown.subItems}
+                    subItems={marketingDropdown.subItems}
                     currentPath={location.pathname}
                     onClick={isMobile ? toggleSidebar : undefined}
                 />

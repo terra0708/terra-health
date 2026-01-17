@@ -1,167 +1,29 @@
-import React, { useState, useMemo } from 'react';
+import React from 'react';
 import {
-    Box,
-    Grid,
-    Card,
-    Typography,
-    Stack,
-    useTheme,
-    Button,
-    Paper,
-    Divider,
-    FormControl,
-    InputLabel,
-    Select,
-    MenuItem,
-    Checkbox,
-    ListItemText,
-    Collapse,
-    Tooltip as MuiTooltip,
-    LinearProgress
+    Box, Grid, Typography, Stack, useTheme, Button, Card, Divider,
+    FormControl, InputLabel, Select, MenuItem, Checkbox, ListItemText, Collapse
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import {
-    TrendingUp,
-    MousePointer2,
-    Users,
-    DollarSign,
-    BarChart3,
-    ArrowUpRight,
-    ArrowDownRight,
-    ShoppingBag,
-    XCircle,
-    Smartphone,
-    Search as SearchIcon,
-    MessageCircle,
-    UserCircle,
-    SlidersHorizontal,
-    ChevronUp,
-    Calendar,
-    FilterX,
-    Globe2,
-    CheckCircle2
+    TrendingUp, Users, DollarSign, ArrowUpRight, ArrowDownRight,
+    ShoppingBag, SlidersHorizontal, ChevronUp, FilterX
 } from 'lucide-react';
 import {
-    AreaChart,
-    Area,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    ResponsiveContainer,
-    BarChart,
-    Bar,
-    Cell as ReCell
+    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+    BarChart, Bar, Cell as ReCell
 } from 'recharts';
-import { MOCK_DAILY_STATS_FULL, MOCK_ATTRIBUTION_DATA_FULL } from '../../mocks/adsMocks';
+import { MarketingStatCard, useMarketingDashboard } from '../../modules/marketing';
 
-const StatCard = ({ title, value, icon: Icon, trend, trendValue, color, subtitle }) => {
-    const theme = useTheme();
-    return (
-        <Card sx={{ p: 3, borderRadius: 4, height: '100%', position: 'relative', overflow: 'hidden', border: '1px solid', borderColor: alpha(color, 0.1) }}>
-            <Box sx={{ position: 'absolute', top: -10, right: -10, opacity: 0.05 }}>
-                <Icon size={100} color={color} />
-            </Box>
-
-            <Stack spacing={2}>
-                <Box sx={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 3,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    bgcolor: alpha(color, 0.1),
-                    color: color
-                }}>
-                    <Icon size={24} />
-                </Box>
-
-                <Box>
-                    <Typography variant="body2" color="text.secondary" fontWeight={600} sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                        {title}
-                    </Typography>
-                    <Typography variant="h4" fontWeight={800} sx={{ mt: 0.5 }}>
-                        {value}
-                    </Typography>
-                </Box>
-
-                <Stack direction="row" alignItems="center" spacing={0.5}>
-                    {trend === 'up' ? (
-                        <ArrowUpRight size={18} color={theme.palette.success.main} />
-                    ) : (
-                        <ArrowDownRight size={18} color={theme.palette.error.main} />
-                    )}
-                    <Typography variant="caption" fontWeight={700} sx={{ color: trend === 'up' ? 'success.main' : 'error.main' }}>
-                        {trendValue}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                        {subtitle || 'vs last month'}
-                    </Typography>
-                </Stack>
-            </Stack>
-        </Card>
-    );
-};
-
-const AdsDashboard = () => {
+const MarketingDashboard = () => {
     const { t } = useTranslation();
     const theme = useTheme();
-
-    // FILTER STATE
-    const [showFilters, setShowFilters] = useState(false);
-    const [filters, setFilters] = useState({
-        platforms: ['meta', 'google', 'whatsapp', 'manual'],
-        service: 'all'
-    });
-
-    // INTERACTIVE FILTER LOGIC
-    const filteredDailyData = useMemo(() => {
-        return (MOCK_DAILY_STATS_FULL || []).filter(item => {
-            const matchesPlatform = filters.platforms.includes(item.platform);
-            const matchesService = filters.service === 'all' || item.service === filters.service;
-            return matchesPlatform && matchesService;
-        });
-    }, [filters]);
-
-    const filteredAttribution = useMemo(() => {
-        return (MOCK_ATTRIBUTION_DATA_FULL || []).filter(item => {
-            const matchesPlatform = filters.platforms.includes(item.platform);
-            const matchesService = filters.service === 'all' || item.service === filters.service;
-            return matchesPlatform && matchesService;
-        });
-    }, [filters]);
-
-    // DERIVED STATS
-    const stats = useMemo(() => {
-        const totalSpend = filteredDailyData.reduce((acc, curr) => acc + (curr.spend || 0), 0);
-        const totalLeads = filteredDailyData.reduce((acc, curr) => acc + (curr.leads || 0), 0);
-        const salesCount = filteredAttribution.filter(l => l.status === 'sale').length;
-        const cancelCount = filteredAttribution.filter(l => l.status === 'cancelled').length;
-        const netRevenue = filteredAttribution.reduce((acc, curr) => acc + (curr.value || 0), 0);
-        const cpl = totalLeads > 0 ? (totalSpend / totalLeads).toFixed(2) : 0;
-        const roas = totalSpend > 0 ? (netRevenue / totalSpend).toFixed(1) : 0;
-
-        return { totalSpend, totalLeads, salesCount, cancelCount, netRevenue, cpl, roas };
-    }, [filteredDailyData, filteredAttribution]);
-
-    const funnelData = useMemo(() => [
-        { name: 'Total Leads', value: stats.totalLeads, color: theme.palette.primary.main },
-        { name: 'Sales', value: stats.salesCount, color: theme.palette.success.main },
-        { name: 'Cancellations', value: stats.cancelCount, color: theme.palette.error.main },
-    ], [stats, theme]);
-
-    const handleFilterChange = (field, value) => {
-        setFilters(prev => ({ ...prev, [field]: value }));
-    };
-
-    const resetFilters = () => {
-        setFilters({
-            platforms: ['meta', 'google', 'whatsapp', 'manual'],
-            service: 'all'
-        });
-    };
+    const {
+        showFilters, setShowFilters,
+        filters, handleFilterChange, resetFilters,
+        stats, funnelData,
+        filteredDailyData
+    } = useMarketingDashboard();
 
     return (
         <Box sx={{ p: { xs: 2, md: 4 } }}>
@@ -173,10 +35,10 @@ const AdsDashboard = () => {
                             WebkitBackgroundClip: 'text',
                             WebkitTextFillColor: 'transparent',
                         }}>
-                            Ads Analytics Dashboard
+                            {t('ads.analytics_dashboard')}
                         </Typography>
                         <Typography color="text.secondary" variant="body1">
-                            Interactive full-funnel marketing performance tracking
+                            {t('ads.analytics_subtitle', 'Interactive full-funnel marketing performance tracking')}
                         </Typography>
                     </Box>
 
@@ -187,10 +49,10 @@ const AdsDashboard = () => {
                             onClick={() => setShowFilters(!showFilters)}
                             sx={{ borderRadius: 3, px: 3, fontWeight: 700 }}
                         >
-                            Advanced Filters
+                            {t('common.filters')}
                         </Button>
                         <Button variant="contained" sx={{ borderRadius: 3, fontWeight: 800, background: theme.palette.text.primary, color: theme.palette.background.paper, px: 4 }}>
-                            Export Report
+                            {t('ads.export_report', 'Export Report')}
                         </Button>
                     </Stack>
                 </Stack>
@@ -200,10 +62,10 @@ const AdsDashboard = () => {
                         <Grid container spacing={3}>
                             <Grid item xs={12} sm={4}>
                                 <FormControl fullWidth size="small">
-                                    <InputLabel sx={{ fontWeight: 700 }}>Platforms</InputLabel>
+                                    <InputLabel sx={{ fontWeight: 700 }}>{t('ads.platform')}</InputLabel>
                                     <Select
                                         multiple
-                                        label="Platforms"
+                                        label={t('ads.platform')}
                                         value={filters.platforms}
                                         onChange={(e) => handleFilterChange('platforms', e.target.value)}
                                         renderValue={(selected) => selected.map(s => s.toUpperCase()).join(', ')}
@@ -221,14 +83,14 @@ const AdsDashboard = () => {
 
                             <Grid item xs={12} sm={4}>
                                 <FormControl fullWidth size="small">
-                                    <InputLabel sx={{ fontWeight: 700 }}>Service Type</InputLabel>
+                                    <InputLabel sx={{ fontWeight: 700 }}>{t('customers.service_category')}</InputLabel>
                                     <Select
-                                        label="Service Type"
+                                        label={t('customers.service_category')}
                                         value={filters.service}
                                         onChange={(e) => handleFilterChange('service', e.target.value)}
                                         sx={{ borderRadius: 2 }}
                                     >
-                                        <MenuItem value="all">All Services</MenuItem>
+                                        <MenuItem value="all">{t('common.all')}</MenuItem>
                                         <MenuItem value="hair">Hair Transplant</MenuItem>
                                         <MenuItem value="dental">Dental Aesthetics</MenuItem>
                                         <MenuItem value="plastic">Plastic Surgery</MenuItem>
@@ -238,7 +100,7 @@ const AdsDashboard = () => {
 
                             <Grid item xs={12} sm={4}>
                                 <Button fullWidth variant="soft" color="error" startIcon={<FilterX size={18} />} onClick={resetFilters} sx={{ borderRadius: 2, height: 40, fontWeight: 700 }}>
-                                    Reset All
+                                    {t('common.reset_filters', 'Reset All')}
                                 </Button>
                             </Grid>
                         </Grid>
@@ -248,21 +110,21 @@ const AdsDashboard = () => {
 
             <Grid container spacing={3}>
                 <Grid item xs={12} sm={6} lg={3}>
-                    <StatCard title="Total Ad Spend" value={`€${stats.totalSpend.toLocaleString()}`} icon={DollarSign} trend="up" trendValue="+12%" color={theme.palette.primary.main} />
+                    <MarketingStatCard title={t('ads.total_spend')} value={`€${stats.totalSpend.toLocaleString()}`} icon={DollarSign} trend="up" trendValue="+12%" color={theme.palette.primary.main} />
                 </Grid>
                 <Grid item xs={12} sm={6} lg={3}>
-                    <StatCard title="Leads Captured" value={stats.totalLeads} icon={Users} trend="up" trendValue="+8%" color="#20c997" />
+                    <MarketingStatCard title={t('ads.leads_captured')} value={stats.totalLeads} icon={Users} trend="up" trendValue="+8%" color="#20c997" />
                 </Grid>
                 <Grid item xs={12} sm={6} lg={3}>
-                    <StatCard title="Sales (Closed)" value={stats.salesCount} icon={ShoppingBag} trend="up" trendValue="+15%" color={theme.palette.success.main} />
+                    <MarketingStatCard title={t('ads.sales_closed')} value={stats.salesCount} icon={ShoppingBag} trend="up" trendValue="+15%" color={theme.palette.success.main} />
                 </Grid>
                 <Grid item xs={12} sm={6} lg={3}>
-                    <StatCard title="Net Revenue" value={`€${stats.netRevenue.toLocaleString()}`} icon={TrendingUp} trend="up" trendValue="+21%" color="#7367f0" />
+                    <MarketingStatCard title={t('ads.net_revenue')} value={`€${stats.netRevenue.toLocaleString()}`} icon={TrendingUp} trend="up" trendValue="+21%" color="#7367f0" />
                 </Grid>
 
                 <Grid item xs={12} lg={8}>
                     <Card sx={{ p: 4, borderRadius: 5, height: 550 }}>
-                        <Typography variant="h6" fontWeight={800} mb={3}>Performance Trend (Daily)</Typography>
+                        <Typography variant="h6" fontWeight={800} mb={3}>{t('ads.performance_trend_daily')}</Typography>
                         <Box sx={{ width: '100%', height: 420 }}>
                             <ResponsiveContainer>
                                 <AreaChart data={filteredDailyData}>
@@ -290,7 +152,7 @@ const AdsDashboard = () => {
 
                 <Grid item xs={12} lg={4}>
                     <Card sx={{ p: 4, borderRadius: 5, height: 550, display: 'flex', flexDirection: 'column' }}>
-                        <Typography variant="h6" fontWeight={800} mb={3}>Efficiency Funnel</Typography>
+                        <Typography variant="h6" fontWeight={800} mb={3}>{t('ads.efficiency_funnel')}</Typography>
                         <Box sx={{ flexGrow: 1, width: '100%' }}>
                             <ResponsiveContainer>
                                 <BarChart layout="vertical" data={funnelData} margin={{ left: 10, right: 30, top: 20, bottom: 20 }}>
@@ -306,11 +168,11 @@ const AdsDashboard = () => {
                         </Box>
                         <Stack spacing={2} sx={{ mt: 3, pt: 3, borderTop: '1px dashed', borderColor: 'divider' }}>
                             <Stack direction="row" justifyContent="space-between" alignItems="center">
-                                <Typography variant="body2" fontWeight={700} color="text.secondary">Cost Per Lead (CPL)</Typography>
+                                <Typography variant="body2" fontWeight={700} color="text.secondary">{t('ads.cost_per_lead')}</Typography>
                                 <Typography variant="h6" fontWeight={900} color="primary.main">€{stats.cpl}</Typography>
                             </Stack>
                             <Stack direction="row" justifyContent="space-between" alignItems="center">
-                                <Typography variant="body2" fontWeight={700} color="text.secondary">ROI / ROAS</Typography>
+                                <Typography variant="body2" fontWeight={700} color="text.secondary">{t('ads.roi_roas')}</Typography>
                                 <Typography variant="h6" fontWeight={900} color="success.main">{stats.roas}x</Typography>
                             </Stack>
                         </Stack>
@@ -321,4 +183,4 @@ const AdsDashboard = () => {
     );
 };
 
-export default AdsDashboard;
+export default MarketingDashboard;

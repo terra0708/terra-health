@@ -23,7 +23,7 @@ import {
 import { alpha } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import { Copy, ExternalLink, Hash, Search, MessageCircle, UserCircle, Smartphone, Globe } from 'lucide-react';
-import { MOCK_ATTRIBUTION_DATA_FULL } from '../../mocks/adsMocks';
+import { MOCK_ATTRIBUTION_DATA_FULL } from '../../mocks/marketingMocks';
 
 const AttributionCard = ({ label, value, icon: Icon, color }) => (
     <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 4, bgcolor: alpha(color, 0.03), borderColor: alpha(color, 0.1) }}>
@@ -43,7 +43,7 @@ const AttributionCard = ({ label, value, icon: Icon, color }) => (
     </Paper>
 );
 
-const AdsAttribution = () => {
+const MarketingAttribution = () => {
     const { t } = useTranslation();
     const theme = useTheme();
     const [searchQuery, setSearchQuery] = useState('');
@@ -193,4 +193,4 @@ const AdsAttribution = () => {
     );
 };
 
-export default AdsAttribution;
+export default MarketingAttribution;

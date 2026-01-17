@@ -79,6 +79,15 @@
         "delete_confirm": "Bu hatırlatıcıyı silmek istediğinize emin misiniz?",
         "empty_state_desc": "Henüz herhangi bir hatırlatıcı planlanmamış. Yeni bir tane ekleyerek başlayabilirsiniz."
     },
+    "settings": {
+        "reminder_settings": "Hatırlatıcı Ayarları",
+        "reminder_settings_desc": "Hatırlatıcı kategorilerini, alt başlıklarını ve durumlarını buradan yönetebilirsiniz.",
+        "categories": "Kategoriler",
+        "sub_categories": "Alt Başlıklar",
+        "statuses": "Durumlar",
+        "mark_as_completed": "İşlemi Tamamlar",
+        "mark_as_completed_desc": "Bu durum seçildiğinde hatırlatıcı 'Tamamlandı' olarak işaretlenir."
+    },
     "menu": {
         "dashboard": "Dashboard",
         "appointments": "Randevular",
