@@ -69,8 +69,15 @@
     },
     "reminders": {
         "title": "Reminders",
+        "subtitle": "Manage all reminders and follow-up tasks from here.",
         "add_new": "Add New Reminder",
-        "no_scheduled_reminders": "No scheduled reminders"
+        "no_scheduled_reminders": "No scheduled reminders",
+        "personal_reminder": "Personal Reminder",
+        "select_customer_error": "Please select a customer",
+        "editing_customer_record": "You are editing a customer record. Changes will also be reflected in the customer profile.",
+        "meeting_with": "Meeting",
+        "delete_confirm": "Are you sure you want to delete this reminder?",
+        "empty_state_desc": "No reminders scheduled yet. You can start by adding a new one."
     },
     "menu": {
         "dashboard": "Dashboard",
@@ -308,7 +315,12 @@
             "add_multiple_to_system": "Add {{count}} Files to System",
             "payment_note_placeholder": "Payment note...",
             "note_placeholder": "Add note...",
-            "click_to_select": "Click to Select Files"
+            "click_to_select": "Click to Select Files",
+            "error": {
+                "name_min": "Name must be at least 2 characters",
+                "phone_min": "Please enter a valid phone number",
+                "invalid_email": "Please enter a valid email address"
+            }
         }
     },
     "appointments": {

@@ -18,7 +18,8 @@ import {
     FormControl,
     Select,
     MenuItem,
-    InputLabel
+    InputLabel,
+    TablePagination
 } from '@mui/material';
 import {
     Bell,
@@ -42,12 +43,27 @@ const NotificationsPage = () => {
     const { notifications, markAsRead, markAllAsRead, clearAll } = useNotificationStore();
 
     const [filter, setFilter] = useState('all');
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
 
     const filteredNotifications = useMemo(() => {
         if (filter === 'all') return notifications;
         if (filter === 'unread') return notifications.filter(n => !n.isRead);
         return notifications.filter(n => n.type === filter);
     }, [notifications, filter]);
+
+    const paginatedNotifications = useMemo(() => {
+        return filteredNotifications.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+    }, [filteredNotifications, page, rowsPerPage]);
+
+    const handleChangePage = (event, newPage) => {
+        setPage(newPage);
+    };
+
+    const handleChangeRowsPerPage = (event) => {
+        setRowsPerPage(parseInt(event.target.value, 10));
+        setPage(0);
+    };
 
     const getIcon = (type) => {
         switch (type) {
@@ -140,8 +156,8 @@ const NotificationsPage = () => {
 
             <Card sx={{ borderRadius: 5, overflow: 'hidden', border: `1px solid ${theme.palette.divider}` }}>
                 <List sx={{ p: 0 }}>
-                    {filteredNotifications.length > 0 ? (
-                        filteredNotifications.map((n, index) => (
+                    {paginatedNotifications.length > 0 ? (
+                        paginatedNotifications.map((n, index) => (
                             <React.Fragment key={n.id}>
                                 <ListItem
                                     sx={{
@@ -190,7 +206,7 @@ const NotificationsPage = () => {
                                         <ChevronRight size={20} />
                                     </IconButton>
                                 </ListItem>
-                                {index < filteredNotifications.length - 1 && <Divider />}
+                                {index < paginatedNotifications.length - 1 && <Divider />}
                             </React.Fragment>
                         ))
                     ) : (
@@ -200,6 +216,18 @@ const NotificationsPage = () => {
                         </Box>
                     )}
                 </List>
+                {filteredNotifications.length > 0 && (
+                    <TablePagination
+                        component="div"
+                        count={filteredNotifications.length}
+                        page={page}
+                        onPageChange={handleChangePage}
+                        rowsPerPage={rowsPerPage}
+                        onRowsPerPageChange={handleChangeRowsPerPage}
+                        labelRowsPerPage={t('common.rows_per_page', 'Satır sayısı:')}
+                        sx={{ borderTop: `1px solid ${theme.palette.divider}` }}
+                    />
+                )}
             </Card>
 
             <style>{`

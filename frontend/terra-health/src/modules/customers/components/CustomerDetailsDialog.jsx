@@ -8,16 +8,21 @@ import {
     Tag as TagIcon, Briefcase, Activity, Clock, FileText, Bell, CreditCard,
     File, Download, ExternalLink, CheckCircle2, ChevronRight
 } from 'lucide-react';
-import { useCustomerSettingsStore } from '../hooks/useCustomerSettingsStore';
 import { formatLocaleDate, ALL_COUNTRIES } from '../data/countries';
 import { useTranslation } from 'react-i18next';
 import { MOCK_USERS } from '../../users';
 import { UserCheck } from 'lucide-react';
+import { useLookup } from '@common/hooks/useLookup';
+import { ReminderCard } from '../../reminders/components/ReminderCard';
+import { useReminderSettingsStore } from '../../reminders/hooks/useReminderSettingsStore';
+import { useCustomerStore } from '../../customers/hooks/useCustomerStore';
 
 export const CustomerDetailsDialog = ({ open, onClose, customer }) => {
     const theme = useTheme();
     const { t, i18n } = useTranslation();
-    const settings = useCustomerSettingsStore();
+    const { getStatus, getSource, getService, getTag } = useLookup();
+    const { categories, subCategories, statuses } = useReminderSettingsStore();
+    const { updateCustomerNote } = useCustomerStore();
     const [activeTab, setActiveTab] = useState(0);
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(5);
@@ -42,11 +47,6 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }) => {
     const country = ALL_COUNTRIES.find(c => c.code === customer.country);
     const consultant = MOCK_USERS.find(u => u.id === customer.consultantId);
 
-    const getLocalizedLabel = (def, type) => {
-        if (!def) return '-';
-        if (type === 'service') return lang === 'tr' ? def.name_tr : (def.name_en || def.name_tr);
-        return lang === 'tr' ? def.label_tr : (def.label_en || def.label_tr);
-    };
 
     const SectionTitle = ({ icon: Icon, title, count }) => (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, mt: 1 }}>
@@ -143,12 +143,11 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }) => {
                                 <SectionTitle icon={Briefcase} title={t('customers.services')} count={customer.services?.length} />
                                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                                     {customer.services?.map((sName, i) => {
-                                        const def = settings.services.find(s => s.value === sName || s.name_tr === sName || s.name_en === sName || s.name === sName);
-                                        const color = def?.color || theme.palette.secondary.main;
+                                        const { label, color } = getService(sName);
                                         return (
                                             <Chip
                                                 key={i}
-                                                label={getLocalizedLabel(def, 'service') || sName}
+                                                label={label}
                                                 size="small"
                                                 sx={{ fontWeight: 800, bgcolor: alpha(color, 0.08), color: color, border: `1px solid ${alpha(color, 0.2)}` }}
                                             />
@@ -162,14 +161,14 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }) => {
                             <DetailItem
                                 icon={Activity}
                                 label={t('common.status')}
-                                value={getLocalizedLabel(settings.statuses.find(s => s.value === customer.status))}
-                                color={settings.statuses.find(s => s.value === customer.status)?.color}
+                                value={getStatus(customer.status).label}
+                                color={getStatus(customer.status).color}
                             />
                             <DetailItem
                                 icon={LinkIcon}
                                 label={t('customers.source')}
-                                value={getLocalizedLabel(settings.sources.find(s => s.value === customer.source))}
-                                color={settings.sources.find(s => s.value === customer.source)?.color}
+                                value={getSource(typeof customer.source === 'object' ? customer.source?.type : customer.source).label}
+                                color={getSource(typeof customer.source === 'object' ? customer.source?.type : customer.source).color}
                             />
                             <DetailItem
                                 icon={UserCheck}
@@ -182,12 +181,11 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }) => {
                                 <SectionTitle icon={TagIcon} title={t('customers.tags')} count={customer.tags?.length} />
                                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                                     {customer.tags?.map((tName, i) => {
-                                        const def = settings.tags.find(t => t.value === tName || t.label_tr === tName || t.label_en === tName || t.label === tName);
-                                        const color = def?.color || theme.palette.text.secondary;
+                                        const { label, color } = getTag(tName);
                                         return (
                                             <Chip
                                                 key={i}
-                                                label={getLocalizedLabel(def) || tName}
+                                                label={label}
                                                 size="small"
                                                 sx={{ fontWeight: 800, bgcolor: alpha(color, 0.08), color: color, borderRadius: '6px' }}
                                             />
@@ -246,18 +244,24 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }) => {
                                         {customer.reminder.notes
                                             .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                                             .map((rem) => (
-                                                <Paper key={rem.id} elevation={0} sx={{ p: 2.5, borderRadius: '20px', border: `1px solid ${theme.palette.divider}`, bgcolor: rem.completed ? alpha(theme.palette.success.main, 0.02) : 'transparent' }}>
-                                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
-                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'warning.main' }}>
-                                                            <Calendar size={16} />
-                                                            <Typography variant="caption" sx={{ fontWeight: 900 }}>
-                                                                {rem.reminderTime ? new Date(rem.reminderTime).toLocaleString(i18n.language) : rem.date}
-                                                            </Typography>
-                                                        </Box>
-                                                        {rem.completed && <Chip icon={<CheckCircle2 size={12} />} label={t('customers.status.completed')} size="small" color="success" sx={{ height: 20, fontSize: '0.65rem', fontWeight: 800 }} />}
-                                                    </Box>
-                                                    <Typography variant="body2" sx={{ fontWeight: 700, mb: 1 }}>{rem.text}</Typography>
-                                                </Paper>
+                                                <ReminderCard
+                                                    key={rem.id}
+                                                    reminder={{ ...rem, type: 'customer', customer }}
+                                                    onChangeStatus={(reminder, newStatusId) => {
+                                                        const newStatus = statuses.find(s => s.id === newStatusId);
+                                                        updateCustomerNote(customer.id, rem.id, {
+                                                            statusId: newStatusId,
+                                                            isCompleted: newStatus ? newStatus.isCompleted : false
+                                                        });
+                                                    }}
+                                                    t={t}
+                                                    i18n={i18n}
+                                                    categories={categories}
+                                                    subCategories={subCategories}
+                                                    statuses={statuses}
+                                                    hideCustomerInfo={true}
+                                                    compact={true}
+                                                />
                                             ))}
                                     </Stack>
                                     <TablePagination

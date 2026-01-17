@@ -6,16 +6,15 @@ import { ALL_COUNTRIES } from '../data/countries'; // Import countries data
 import { useTranslation } from 'react-i18next';
 import { MOCK_USERS } from '../../users';
 
+import { useLookup } from '@common/hooks/useLookup';
+
 export const CustomerMobileCard = ({ customer, t, theme, onEdit, onInfo, getStatusChip }) => {
     const { i18n } = useTranslation();
-    const settings = useCustomerSettingsStore();
+    const { getSource, getTag, getService } = useLookup();
     const lang = i18n.language;
 
     const getSourceLabel = (source) => {
-        const sourceVal = typeof source === 'object' ? source?.type : source;
-        const foundSource = settings.sources.find(s => s.value === sourceVal);
-        if (!foundSource) return sourceVal || '-';
-        return lang === 'tr' ? foundSource.label_tr : (foundSource.label_en || foundSource.label_tr);
+        return getSource(typeof source === 'object' ? source?.type : source).label;
     };
 
     // Find flag from standardized countries list
@@ -48,12 +47,11 @@ export const CustomerMobileCard = ({ customer, t, theme, onEdit, onInfo, getStat
                         </Typography>
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                             {customer.tags && customer.tags.map((tagLabel, idx) => {
-                                const tag = settings.tags.find(t => t.label_tr === tagLabel || t.label_en === tagLabel);
-                                const finalLabel = tag ? (lang === 'tr' ? tag.label_tr : (tag.label_en || tag.label_tr)) : tagLabel;
+                                const { label, color } = getTag(tagLabel);
                                 return (
                                     <Chip
-                                        key={idx} label={finalLabel} size="small"
-                                        sx={{ bgcolor: tag ? alpha(tag.color, 0.1) : alpha(theme.palette.divider, 0.1), color: tag?.color || theme.palette.text.secondary, fontWeight: 800, fontSize: '0.6rem', height: 18 }}
+                                        key={idx} label={label} size="small"
+                                        sx={{ bgcolor: alpha(color, 0.1), color: color, fontWeight: 800, fontSize: '0.6rem', height: 18 }}
                                     />
                                 );
                             })}
@@ -86,13 +84,11 @@ export const CustomerMobileCard = ({ customer, t, theme, onEdit, onInfo, getStat
 
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.8, mb: 2 }}>
                 {customer.services.map((service, idx) => {
-                    const def = settings.services.find(s => s.name_tr === service || s.name_en === service);
-                    const finalLabel = def ? (lang === 'tr' ? def.name_tr : (def.name_en || def.name_tr)) : service;
-                    const sColor = def?.color || theme.palette.secondary.main;
+                    const { label, color } = getService(service);
                     return (
                         <Chip
-                            key={idx} label={finalLabel} size="small"
-                            sx={{ bgcolor: alpha(sColor, 0.08), color: sColor, fontWeight: 700, fontSize: '0.7rem', border: `1px solid ${alpha(sColor, 0.15)}` }}
+                            key={idx} label={label} size="small"
+                            sx={{ bgcolor: alpha(color, 0.08), color: color, fontWeight: 700, fontSize: '0.7rem', border: `1px solid ${alpha(color, 0.15)}` }}
                         />
                     );
                 })}

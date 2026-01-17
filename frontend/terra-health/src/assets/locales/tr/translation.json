@@ -69,8 +69,15 @@
     },
     "reminders": {
         "title": "Hatırlatıcılar",
+        "subtitle": "Tüm hatırlatıcıları ve takip görevlerini buradan yönetin.",
         "add_new": "Yeni Hatırlatıcı Ekle",
-        "no_scheduled_reminders": "Planlanmış hatırlatıcı yok"
+        "no_scheduled_reminders": "Planlanmış hatırlatıcı yok",
+        "personal_reminder": "Kişisel Hatırlatıcı",
+        "select_customer_error": "Lütfen bir müşteri seçiniz",
+        "editing_customer_record": "Bir Müşteri Kaydını Düzenliyorsunuz. Değişiklikler müşteri profiline de yansıyacaktır.",
+        "meeting_with": "Görüşme",
+        "delete_confirm": "Bu hatırlatıcıyı silmek istediğinize emin misiniz?",
+        "empty_state_desc": "Henüz herhangi bir hatırlatıcı planlanmamış. Yeni bir tane ekleyerek başlayabilirsiniz."
     },
     "menu": {
         "dashboard": "Dashboard",
@@ -308,7 +315,12 @@
             "add_multiple_to_system": "{{count}} Dosyayı Sisteme Ekle",
             "payment_note_placeholder": "Ödeme notu...",
             "note_placeholder": "Not ekle...",
-            "click_to_select": "Dosya Seçmek İçin Tıklayın"
+            "click_to_select": "Dosya Seçmek İçin Tıklayın",
+            "error": {
+                "name_min": "İsim en az 2 karakter olmalıdır",
+                "phone_min": "Geçerli bir telefon numarası giriniz",
+                "invalid_email": "Geçerli bir e-posta adresi giriniz"
+            }
         }
     },
     "appointments": {

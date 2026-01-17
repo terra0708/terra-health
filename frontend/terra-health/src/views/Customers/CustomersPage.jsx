@@ -19,10 +19,12 @@ import { useCustomerSettingsStore } from '../../modules/customers/hooks/useCusto
 import { useCustomerStore } from '../../modules/customers/hooks/useCustomerStore';
 import { formatLocaleDate, ALL_COUNTRIES } from '../../modules/customers/data/countries';
 import { MOCK_USERS } from '../../modules/users';
+import { useLookup } from '../../common/hooks/useLookup';
 
 const CustomersPage = () => {
     const { t, i18n } = useTranslation();
     const theme = useTheme();
+    const { getStatus, getSource, getService, getTag } = useLookup();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const settings = useCustomerSettingsStore();
     const { customers, deleteCustomer, syncWithMockData } = useCustomerStore();
@@ -151,6 +153,10 @@ const CustomersPage = () => {
         completed: customers.filter(c => ['completed', 'sale'].includes(c.status)).length
     };
 
+    const getSourceLabel = (source) => {
+        return getSource(typeof source === 'object' ? source?.type : source).label;
+    };
+
     const getLocalizedLabel = (item, type) => {
         if (!item) return '-';
         if (type === 'service') return lang === 'tr' ? item.name_tr : (item.name_en || item.name_tr);
@@ -158,9 +164,7 @@ const CustomersPage = () => {
     };
 
     const getStatusChip = (statusValue) => {
-        const s = settings.statuses.find(x => x.value === statusValue);
-        const label = s ? (lang === 'tr' ? s.label_tr : (s.label_en || s.label_tr)) : statusValue;
-        const color = s ? s.color : theme.palette.text.secondary;
+        const { label, color } = getStatus(statusValue);
 
         return (
             <Chip
@@ -267,8 +271,8 @@ const CustomersPage = () => {
                                         renderValue={(selected) => (
                                             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                                                 {selected.map((value) => {
-                                                    const s = settings.statuses.find(x => x.value === value);
-                                                    return <Chip key={value} label={lang === 'tr' ? s?.label_tr : (s?.label_en || s?.label_tr)} size="small" />;
+                                                    const s = getStatus(value);
+                                                    return <Chip key={value} label={s?.label} size="small" />;
                                                 })}
                                             </Box>
                                         )}
@@ -318,8 +322,8 @@ const CustomersPage = () => {
                                         renderValue={(selected) => (
                                             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                                                 {selected.map((value) => {
-                                                    const s = settings.sources.find(x => x.value === value);
-                                                    return <Chip key={value} label={lang === 'tr' ? s?.label_tr : (s?.label_en || s?.label_tr)} size="small" />;
+                                                    const s = getSource(value);
+                                                    return <Chip key={value} label={s?.label} size="small" />;
                                                 })}
                                             </Box>
                                         )}
@@ -376,7 +380,7 @@ const CustomersPage = () => {
                                         renderValue={(selected) => (
                                             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                                                 {selected.map((value) => (
-                                                    <Chip key={value} label={getLocalizedLabel(settings.services.find(s => s.name_tr === value || s.name_en === value), 'service') || value} size="small" />
+                                                    <Chip key={value} label={getService(value).label} size="small" />
                                                 ))}
                                             </Box>
                                         )}
@@ -597,25 +601,36 @@ const CustomersPage = () => {
                                             </Box>
                                         </TableCell>
 
-                                        {/* Actions */}
                                         <TableCell align="right" sx={{ pr: 3, whiteSpace: 'nowrap' }}>
-                                            <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
                                                 <Tooltip title={t('common.details')}>
-                                                    <IconButton onClick={() => handleInfo(c)} sx={{ color: 'info.main', '&:hover': { bgcolor: alpha(theme.palette.info.main, 0.1) } }} size="small">
-                                                        <Info size={16} />
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => { setInfoTarget(c); setDetailsOpen(true); }}
+                                                        sx={{ color: 'info.main', bgcolor: alpha(theme.palette.info.main, 0.08), '&:hover': { bgcolor: alpha(theme.palette.info.main, 0.15) } }}
+                                                    >
+                                                        <Info size={18} />
                                                     </IconButton>
                                                 </Tooltip>
                                                 <Tooltip title={t('common.edit')}>
-                                                    <IconButton onClick={() => handleEdit(c)} sx={{ color: 'primary.main', '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) } }} size="small">
-                                                        <Edit3 size={16} />
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => { setEditTarget(c); setDrawerOpen(true); }}
+                                                        sx={{ color: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.08), '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.15) } }}
+                                                    >
+                                                        <Edit3 size={18} />
                                                     </IconButton>
                                                 </Tooltip>
                                                 <Tooltip title={t('common.delete')}>
-                                                    <IconButton onClick={() => onDelete(c.id)} sx={{ color: 'error.main', '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.1) } }} size="small">
-                                                        <Trash2 size={16} />
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => onDelete(c.id)}
+                                                        sx={{ color: 'error.main', bgcolor: alpha(theme.palette.error.main, 0.08), '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.15) } }}
+                                                    >
+                                                        <Trash2 size={18} />
                                                     </IconButton>
                                                 </Tooltip>
-                                            </Stack>
+                                            </Box>
                                         </TableCell>
                                     </TableRow>
                                 ))}
@@ -626,8 +641,18 @@ const CustomersPage = () => {
                 <TablePagination component="div" count={filteredCustomers.length} rowsPerPage={rowsPerPage} page={page} onPageChange={(e, p) => setPage(p)} onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }} labelRowsPerPage={t('common.rows_per_page')} />
             </Paper>
 
-            <CustomerDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} customer={editTarget} t={t} />
-            <CustomerDetailsDialog open={detailsOpen} onClose={() => setDetailsOpen(false)} customer={infoTarget} />
+            <CustomerDrawer
+                open={drawerOpen}
+                onClose={() => { setDrawerOpen(false); setEditTarget(null); }}
+                customer={editTarget}
+                t={t}
+            />
+
+            <CustomerDetailsDialog
+                open={detailsOpen}
+                onClose={() => { setDetailsOpen(false); setInfoTarget(null); }}
+                customer={infoTarget}
+            />
 
             <Snackbar
                 open={snackbar.open}
