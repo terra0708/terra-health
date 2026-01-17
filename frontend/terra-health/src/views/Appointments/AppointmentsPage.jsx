@@ -9,6 +9,7 @@ import {
     AppointmentCalendar,
     AppointmentDrawer
 } from '../../modules/appointments';
+import { useCustomerStore } from '../../modules/customers/hooks/useCustomerStore';
 
 const AppointmentsPage = () => {
     const { t } = useTranslation();
@@ -22,6 +23,7 @@ const AppointmentsPage = () => {
     }, [userStore.users]);
 
     const { appointments, addAppointment, updateAppointment, deleteAppointment } = useAppointments();
+    const { customers } = useCustomerStore();
 
     // --- STATE ---
     const [selectedDoctorId, setSelectedDoctorId] = useState(doctors[0]?.id || null);
@@ -43,19 +45,25 @@ const AppointmentsPage = () => {
         if (!selectedDoctorId) return [];
         return appointments
             .filter(appt => appt.doctorId === selectedDoctorId)
-            .map(appt => ({
-                id: appt.id.toString(),
-                title: appt.patientName, // Simplified title
-                start: appt.start,
-                end: appt.end,
-                extendedProps: {
-                    type: appt.type,
-                    status: appt.status,
-                    patientName: appt.patientName,
-                    notes: appt.notes
-                }
-            }));
-    }, [appointments, selectedDoctorId]);
+            .map(appt => {
+                const customer = customers.find(c => c.id === appt.patientId);
+                const displayName = customer ? customer.name : appt.patientName;
+
+                return {
+                    id: appt.id.toString(),
+                    title: displayName,
+                    start: appt.start,
+                    end: appt.end,
+                    extendedProps: {
+                        type: appt.type,
+                        status: appt.status,
+                        patientId: appt.patientId,
+                        patientName: displayName,
+                        notes: appt.notes
+                    }
+                };
+            });
+    }, [appointments, selectedDoctorId, customers]);
 
     // --- HANDLERS ---
     const handleSelect = (selectionInfo) => {

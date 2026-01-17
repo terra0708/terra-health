@@ -351,11 +351,11 @@ const Sidebar = () => {
         icon: 'settings',
         label: t('menu.settings'),
         subItems: [
-            { key: 'users', icon: 'users', label: t('menu.users'), path: '/users' },
-            { key: 'permissions', icon: 'permissions', label: t('menu.permissions'), path: '/permissions' },
+            { key: 'users', icon: 'users', label: t('menu.users'), path: '/settings/users' },
+            { key: 'permissions', icon: 'permissions', label: t('menu.permissions'), path: '/settings/permissions' },
             { key: 'reminder_settings', icon: 'settings', label: t('settings.reminder_settings', 'Hatırlatıcı Ayarları'), path: '/settings/reminders' },
             { key: 'system_settings', icon: 'system_settings', label: t('menu.system_settings'), path: '/settings' },
-            { key: 'customer_panel', icon: 'customer_panel', label: t('menu.customer_panel'), path: '/customer-panel' },
+            { key: 'customer_panel', icon: 'customer_panel', label: t('menu.customer_panel'), path: '/settings/customer-panel' },
         ]
     };
 
@@ -489,8 +489,6 @@ const Sidebar = () => {
                 variant="temporary"
                 open={sidebarOpen}
                 onClose={toggleSidebar}
-                disableEnforceFocus
-                disableRestoreFocus
                 ModalProps={{ keepMounted: true }}
                 sx={{
                     zIndex: (theme) => theme.zIndex.drawer + 5,

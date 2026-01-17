@@ -99,7 +99,7 @@ export const EditableList = ({
             </Stack>
 
             <Stack spacing={1.5}>
-                {items.length > 0 ? items.map((item) => (
+                {Array.isArray(items) && items.length > 0 ? items.map((item) => (
                     <Paper
                         key={item.id}
                         elevation={0}

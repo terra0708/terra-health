@@ -4,21 +4,24 @@ import { User, Phone, Mail, Calendar } from 'lucide-react';
 import { ALL_COUNTRIES } from '../data/countries';
 import { EditableList } from '@common/ui/EditableList';
 import { useTranslation } from 'react-i18next';
-import { useController } from 'react-hook-form';
+import { Controller, useController } from 'react-hook-form';
 
 export const PersonalInfoTab = ({ register, control, t, i18n, errors }) => {
     const { field: notesField } = useController({ name: 'notes', control });
 
     const handleAddNote = (newNote) => {
-        notesField.onChange([{ id: Date.now(), ...newNote }, ...notesField.value]);
+        const currentNotes = Array.isArray(notesField.value) ? notesField.value : [];
+        notesField.onChange([{ id: Date.now(), ...newNote }, ...currentNotes]);
     };
 
     const handleUpdateNote = (id, updates) => {
-        notesField.onChange(notesField.value.map(n => n.id === id ? { ...n, ...updates } : n));
+        const currentNotes = Array.isArray(notesField.value) ? notesField.value : [];
+        notesField.onChange(currentNotes.map(n => n.id === id ? { ...n, ...updates } : n));
     };
 
     const handleDeleteNote = (id) => {
-        notesField.onChange(notesField.value.filter(n => n.id !== id));
+        const currentNotes = Array.isArray(notesField.value) ? notesField.value : [];
+        notesField.onChange(currentNotes.filter(n => n.id !== id));
     };
 
     return (
@@ -40,15 +43,22 @@ export const PersonalInfoTab = ({ register, control, t, i18n, errors }) => {
             />
 
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-                <TextField
-                    {...register('country')}
-                    select
-                    label={t('customers.country')}
-                    sx={{ width: { xs: '100%', sm: '160px' } }}
-                    InputProps={{ sx: { borderRadius: '16px' } }}
-                >
-                    {ALL_COUNTRIES.map((c) => <MenuItem key={c.code} value={c.code}>{c.flag} {c.code}</MenuItem>)}
-                </TextField>
+                <Controller
+                    name="country"
+                    control={control}
+                    render={({ field }) => (
+                        <TextField
+                            {...field}
+                            select
+                            label={t('customers.country')}
+                            sx={{ width: { xs: '100%', sm: '160px' } }}
+                            InputProps={{ sx: { borderRadius: '16px' } }}
+                            value={field.value || 'TR'}
+                        >
+                            {ALL_COUNTRIES.map((c) => <MenuItem key={c.code} value={c.code}>{c.flag} {c.code}</MenuItem>)}
+                        </TextField>
+                    )}
+                />
 
                 <TextField
                     {...register('phone')}

@@ -8,6 +8,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
 import { useCustomerStore } from '../hooks/useCustomerStore';
+import { useReminderStore } from '../../reminders/hooks/useReminderStore';
 import { useCustomerSettingsStore } from '../hooks/useCustomerSettingsStore';
 import { customerSchema } from '../data/schema';
 import { PersonalInfoTab } from './PersonalInfoTab';
@@ -23,6 +24,7 @@ export const CustomerDrawer = ({ open, onClose, customer, t }) => {
     const { i18n } = useTranslation();
     const settings = useCustomerSettingsStore();
     const { addCustomer, updateCustomer } = useCustomerStore();
+    const { addReminder, deleteRemindersByRelation } = useReminderStore();
     const [tabValue, setTabValue] = React.useState(0);
     const [snackbar, setSnackbar] = React.useState({ open: false, message: '', severity: 'success' });
 
@@ -38,19 +40,32 @@ export const CustomerDrawer = ({ open, onClose, customer, t }) => {
             name: '', phone: '', email: '', country: 'TR',
             registrationDate: new Date().toISOString().split('T')[0],
             status: 'new', source: 'manual', services: [], tags: [],
-            notes: [], reminder: { active: false, notes: [] }, files: [], payments: []
+            notes: [], files: [], payments: [],
+            reminder: { active: false, notes: [] } // For form internal use
         }
     });
 
     useEffect(() => {
         if (open) {
             if (customer) {
+                // Fetch reminders from central store for this customer
+                const centralReminders = useReminderStore.getState().reminders
+                    .filter(r => r.relationId === customer.id);
+
                 reset({
                     ...customer,
+                    country: customer.country || 'TR',
+                    status: customer.status || settings.statuses[0]?.value || 'new',
+                    source: customer.source || settings.sources[0]?.value || 'manual',
+                    consultantId: customer.consultantId || '',
+                    category: customer.category || '',
                     notes: customer.notes || [],
-                    reminder: customer.reminder || { active: false, notes: [] },
                     files: customer.files || [],
-                    payments: customer.payments || []
+                    payments: customer.payments || [],
+                    reminder: {
+                        active: centralReminders.length > 0,
+                        notes: centralReminders
+                    }
                 });
             } else {
                 reset({
@@ -59,7 +74,8 @@ export const CustomerDrawer = ({ open, onClose, customer, t }) => {
                     status: settings.statuses[0]?.value || 'new',
                     source: settings.sources[0]?.value || 'manual',
                     services: [], tags: [], notes: [],
-                    reminder: { active: false, notes: [] }, files: [], payments: []
+                    files: [], payments: [],
+                    reminder: { active: false, notes: [] }
                 });
             }
             setTabValue(0);
@@ -67,12 +83,12 @@ export const CustomerDrawer = ({ open, onClose, customer, t }) => {
     }, [customer, open, reset, settings]);
 
     const onSubmit = (data) => {
-        // Handle Mentions (simplified logic from original)
+        // Handle Mentions
         const allNotes = [...data.notes, ...(data.reminder?.notes || []), ...data.payments];
         const mentionRegex = /@(\w+)/g;
         allNotes.forEach(note => {
             let match;
-            while ((match = mentionRegex.exec(note.text)) !== null) {
+            while ((match = mentionRegex.exec(note.text || note.note || '')) !== null) {
                 useNotificationStore.getState().addNotification({
                     title: 'Senden Bahsedildi',
                     message: `${data.name} hakkındaki bir notta bahsedildin.`,
@@ -81,11 +97,30 @@ export const CustomerDrawer = ({ open, onClose, customer, t }) => {
             }
         });
 
+        // Separate Reminders from Customer Data
+        const { reminder, ...customerData } = data;
+        const reminderNotes = reminder?.notes || [];
+
         if (customer) {
-            updateCustomer(customer.id, data);
+            updateCustomer(customer.id, customerData);
+
+            // Sync Reminders: For simplicity in this drawer, we overwrite/re-add or we could diff.
+            // But since this is a 'Tab' based edit, we can clear and re-add for this specific customer
+            deleteRemindersByRelation(customer.id);
+            reminderNotes.forEach(rn => {
+                addReminder({ ...rn, relationId: customer.id, categoryId: 'customer' });
+            });
+
             setSnackbar({ open: true, message: t('common.success_update', 'Güncellendi'), severity: 'success' });
         } else {
-            addCustomer(data);
+            // New Customer
+            const newCust = addCustomer(customerData); // Should return the new ID
+            const newId = newCust?.id || Date.now(); // Fallback if addCustomer doesn't return
+
+            reminderNotes.forEach(rn => {
+                addReminder({ ...rn, relationId: newId, categoryId: 'customer' });
+            });
+
             useNotificationStore.getState().addNotification({
                 title: t('notifications.new_leads'),
                 message: `${data.name} yeni müşteri kaydı.`,

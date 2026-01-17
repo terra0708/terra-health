@@ -9,8 +9,16 @@ export const useReminders = () => {
     const { t, i18n } = useTranslation();
 
     // Stores
-    const { customers, deleteCustomerNote, updateCustomerNote, addCustomerNote, generateRandomReminders, syncWithMockData } = useCustomerStore();
-    const { personalReminders, addPersonalReminder, updatePersonalReminder, deletePersonalReminder } = useReminderStore();
+    const { customers, clearNestedReminders, syncWithMockData } = useCustomerStore();
+    const {
+        reminders,
+        addReminder,
+        updateReminder,
+        deleteReminder,
+        toggleComplete,
+        syncFromCustomerStore
+    } = useReminderStore();
+
     const { categories, subCategories, statuses } = useReminderSettingsStore();
 
     // UI States
@@ -28,11 +36,37 @@ export const useReminders = () => {
     const [filterSubCategory, setFilterSubCategory] = useState([]);
     const [showFilters, setShowFilters] = useState(false);
 
-    // Local Filters for Apply Button
+    // Local Filters for Apply Button (Performance)
     const [localFilters, setLocalFilters] = useState({
         status: [], category: [], subCategory: [],
         dateStart: '', dateEnd: ''
     });
+
+    // --- INITIALIZATION & MIGRATION ---
+    useEffect(() => {
+        // 1. Sync customers with base mock data if needed
+        syncWithMockData();
+
+        // 2. Perform one-time migration from Nested -> Centralized
+        // We check if any customer still has a 'reminder' property with notes
+        const needsMigration = customers.some(c => c.reminder?.notes?.length > 0);
+        if (needsMigration) {
+            const synced = syncFromCustomerStore(customers);
+            if (synced) {
+                clearNestedReminders();
+            }
+        }
+
+        // 3. Generate initial demo data if everything is empty
+        if (reminders.length === 0) {
+            // Self-generating standard demo reminders
+            const demoReminders = [
+                { title: 'Hoşgeldin Mesajı', note: 'Yeni sistem hatırlatıcısı', categoryId: 'personal', statusId: 'pending' },
+                { title: 'Haftalık Rapor', note: 'Performans kontrolü', categoryId: 'finance', statusId: 'pending' }
+            ];
+            demoReminders.forEach(r => addReminder(r));
+        }
+    }, []);
 
     // Sync Main -> Local when opening filters
     useEffect(() => {
@@ -46,13 +80,6 @@ export const useReminders = () => {
             });
         }
     }, [showFilters]);
-
-    // Initial Sync
-    useEffect(() => {
-        syncWithMockData();
-        const totalReminders = personalReminders.length + customers.reduce((acc, c) => acc + (c.reminder?.notes?.length || 0), 0);
-        if (totalReminders === 0) generateRandomReminders();
-    }, []);
 
     // --- ACTIONS ---
     const applyFilters = () => {
@@ -79,39 +106,28 @@ export const useReminders = () => {
     };
 
     const handleAddSubmit = useCallback((data) => {
-        if (data.categoryId === 'customer' && data.customerId) {
-            const noteData = { ...data, type: 'customer' };
-            if (data.id && data.type === 'customer') updateCustomerNote(data.customerId, data.id, noteData);
-            else addCustomerNote(data.customerId, noteData);
+        if (data.id) {
+            updateReminder(data.id, data);
         } else {
-            const reminderData = { ...data, type: 'personal' };
-            if (data.id && data.type === 'personal') updatePersonalReminder(data.id, reminderData);
-            else addPersonalReminder(reminderData);
+            addReminder(data);
         }
-    }, [addCustomerNote, updateCustomerNote, addPersonalReminder, updatePersonalReminder]);
+        setOpenAddDialog(false);
+        setEditingReminder(null);
+    }, [addReminder, updateReminder]);
 
     const handleDelete = useCallback((reminder) => {
-        if (reminder.type === 'customer') {
-            if (window.confirm(t('reminders.delete_confirm'))) deleteCustomerNote(reminder.customer.id, reminder.id);
-        } else deletePersonalReminder(reminder.id);
-    }, [deleteCustomerNote, deletePersonalReminder, t]);
+        if (window.confirm(t('reminders.delete_confirm'))) {
+            deleteReminder(reminder.id);
+        }
+    }, [deleteReminder, t]);
 
     const handleChangeStatus = useCallback((reminder, newStatusId) => {
         const newStatus = statuses.find(s => s.id === newStatusId);
-        const isCompleted = newStatus ? newStatus.isCompleted : false;
-
-        if (reminder.type === 'customer') {
-            updateCustomerNote(reminder.customer.id, reminder.id, {
-                statusId: newStatusId,
-                isCompleted: isCompleted
-            });
-        } else {
-            updatePersonalReminder(reminder.id, {
-                statusId: newStatusId,
-                isCompleted: isCompleted
-            });
-        }
-    }, [statuses, updateCustomerNote, updatePersonalReminder]);
+        updateReminder(reminder.id, {
+            statusId: newStatusId,
+            isCompleted: newStatus ? newStatus.isCompleted : false
+        });
+    }, [statuses, updateReminder]);
 
     const handleEdit = useCallback((reminder) => {
         setEditingReminder(reminder);
@@ -123,31 +139,44 @@ export const useReminders = () => {
         setDetailsOpen(true);
     }, []);
 
-    // --- COMPUTED ---
-    const allReminders = useMemo(() => {
-        const customerReminders = customers.flatMap(c =>
-            (c.reminder?.notes || []).map(note => ({
-                ...note,
-                type: 'customer',
-                customer: c,
-                source: 'CRM'
-            }))
-        );
-        const personal = personalReminders.map(r => ({ ...r, type: 'personal', source: 'Personal' }));
-        return [...customerReminders, ...personal].sort((a, b) => {
+    // --- COMPUTED (THE ENGINE) ---
+
+    // We enrich reminders with customer data on-the-fly (Reference based)
+    const enrichedReminders = useMemo(() => {
+        const uniqueMap = new Map();
+
+        reminders.forEach(r => {
+            const customer = r.relationId ? customers.find(c => c.id === r.relationId) : null;
+            const enriched = {
+                ...r,
+                customer: customer, // Dynamic link
+                source: r.categoryId === 'customer' ? 'CRM' : 'Personal',
+                type: r.categoryId === 'customer' ? 'customer' : 'personal'
+            };
+            // If duplicate ID exists, last one wins or we skip. 
+            // Here, we ensure the key used in UI will be unique.
+            if (!uniqueMap.has(r.id)) {
+                uniqueMap.set(r.id, enriched);
+            }
+        });
+
+        return Array.from(uniqueMap.values()).sort((a, b) => {
             const dateA = new Date(a.date);
             const dateB = new Date(b.date);
             if (!isValid(dateA)) return 1;
             if (!isValid(dateB)) return -1;
             return dateA - dateB;
         });
-    }, [customers, personalReminders]);
+    }, [reminders, customers]);
 
     const filteredReminders = useMemo(() => {
-        let filtered = allReminders;
+        let filtered = enrichedReminders;
+
+        // Status / Overdue Filter
         if (currentTab.length > 0) {
             const hasOverdue = currentTab.includes('overdue');
             const statusIds = currentTab.filter(s => s !== 'overdue');
+
             filtered = filtered.filter(r => {
                 let match = false;
                 if (statusIds.length > 0 && statusIds.includes(r.statusId)) match = true;
@@ -155,6 +184,8 @@ export const useReminders = () => {
                 return match;
             });
         }
+
+        // Search Query
         if (searchQuery) {
             const query = searchQuery.toLowerCase();
             filtered = filtered.filter(r =>
@@ -163,12 +194,15 @@ export const useReminders = () => {
                 (r.customer && r.customer.name && r.customer.name.toLowerCase().includes(query))
             );
         }
+
+        // Filters
         if (filterDateStart) filtered = filtered.filter(r => r.date >= filterDateStart);
         if (filterDateEnd) filtered = filtered.filter(r => r.date <= filterDateEnd);
         if (filterCategory.length > 0) filtered = filtered.filter(r => filterCategory.includes(r.categoryId));
         if (filterSubCategory.length > 0) filtered = filtered.filter(r => filterSubCategory.includes(r.subCategoryId));
+
         return filtered;
-    }, [allReminders, currentTab, searchQuery, filterDateStart, filterDateEnd, filterCategory, filterSubCategory]);
+    }, [enrichedReminders, currentTab, searchQuery, filterDateStart, filterDateEnd, filterCategory, filterSubCategory]);
 
     const activeFilterCount = useMemo(() => {
         let count = 0;
@@ -206,11 +240,11 @@ export const useReminders = () => {
         // Actions
         applyFilters,
         resetFilters,
-        generateRandomReminders,
         handleAddSubmit,
         handleDelete,
         handleEdit,
         handleShowInfo,
-        handleChangeStatus
+        handleChangeStatus,
+        toggleComplete
     };
 };

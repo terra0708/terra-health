@@ -37,7 +37,7 @@ export const RemindersTab = ({ control, t, i18n }) => {
         const selectedStatus = statuses.find(s => s.id === newReminder.statusId);
 
         const reminderToAdd = {
-            id: Date.now().toString(),
+            id: `${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
             ...newReminder,
             isCompleted: selectedStatus ? selectedStatus.isCompleted : false,
             categoryId: 'customer',
@@ -59,11 +59,13 @@ export const RemindersTab = ({ control, t, i18n }) => {
     };
 
     const handleUpdate = (id, updates) => {
-        notesField.onChange(notesField.value.map(n => n.id === id ? { ...n, ...updates } : n));
+        const current = Array.isArray(notesField.value) ? notesField.value : [];
+        notesField.onChange(current.map(n => n.id === id ? { ...n, ...updates } : n));
     };
 
     const handleDelete = (reminder) => {
-        const remaining = notesField.value.filter(n => n.id !== reminder.id);
+        const current = Array.isArray(notesField.value) ? notesField.value : [];
+        const remaining = current.filter(n => n.id !== reminder.id);
         notesField.onChange(remaining);
         if (remaining.length === 0) activeField.onChange(false);
     };

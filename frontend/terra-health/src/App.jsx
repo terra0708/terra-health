@@ -3,8 +3,8 @@ import LoginPage from './views/Login/LoginPage';
 import useAuthStore from './modules/auth/hooks/useAuthStore';
 import MainLayout from './app/MainLayout';
 import * as Views from './views/Placeholders';
-import UsersPage from './views/Users/UsersPage';
-import PermissionsPage from './views/Users/PermissionsPage';
+import UsersPage from './views/Settings/UsersPage';
+import PermissionsPage from './views/Settings/PermissionsPage';
 import CustomersPage from './views/Customers/CustomersPage';
 import CustomerPanel from './views/Settings/CustomerPanel';
 import AppointmentsPage from './views/Appointments/AppointmentsPage';
@@ -16,6 +16,7 @@ import NotificationsPage from './views/Notifications/NotificationsPage';
 import DashboardPage from './views/Dashboard/DashboardPage';
 import RemindersPage from './views/Reminders/RemindersPage';
 import ReminderSettingsPage from './views/Settings/ReminderSettingsPage';
+import SystemSettingsPage from './views/Settings/SystemSettingsPage';
 import { Box } from '@mui/material';
 
 // Protected Route component
@@ -51,11 +52,13 @@ function App() {
         </Route>
         <Route path="statistics" element={<Views.Statistics />} />
         <Route path="notifications" element={<NotificationsPage />} />
-        <Route path="users" element={<UsersPage />} />
-        <Route path="permissions" element={<PermissionsPage />} />
-        <Route path="settings" element={<Views.Settings />} />
-        <Route path="settings/reminders" element={<ReminderSettingsPage />} />
-        <Route path="customer-panel" element={<CustomerPanel />} />
+        <Route path="settings">
+          <Route index element={<SystemSettingsPage />} />
+          <Route path="users" element={<UsersPage />} />
+          <Route path="permissions" element={<PermissionsPage />} />
+          <Route path="reminders" element={<ReminderSettingsPage />} />
+          <Route path="customer-panel" element={<CustomerPanel />} />
+        </Route>
       </Route>
 
       {/* 404 - Tanımsız rotaları login'e yönlendir */}

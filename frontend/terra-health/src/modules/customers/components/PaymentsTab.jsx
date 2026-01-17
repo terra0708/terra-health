@@ -8,15 +8,18 @@ export const PaymentsTab = ({ control, t }) => {
     const { field: paymentsField } = useController({ name: 'payments', control });
 
     const handleAdd = (newPay) => {
-        paymentsField.onChange([{ id: Date.now(), ...newPay }, ...paymentsField.value]);
+        const currentPayments = Array.isArray(paymentsField.value) ? paymentsField.value : [];
+        paymentsField.onChange([{ id: Date.now(), ...newPay }, ...currentPayments]);
     };
 
     const handleUpdate = (id, updates) => {
-        paymentsField.onChange(paymentsField.value.map(p => p.id === id ? { ...p, ...updates } : p));
+        const currentPayments = Array.isArray(paymentsField.value) ? paymentsField.value : [];
+        paymentsField.onChange(currentPayments.map(p => p.id === id ? { ...p, ...updates } : p));
     };
 
     const handleDelete = (id) => {
-        paymentsField.onChange(paymentsField.value.filter(p => p.id !== id));
+        const currentPayments = Array.isArray(paymentsField.value) ? paymentsField.value : [];
+        paymentsField.onChange(currentPayments.filter(p => p.id !== id));
     };
 
     return (

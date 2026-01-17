@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MOCK_CAMPAIGNS } from '../../../mocks/marketingMocks';
+import { useMarketingStore } from './useMarketingStore';
 
 export const useMarketingCampaigns = () => {
     const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState('');
     const [platformFilter, setPlatformFilter] = useState('all');
-    const [campaigns, setCampaigns] = useState(MOCK_CAMPAIGNS);
+    const { campaigns, toggleStatus: storeToggleStatus } = useMarketingStore();
     const [dialogOpen, setDialogOpen] = useState(false);
 
     const filteredCampaigns = campaigns.filter(c => {
@@ -16,9 +16,7 @@ export const useMarketingCampaigns = () => {
     });
 
     const toggleStatus = (id) => {
-        setCampaigns(prev => prev.map(c =>
-            c.id === id ? { ...c, status: c.status === 'active' ? 'paused' : 'active' } : c
-        ));
+        storeToggleStatus(id);
     };
 
     const handleViewStats = (id) => {

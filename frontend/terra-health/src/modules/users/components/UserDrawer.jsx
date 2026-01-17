@@ -108,8 +108,6 @@ export const UserDrawer = ({ open, onClose, onSave, user, t }) => {
             anchor={isMobile ? "bottom" : "right"}
             open={open}
             onClose={onClose}
-            disableEnforceFocus
-            disableRestoreFocus
             sx={{ zIndex: 1400 }}
             PaperProps={{
                 sx: {

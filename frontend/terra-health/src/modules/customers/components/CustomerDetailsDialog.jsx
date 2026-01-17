@@ -15,14 +15,24 @@ import { UserCheck } from 'lucide-react';
 import { useLookup } from '@common/hooks/useLookup';
 import { ReminderCard } from '../../reminders/components/ReminderCard';
 import { useReminderSettingsStore } from '../../reminders/hooks/useReminderSettingsStore';
+import { useReminderStore } from '../../reminders/hooks/useReminderStore';
 import { useCustomerStore } from '../../customers/hooks/useCustomerStore';
 
 export const CustomerDetailsDialog = ({ open, onClose, customer }) => {
     const theme = useTheme();
     const { t, i18n } = useTranslation();
     const { getStatus, getSource, getService, getTag } = useLookup();
-    const { categories, subCategories, statuses } = useReminderSettingsStore();
-    const { updateCustomerNote } = useCustomerStore();
+    const categories = useReminderSettingsStore(state => state.categories);
+    const subCategories = useReminderSettingsStore(state => state.subCategories);
+    const statuses = useReminderSettingsStore(state => state.statuses);
+    const updateReminder = useReminderStore(state => state.updateReminder);
+    const reminders = useReminderStore(state => state.reminders);
+
+    const customerReminders = React.useMemo(() => {
+        if (!customer) return [];
+        return reminders.filter(r => r.relationId === customer.id);
+    }, [reminders, customer?.id]);
+
     const [activeTab, setActiveTab] = useState(0);
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(5);
@@ -32,6 +42,8 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }) => {
     useEffect(() => {
         setPage(0);
     }, [activeTab, open]);
+
+    if (!customer) return null;
 
     const handleChangePage = (event, newPage) => {
         setPage(newPage);
@@ -236,20 +248,20 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }) => {
 
                 {activeTab === 2 && (
                     <Stack spacing={3} sx={{ flex: 1 }}>
-                        <SectionTitle icon={Bell} title={t('customers.scheduled_reminders')} count={customer.reminder?.notes?.length} />
+                        <SectionTitle icon={Bell} title={t('customers.scheduled_reminders')} count={customerReminders.length} />
                         <Box sx={{ flex: 1, minHeight: 0 }}>
-                            {customer.reminder?.notes?.length > 0 ? (
+                            {customerReminders.length > 0 ? (
                                 <>
                                     <Stack spacing={2}>
-                                        {customer.reminder.notes
+                                        {customerReminders
                                             .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                                             .map((rem) => (
                                                 <ReminderCard
                                                     key={rem.id}
-                                                    reminder={{ ...rem, type: 'customer', customer }}
+                                                    reminder={{ ...rem, customer }}
                                                     onChangeStatus={(reminder, newStatusId) => {
                                                         const newStatus = statuses.find(s => s.id === newStatusId);
-                                                        updateCustomerNote(customer.id, rem.id, {
+                                                        updateReminder(rem.id, {
                                                             statusId: newStatusId,
                                                             isCompleted: newStatus ? newStatus.isCompleted : false
                                                         });
@@ -266,7 +278,7 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }) => {
                                     </Stack>
                                     <TablePagination
                                         component="div"
-                                        count={customer.reminder.notes.length}
+                                        count={customerReminders.length}
                                         page={page}
                                         onPageChange={handleChangePage}
                                         rowsPerPage={rowsPerPage}

@@ -37,6 +37,8 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useCustomerStore } from '../../modules/customers/hooks/useCustomerStore';
 import { useAppointmentStore } from '../../modules/appointments/hooks/useAppointmentStore';
+import { useReminderStore } from '../../modules/reminders/hooks/useReminderStore';
+import { useMarketingStore } from '../../modules/marketing/hooks/useMarketingStore';
 import { useNotificationStore } from '../../modules/notifications/hooks/useNotificationStore';
 import { format, isToday, isTomorrow, differenceInMinutes, differenceInHours, differenceInDays } from 'date-fns';
 import { tr, enUS } from 'date-fns/locale';
@@ -47,6 +49,8 @@ const DashboardPage = () => {
     const navigate = useNavigate();
     const { customers } = useCustomerStore();
     const { appointments } = useAppointmentStore();
+    const { reminders } = useReminderStore();
+    const { campaigns } = useMarketingStore();
     const { notifications, getUnreadCount } = useNotificationStore();
 
     // Calculate metrics
@@ -69,13 +73,9 @@ const DashboardPage = () => {
         const unreadNotifications = getUnreadCount();
 
         // Today's reminders
-        const todaysReminders = customers.filter(c =>
-            c.reminder?.active &&
-            c.reminder.notes?.some(n =>
-                !n.completed &&
-                n.reminderTime &&
-                isToday(new Date(n.reminderTime))
-            )
+        const todaysReminders = reminders.filter(r =>
+            !r.isCompleted &&
+            r.date === now.toISOString().split('T')[0]
         );
 
         // Recent customers (last 5)
@@ -91,13 +91,16 @@ const DashboardPage = () => {
 
         // Top sources
         const sourceCounts = customers.reduce((acc, c) => {
-            const source = c.source || 'Diğer';
+            const sourceKey = typeof c.source === 'object' ? c.source?.type : c.source;
+            const source = sourceKey || 'other';
             acc[source] = (acc[source] || 0) + 1;
             return acc;
         }, {});
         const topSources = Object.entries(sourceCounts)
             .sort((a, b) => b[1] - a[1])
             .slice(0, 3);
+
+        const activeCampaignsCount = campaigns.filter(c => c.status === 'active').length;
 
         return {
             totalCustomers: customers.length,
@@ -108,9 +111,10 @@ const DashboardPage = () => {
             todaysReminders,
             recentCustomers,
             upcomingAppointments,
-            topSources
+            topSources,
+            activeCampaignsCount
         };
-    }, [customers, appointments, getUnreadCount]);
+    }, [customers, appointments, reminders, campaigns, getUnreadCount]);
 
     const getTimeAgo = (date) => {
         const now = new Date();
@@ -219,11 +223,11 @@ const DashboardPage = () => {
                 <Grid item xs={12} sm={6} md={3}>
                     <StatCard
                         icon={BarChart3}
-                        title={t('menu.ads')}
+                        title={t('menu.marketing')}
                         value={i18n.language.startsWith('tr') ? 'Aktif' : 'Active'}
                         subtitle={i18n.language.startsWith('tr') ? 'Performansı gör' : 'View performance'}
                         color="#10b981"
-                        onClick={() => navigate('/ads')}
+                        onClick={() => navigate('/marketing/dashboard')}
                     />
                 </Grid>
             </Grid>

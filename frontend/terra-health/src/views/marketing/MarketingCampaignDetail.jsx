@@ -57,7 +57,8 @@ import {
     Bar,
     Cell
 } from 'recharts';
-import { MOCK_CAMPAIGNS, MOCK_DAILY_STATS_FULL, MOCK_ATTRIBUTION_DATA_FULL } from '../../mocks/marketingMocks';
+import { useMarketingStore } from '../../modules/marketing/hooks/useMarketingStore';
+import { MOCK_DAILY_STATS_FULL, MOCK_ATTRIBUTION_DATA_FULL } from '../../mocks/marketingMocks';
 
 const DetailStatCard = ({ title, value, icon: Icon, color, trend, subtitle }) => {
     const theme = useTheme();
@@ -96,12 +97,13 @@ const MarketingCampaignDetail = () => {
     const navigate = useNavigate();
     const { t } = useTranslation();
     const theme = useTheme();
+    const { campaigns } = useMarketingStore();
 
     const [showFilters, setShowFilters] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [filters, setFilters] = useState({ status: 'all', sort: 'newest' });
 
-    const campaign = useMemo(() => (MOCK_CAMPAIGNS || []).find(c => c.id === id), [id]);
+    const campaign = useMemo(() => (campaigns || []).find(c => c.id === id), [id, campaigns]);
 
     const filteredLeads = useMemo(() => {
         if (!campaign) return [];

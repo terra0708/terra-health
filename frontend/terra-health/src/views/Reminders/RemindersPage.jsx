@@ -55,7 +55,7 @@ const RemindersPage = () => {
                     <Button variant="outlined" startIcon={<RefreshCw size={18} />} onClick={generateRandomReminders} sx={{ borderRadius: 3, fontWeight: 600, textTransform: 'none' }}>Demo</Button>
                     <Button
                         variant="contained" startIcon={<Plus size={20} />}
-                        onClick={() => { setEditingReminder(null); setOpenAddDialog(true); }}
+                        onClick={(e) => { e.currentTarget.blur(); setEditingReminder(null); setOpenAddDialog(true); }}
                         sx={{ borderRadius: 3, px: 3, py: 1.5, fontWeight: 700, textTransform: 'none', background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`, boxShadow: `0 8px 166px ${alpha(theme.palette.primary.main, 0.3)}` }}
                     >
                         {t('reminders.add_new')}

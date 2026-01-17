@@ -10,8 +10,6 @@ export const CreateDrawer = ({ open, onClose, onSave, type, formData, setFormDat
             anchor={isMobile ? "bottom" : "right"}
             open={open}
             onClose={onClose}
-            disableEnforceFocus
-            disableRestoreFocus
             PaperProps={{
                 sx: {
                     width: isMobile ? '100%' : 400,

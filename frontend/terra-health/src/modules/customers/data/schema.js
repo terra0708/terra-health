@@ -21,10 +21,6 @@ export const customerSchema = z.object({
     source: z.string().min(1),
     tags: z.array(z.string()).default([]),
     notes: z.array(noteSchema).default([]),
-    reminder: z.object({
-        active: z.boolean().default(false),
-        notes: z.array(noteSchema).default([])
-    }).default({ active: false, notes: [] }),
     files: z.array(z.any()).default([]),
     payments: z.array(noteSchema).default([])
 });
