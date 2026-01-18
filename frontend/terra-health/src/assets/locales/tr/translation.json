@@ -372,6 +372,21 @@
         "option_migrate_to": "Başka Bir Öğeye Aktar",
         "select_migration_target": "Aktarılacak Hedefi Seçin"
     },
+    "auth": {
+        "welcome_message": "Sisteme erişmek için giriş yapın",
+        "email": "E-posta",
+        "password": "Şifre",
+        "login_button": "Giriş Yap",
+        "demo_title": "Demo Hesabı",
+        "demo_email": "E-posta",
+        "demo_password": "Şifre",
+        "invalid_credentials": "Geçersiz e-posta veya şifre",
+        "validation": {
+            "email_required": "E-posta adresi zorunludur",
+            "email_invalid": "Geçersiz e-posta adresi formatı",
+            "password_min": "Şifre en az 6 karakter olmalıdır"
+        }
+    },
     "placeholders": {
         "under_development": "Bu sayfa şu anda geliştirme aşamasındadır.",
         "content_will_be_here": "içeriği çok yakında burada olacak."

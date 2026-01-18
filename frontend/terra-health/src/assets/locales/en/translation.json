@@ -372,6 +372,21 @@
         "option_migrate_to": "Migrate to Another Item",
         "select_migration_target": "Select Migration Target"
     },
+    "auth": {
+        "welcome_message": "Log in to access the system",
+        "email": "Email",
+        "password": "Password",
+        "login_button": "Log In",
+        "demo_title": "Demo Account",
+        "demo_email": "Email",
+        "demo_password": "Password",
+        "invalid_credentials": "Invalid email or password",
+        "validation": {
+            "email_required": "Email is required",
+            "email_invalid": "Invalid email format",
+            "password_min": "Password must be at least 6 characters"
+        }
+    },
     "placeholders": {
         "under_development": "This page is currently under development.",
         "content_will_be_here": "content will be here very soon."
