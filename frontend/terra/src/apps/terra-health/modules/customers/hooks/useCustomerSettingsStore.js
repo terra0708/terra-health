@@ -49,6 +49,7 @@ const INITIAL_FILE_CATEGORIES = [
 ];
 
 const INITIAL_CATEGORIES = [
+    { id: 'system', label_tr: 'Sistem', label_en: 'System', color: '#6366f1' },
     { id: '1', label_tr: 'Estetik', label_en: 'Aesthetics', color: '#a259ff' },
     { id: '2', label_tr: 'Obezite', label_en: 'Obesity', color: '#3b82f6' },
     { id: '3', label_tr: 'Diş', label_en: 'Dental', color: '#10b981' },
@@ -64,50 +65,6 @@ export const useCustomerSettingsStore = create(
             tags: INITIAL_TAGS,
             fileCategories: INITIAL_FILE_CATEGORIES,
             categories: INITIAL_CATEGORIES,
-
-            repairData: () => {
-                const state = get();
-                const currentVersion = 3; // Version bump to force update or handle manually
-
-                // Basit bir onarım/birleştirme mantığı:
-                // Eğer store'daki veri eksikse (örn: value alanı yoksa) veya 
-                // listede eksik elemanlar varsa INITIAL listelerden tamamla.
-
-                const mergeData = (current, initial, keyField = 'value') => {
-                    if (!current) return initial;
-
-                    // 1. Value alanı olmayan eski kayıtları temizle veya güncelle
-                    // (Burada basitçe: initial listede varsa oradan al, yoksa manuel eklenmiştir elleme)
-                    const updatedCurrent = current.map(item => {
-                        // Eğer 'value' yoksa ama bir şekilde eşleşiyorsa güncelle (karmaşık olmasın diye şimdilik atlıyorum)
-                        // Basit yöntem: Initial listedeki değerlere göre güncelleme:
-                        const match = initial.find(i => i.id === item.id);
-                        if (match) return { ...item, ...match }; // Yeni alanları (value vb) ekle
-                        return item;
-                    });
-
-                    // 2. Eksik olan varsayılanları ekle
-                    const existingIds = new Set(updatedCurrent.map(i => i.id));
-                    const missing = initial.filter(i => !existingIds.has(i.id));
-
-                    return [...updatedCurrent, ...missing];
-                };
-
-                const newServices = mergeData(state.services, INITIAL_SERVICES);
-                const newStatuses = mergeData(state.statuses, INITIAL_STATUSES);
-                const newSources = mergeData(state.sources, INITIAL_SOURCES);
-                const newTags = mergeData(state.tags, INITIAL_TAGS);
-
-                // State'i güncelle (Sadece fark varsa güncellemek daha iyi ama basitlik için set ediyoruz)
-                set({
-                    services: newServices,
-                    statuses: newStatuses,
-                    sources: newSources,
-                    tags: newTags,
-                    fileCategories: state.fileCategories || INITIAL_FILE_CATEGORIES,
-                    categories: state.categories || INITIAL_CATEGORIES
-                });
-            },
 
             addService: (service) => set((state) => ({ services: [...state.services, { ...service, id: Date.now().toString() }] })),
             updateService: (id, updated) => set((state) => ({ services: state.services.map(s => s.id === id ? { ...s, ...updated } : s) })),
@@ -131,11 +88,11 @@ export const useCustomerSettingsStore = create(
 
             addCategory: (cat) => set((state) => ({ categories: [...state.categories, { ...cat, id: Date.now().toString() }] })),
             updateCategory: (id, updated) => set((state) => ({ categories: state.categories.map(c => c.id === id ? { ...c, ...updated } : c) })),
-            deleteCategory: (id) => set((state) => ({ categories: state.categories.filter(c => c.id !== id) })),
+            deleteCategory: (id) => set((state) => ({ categories: state.categories.filter(c => c.id !== id && c.id !== 'system') })),
         }),
         {
-            name: 'customer-settings-storage-v3', // Version bump to reset/force update structure
-            version: 3
+            name: 'customer-settings-storage-v1',
+            version: 1
         }
     )
 );
