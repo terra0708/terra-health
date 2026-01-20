@@ -1,0 +1,76 @@
+{
+    "compilerOptions": {
+        "baseUrl": ".",
+        "paths": {
+            "@core": [
+                "src/apps/terra-shared/core"
+            ],
+            "@core/*": [
+                "src/apps/terra-shared/core/*"
+            ],
+            "@common": [
+                "src/apps/terra-shared/common"
+            ],
+            "@common/*": [
+                "src/apps/terra-shared/common/*"
+            ],
+            "@app": [
+                "src/apps/terra-shared/app"
+            ],
+            "@app/*": [
+                "src/apps/terra-shared/app/*"
+            ],
+            "@assets": [
+                "src/assets"
+            ],
+            "@assets/*": [
+                "src/assets/*"
+            ],
+            "@mocks": [
+                "src/mocks"
+            ],
+            "@mocks/*": [
+                "src/mocks/*"
+            ],
+            "@actions": [
+                "src/actions"
+            ],
+            "@actions/*": [
+                "src/actions/*"
+            ],
+            "@shared": [
+                "src/apps/terra-shared"
+            ],
+            "@shared/*": [
+                "src/apps/terra-shared/*"
+            ],
+            "@terra-ads": [
+                "src/apps/terra-ads"
+            ],
+            "@terra-ads/*": [
+                "src/apps/terra-ads/*"
+            ],
+            "@terra-health": [
+                "src/apps/terra-health"
+            ],
+            "@terra-health/*": [
+                "src/apps/terra-health/*"
+            ],
+            "@modules": [
+                "src/apps/terra-shared/modules"
+            ],
+            "@modules/*": [
+                "src/apps/terra-shared/modules/*"
+            ],
+            "@views": [
+                "src/apps/terra-shared/views"
+            ],
+            "@views/*": [
+                "src/apps/terra-shared/views/*"
+            ]
+        }
+    },
+    "include": [
+        "src"
+    ]
+}
