@@ -35,8 +35,11 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useNotificationStore } from '@shared/modules/notifications/hooks/useNotificationStore';
 import { useNavigate } from 'react-router-dom';
+import { ModulePageWrapper } from '@common/ui';
+import { usePerformance } from '@common/hooks';
 
 const NotificationsPage = () => {
+    usePerformance('NotificationsPage');
     const { t, i18n } = useTranslation();
     const theme = useTheme();
     const navigate = useNavigate();
@@ -97,6 +100,7 @@ const NotificationsPage = () => {
     };
 
     return (
+        <ModulePageWrapper moduleName="Notifications" aria-label="Notifications Center">
         <Box sx={{ p: { xs: 2, md: 4 }, animation: 'fadeIn 0.6s ease' }}>
             <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: { xs: 'flex-start', md: 'center' }, flexDirection: { xs: 'column', md: 'row' }, gap: 2 }}>
                 <Box>
@@ -237,6 +241,7 @@ const NotificationsPage = () => {
                 }
             `}</style>
         </Box>
+        </ModulePageWrapper>
     );
 };
 

@@ -49,8 +49,11 @@ import {
     StatCard,
     useUsers
 } from '@shared/modules/users';
+import { ModulePageWrapper } from '@common/ui';
+import { usePerformance } from '@common/hooks';
 
 const UsersPage = () => {
+    usePerformance('UsersPage');
     const { t } = useTranslation();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -132,6 +135,7 @@ const UsersPage = () => {
     };
 
     return (
+        <ModulePageWrapper moduleName="Settings" aria-label="Users Management">
         <Box sx={{ animation: 'fadeIn 0.6s ease', pb: 4 }}>
             {/* STAT CARDS */}
             <Grid container spacing={isSmall ? 2 : 4} sx={{ mb: isSmall ? 4 : 6 }}>
@@ -298,6 +302,7 @@ const UsersPage = () => {
                 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
             `}</style>
         </Box>
+        </ModulePageWrapper>
     );
 };
 

@@ -1,69 +1,83 @@
+import { Suspense, lazy } from 'react';
 import { Navigate, Routes, Route } from 'react-router-dom';
 import LoginPage from '@shared/views/Login/LoginPage';
 import useAuthStore from '@shared/modules/auth/hooks/useAuthStore';
 import MainLayout from '@shared/app/MainLayout';
 import * as Views from './views/Placeholders.jsx';
-import UsersPage from '@shared/views/Settings/UsersPage';
-import PermissionsPage from '@shared/views/Settings/PermissionsPage';
-import CustomersPage from '@terra-health/views/Customers/CustomersPage';
-import CustomerPanel from '@shared/views/Settings/CustomerPanel';
-import AppointmentsPage from '@terra-health/views/Appointments/AppointmentsPage';
-import MarketingDashboard from '@terra-ads/views/marketing/MarketingDashboard';
-import MarketingCampaigns from '@terra-ads/views/marketing/MarketingCampaigns';
-import MarketingAttribution from '@terra-ads/views/marketing/MarketingAttribution';
-import MarketingCampaignDetail from '@terra-ads/views/marketing/MarketingCampaignDetail';
-import NotificationsPage from '@shared/views/Notifications/NotificationsPage';
-import DashboardPage from '@terra-health/views/Dashboard/DashboardPage';
-import RemindersPage from '@terra-health/views/Reminders/RemindersPage';
-import ReminderSettingsPage from '@shared/views/Settings/ReminderSettingsPage';
-import SystemSettingsPage from '@shared/views/Settings/SystemSettingsPage';
-import { Box } from '@mui/material';
+import { ErrorBoundary, LoadingSpinner, PageSkeleton } from '@common/ui';
 
-// Protected Route component
+// Lazy load pages for code splitting and performance
+const UsersPage = lazy(() => import('@shared/views/Settings/UsersPage'));
+const PermissionsPage = lazy(() => import('@shared/views/Settings/PermissionsPage'));
+const CustomersPage = lazy(() => import('@terra-health/views/Customers/CustomersPage'));
+const CustomerPanel = lazy(() => import('@shared/views/Settings/CustomerPanel'));
+const AppointmentsPage = lazy(() => import('@terra-health/views/Appointments/AppointmentsPage'));
+const MarketingDashboard = lazy(() => import('@terra-ads/views/marketing/MarketingDashboard'));
+const MarketingCampaigns = lazy(() => import('@terra-ads/views/marketing/MarketingCampaigns'));
+const MarketingAttribution = lazy(() => import('@terra-ads/views/marketing/MarketingAttribution'));
+const MarketingCampaignDetail = lazy(() => import('@terra-ads/views/marketing/MarketingCampaignDetail'));
+const NotificationsPage = lazy(() => import('@shared/views/Notifications/NotificationsPage'));
+const DashboardPage = lazy(() => import('@terra-health/views/Dashboard/DashboardPage'));
+const RemindersPage = lazy(() => import('@terra-health/views/Reminders/RemindersPage'));
+const ReminderSettingsPage = lazy(() => import('@shared/views/Settings/ReminderSettingsPage'));
+const SystemSettingsPage = lazy(() => import('@shared/views/Settings/SystemSettingsPage'));
+
+// Protected Route component with Error Boundary
 const ProtectedRoute = ({ children }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   return isAuthenticated ? children : <Navigate to="/login" />;
 };
 
+// Lazy loaded route wrapper with Suspense and Error Boundary
+const LazyRoute = ({ children, moduleName }) => (
+  <ErrorBoundary level="component" moduleName={moduleName}>
+    <Suspense fallback={<PageSkeleton />}>
+      {children}
+    </Suspense>
+  </ErrorBoundary>
+);
+
 function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<LoginPage />} />
+    <ErrorBoundary level="app">
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
 
-      {/* Korumalı Rotalar */}
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <MainLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<DashboardPage />} />
-        <Route path="appointments" element={<AppointmentsPage />} />
-        <Route path="customers" element={<CustomersPage />} />
-        <Route path="reminders" element={<RemindersPage />} />
-        <Route path="marketing">
-          <Route index element={<Navigate to="/marketing/dashboard" replace />} />
-          <Route path="dashboard" element={<MarketingDashboard />} />
-          <Route path="campaigns" element={<MarketingCampaigns />} />
-          <Route path="campaigns/:id" element={<MarketingCampaignDetail />} />
-          <Route path="attribution" element={<MarketingAttribution />} />
+        {/* Korumalı Rotalar */}
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <MainLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<LazyRoute moduleName="Dashboard"><DashboardPage /></LazyRoute>} />
+          <Route path="appointments" element={<LazyRoute moduleName="Appointments"><AppointmentsPage /></LazyRoute>} />
+          <Route path="customers" element={<LazyRoute moduleName="Customers"><CustomersPage /></LazyRoute>} />
+          <Route path="reminders" element={<LazyRoute moduleName="Reminders"><RemindersPage /></LazyRoute>} />
+          <Route path="marketing">
+            <Route index element={<Navigate to="/marketing/dashboard" replace />} />
+            <Route path="dashboard" element={<LazyRoute moduleName="Marketing"><MarketingDashboard /></LazyRoute>} />
+            <Route path="campaigns" element={<LazyRoute moduleName="Marketing"><MarketingCampaigns /></LazyRoute>} />
+            <Route path="campaigns/:id" element={<LazyRoute moduleName="Marketing"><MarketingCampaignDetail /></LazyRoute>} />
+            <Route path="attribution" element={<LazyRoute moduleName="Marketing"><MarketingAttribution /></LazyRoute>} />
+          </Route>
+          <Route path="statistics" element={<LazyRoute moduleName="Statistics"><Views.Statistics /></LazyRoute>} />
+          <Route path="notifications" element={<LazyRoute moduleName="Notifications"><NotificationsPage /></LazyRoute>} />
+          <Route path="settings">
+            <Route index element={<LazyRoute moduleName="Settings"><SystemSettingsPage /></LazyRoute>} />
+            <Route path="users" element={<LazyRoute moduleName="Settings"><UsersPage /></LazyRoute>} />
+            <Route path="permissions" element={<LazyRoute moduleName="Settings"><PermissionsPage /></LazyRoute>} />
+            <Route path="reminders" element={<LazyRoute moduleName="Settings"><ReminderSettingsPage /></LazyRoute>} />
+            <Route path="customer-panel" element={<LazyRoute moduleName="Settings"><CustomerPanel /></LazyRoute>} />
+          </Route>
         </Route>
-        <Route path="statistics" element={<Views.Statistics />} />
-        <Route path="notifications" element={<NotificationsPage />} />
-        <Route path="settings">
-          <Route index element={<SystemSettingsPage />} />
-          <Route path="users" element={<UsersPage />} />
-          <Route path="permissions" element={<PermissionsPage />} />
-          <Route path="reminders" element={<ReminderSettingsPage />} />
-          <Route path="customer-panel" element={<CustomerPanel />} />
-        </Route>
-      </Route>
 
-      {/* 404 - Tanımsız rotaları login'e yönlendir */}
-      <Route path="*" element={<Navigate to="/" />} />
-    </Routes>
+        {/* 404 - Tanımsız rotaları login'e yönlendir */}
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+    </ErrorBoundary>
   );
 }
 

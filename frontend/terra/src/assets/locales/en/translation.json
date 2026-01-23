@@ -1,4 +1,4 @@
-﻿{
+{
     "common": {
         "save": "Save",
         "cancel": "Cancel",
@@ -19,6 +19,16 @@
         "success_delete": "Successfully deleted",
         "error": "An error occurred",
         "loading": "Loading...",
+        "error": {
+            "boundary": {
+                "title": "An Error Occurred",
+                "message": "Sorry, an unexpected error occurred. Please refresh the page or return to the home page.",
+                "module": "Module",
+                "retry": "Try Again",
+                "home": "Home",
+                "details": "Error details"
+            }
+        },
         "no_data": "No data found",
         "user_placeholder": "User",
         "admin": "Admin",

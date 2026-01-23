@@ -7,6 +7,8 @@ import {
 } from '@terra-health/modules/customers';
 import { useLookup } from '@shared/common/hooks/useLookup';
 import { useTranslation } from 'react-i18next';
+import { ModulePageWrapper } from '@common/ui';
+import { usePerformance } from '@common/hooks';
 
 /**
  * Health-specific Customers Page Wrapper
@@ -15,6 +17,7 @@ import { useTranslation } from 'react-i18next';
  * bağımlılıkları (CustomerDrawer, CustomerDetailsDialog, useCustomers) inject eder.
  */
 const CustomersPage = () => {
+    usePerformance('CustomersPage');
     const { t } = useTranslation();
     const { getStatus, getSource, getService, getTag } = useLookup();
 
@@ -43,7 +46,8 @@ const CustomersPage = () => {
     } = useCustomers();
 
     return (
-        <ClientsPageBase
+        <ModulePageWrapper moduleName="Customers" aria-label="Customers Management">
+            <ClientsPageBase
             clients={filteredCustomers}
             searchTerm={searchTerm} setSearchTerm={setSearchTerm}
             showFilters={showFilters} setShowFilters={setShowFilters}
@@ -83,6 +87,7 @@ const CustomersPage = () => {
                 addButton: t('customers.add_customer')
             }}
         />
+        </ModulePageWrapper>
     );
 };
 

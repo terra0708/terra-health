@@ -36,6 +36,8 @@ import {
     User
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { ModulePageWrapper } from '@common/ui';
+import { usePerformance } from '@common/hooks';
 
 const SettingSection = ({ title, icon: Icon, children }) => {
     const theme = useTheme();
@@ -53,6 +55,7 @@ const SettingSection = ({ title, icon: Icon, children }) => {
 };
 
 const SystemSettingsPage = () => {
+    usePerformance('SystemSettingsPage');
     const { t, i18n } = useTranslation();
     const theme = useTheme();
     const [isDarkMode, setIsDarkMode] = useState(theme.palette.mode === 'dark');
@@ -62,6 +65,7 @@ const SystemSettingsPage = () => {
     };
 
     return (
+        <ModulePageWrapper moduleName="Settings" aria-label="System Settings">
         <Box sx={{ animation: 'fadeIn 0.6s ease', pb: 4 }}>
             <Box sx={{ mb: 4 }}>
                 <Typography variant="h4" sx={{ fontWeight: 900, letterSpacing: '-0.05em', mb: 1 }}>
@@ -186,6 +190,7 @@ const SystemSettingsPage = () => {
 
             <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }`}</style>
         </Box>
+        </ModulePageWrapper>
     );
 };
 

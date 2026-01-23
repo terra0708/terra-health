@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { ModulePageWrapper } from '@common/ui';
+import { usePerformance } from '@common/hooks';
 import {
     Box,
     Grid,
@@ -93,6 +95,7 @@ const DetailStatCard = ({ title, value, icon: Icon, color, trend, subtitle }) =>
 };
 
 const MarketingCampaignDetail = () => {
+    usePerformance('MarketingCampaignDetail');
     const { id } = useParams();
     const navigate = useNavigate();
     const { t } = useTranslation();
@@ -139,6 +142,7 @@ const MarketingCampaignDetail = () => {
     ];
 
     return (
+        <ModulePageWrapper moduleName="Marketing" aria-label="Campaign Details">
         <Box sx={{ p: { xs: 2, md: 4 } }}>
             <Box sx={{ mb: 4 }}>
                 <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 3 }}>
@@ -328,6 +332,7 @@ const MarketingCampaignDetail = () => {
                 </Grid>
             </Grid>
         </Box>
+        </ModulePageWrapper>
     );
 };
 

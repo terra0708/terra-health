@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useCustomerSettingsStore } from '@terra-health/modules/customers/hooks/useCustomerSettingsStore';
 import { useTheme } from '@mui/material';
 
-export const useLookup = () => {
+const useLookup = () => {
     const { i18n } = useTranslation();
     const settings = useCustomerSettingsStore();
     const theme = useTheme();
@@ -85,3 +85,6 @@ export const useLookup = () => {
         lang
     };
 };
+
+export default useLookup;
+export { useLookup };

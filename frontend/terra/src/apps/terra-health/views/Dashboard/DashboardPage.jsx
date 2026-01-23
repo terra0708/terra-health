@@ -42,8 +42,11 @@ import { useMarketingStore } from '@terra-ads/modules/marketing/hooks/useMarketi
 import { useNotificationStore } from '@shared/modules/notifications/hooks/useNotificationStore';
 import { format, isToday, isTomorrow, differenceInMinutes, differenceInHours, differenceInDays } from 'date-fns';
 import { tr, enUS } from 'date-fns/locale';
+import { ModulePageWrapper } from '@common/ui';
+import { usePerformance } from '@common/hooks';
 
 const DashboardPage = () => {
+    usePerformance('DashboardPage');
     const { t, i18n } = useTranslation();
     const theme = useTheme();
     const navigate = useNavigate();
@@ -177,6 +180,7 @@ const DashboardPage = () => {
     );
 
     return (
+        <ModulePageWrapper moduleName="Dashboard" aria-label="Dashboard">
         <Box sx={{ p: { xs: 2, md: 4 } }}>
             {/* Header */}
             <Box sx={{ mb: 4 }}>
@@ -412,6 +416,7 @@ const DashboardPage = () => {
                 </Grid>
             </Grid>
         </Box>
+        </ModulePageWrapper>
     );
 };
 

@@ -28,8 +28,11 @@ import { CustomColorPicker } from './components/shared/CustomColorPicker';
 import { CustomerItemGrid } from './components/customer/CustomerItemGrid';
 import { CustomerEditDialog } from './components/customer/CustomerEditDialog';
 import { CustomerDeleteDialog } from './components/customer/CustomerDeleteDialog';
+import { ModulePageWrapper } from '@common/ui';
+import { usePerformance } from '@common/hooks';
 
 const CustomerPanel = () => {
+    usePerformance('CustomerPanel');
     const { t, i18n } = useTranslation();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -240,6 +243,7 @@ const CustomerPanel = () => {
     }, []);
 
     return (
+        <ModulePageWrapper moduleName="Settings" aria-label="Customer Panel Settings">
         <Box sx={{ animation: 'fadeIn 0.5s ease', p: 3 }}>
             {/* Header */}
             <Box sx={{ mb: 4, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2 }}>
@@ -357,6 +361,7 @@ const CustomerPanel = () => {
                 }
             `}</style>
         </Box>
+        </ModulePageWrapper>
     );
 };
 

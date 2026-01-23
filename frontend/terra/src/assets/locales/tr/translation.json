@@ -1,4 +1,4 @@
-﻿{
+{
     "common": {
         "save": "Kaydet",
         "cancel": "İptal",
@@ -19,6 +19,16 @@
         "success_delete": "Başarıyla silindi",
         "error": "Bir hata oluştu",
         "loading": "Yükleniyor...",
+        "error": {
+            "boundary": {
+                "title": "Bir Hata Oluştu",
+                "message": "Üzgünüz, beklenmeyen bir hata oluştu. Lütfen sayfayı yenileyin veya ana sayfaya dönün.",
+                "module": "Modül",
+                "retry": "Tekrar Dene",
+                "home": "Ana Sayfa",
+                "details": "Hata detayları"
+            }
+        },
         "no_data": "Veri bulunamadı",
         "user_placeholder": "Kullanıcı",
         "admin": "Yönetici",

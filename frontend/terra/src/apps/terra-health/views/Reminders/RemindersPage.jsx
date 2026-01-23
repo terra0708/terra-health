@@ -4,6 +4,8 @@ import { CustomerDetailsDialog } from '@terra-health/modules/customers';
 import { useCustomers } from '@terra-health/modules/customers';
 import { useCustomerStore } from '@terra-health/modules/customers/hooks/useCustomerStore';
 import { useReminderStore } from '@shared/modules/reminders';
+import { ModulePageWrapper } from '@common/ui';
+import { usePerformance } from '@common/hooks';
 
 /**
  * Health-specific Reminders Page Wrapper
@@ -12,6 +14,7 @@ import { useReminderStore } from '@shared/modules/reminders';
  * bağımlılıkları (CustomerDetailsDialog, customers) inject eder.
  */
 const RemindersPage = () => {
+    usePerformance('RemindersPage');
     const { customers } = useCustomers();
     const { syncWithMockData, clearNestedReminders } = useCustomerStore();
     
@@ -56,12 +59,14 @@ const RemindersPage = () => {
     }), [customers, syncWithMockData, clearNestedReminders, syncFromCustomerStore]);
 
     return (
-        <RemindersPageBase
-            CustomerDetailsDialog={CustomerDetailsDialog}
-            customersResolver={customersResolver}
-            migrationConfig={migrationConfig}
-            customers={customers}
-        />
+        <ModulePageWrapper moduleName="Reminders" aria-label="Reminders Management">
+            <RemindersPageBase
+                CustomerDetailsDialog={CustomerDetailsDialog}
+                customersResolver={customersResolver}
+                migrationConfig={migrationConfig}
+                customers={customers}
+            />
+        </ModulePageWrapper>
     );
 };
 

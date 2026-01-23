@@ -7,7 +7,7 @@ import { getClientLabel, getClientListLabel, PACKAGE_CONFIG } from '@core/config
  * Package type'a göre dinamik label'lar sağlar.
  * Contextual naming için kullanılır.
  */
-export const usePackageLabels = () => {
+const usePackageLabels = () => {
     const { t } = useTranslation();
     const packageType = PACKAGE_CONFIG.type;
 
@@ -42,3 +42,6 @@ export const usePackageLabels = () => {
         isTourismModule: PACKAGE_CONFIG.modules.tourism
     };
 };
+
+export default usePackageLabels;
+export { usePackageLabels };

@@ -22,8 +22,11 @@ import { ReminderEditDialog } from './components/reminder/ReminderEditDialog';
 import { ReminderDeleteDialog } from './components/reminder/ReminderDeleteDialog';
 import { ReminderTypeDialog } from './components/reminder/ReminderTypeDialog';
 import { ReminderCategoryList } from './components/reminder/ReminderCategoryList';
+import { ModulePageWrapper } from '@common/ui';
+import { usePerformance } from '@common/hooks';
 
 const ReminderSettingsPage = () => {
+    usePerformance('ReminderSettingsPage');
     const { t, i18n } = useTranslation();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -236,6 +239,7 @@ const ReminderSettingsPage = () => {
     }, []);
 
     return (
+        <ModulePageWrapper moduleName="Settings" aria-label="Reminder Settings">
         <Box sx={{ animation: 'fadeIn 0.5s ease', p: 3 }}>
             {/* Header */}
             <Box sx={{ mb: 4, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2 }}>
@@ -440,6 +444,7 @@ const ReminderSettingsPage = () => {
                 </Alert>
             </Snackbar>
         </Box>
+        </ModulePageWrapper>
     );
 };
 

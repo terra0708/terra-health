@@ -10,8 +10,11 @@ import {
     AppointmentDrawer
 } from '@terra-health/modules/appointments';
 import { useCustomerStore } from '@terra-health/modules/customers/hooks/useCustomerStore';
+import { ModulePageWrapper } from '@common/ui';
+import { usePerformance } from '@common/hooks';
 
 const AppointmentsPage = () => {
+    usePerformance('AppointmentsPage');
     const { t } = useTranslation();
     const theme = useTheme();
 
@@ -136,6 +139,7 @@ const AppointmentsPage = () => {
     };
 
     return (
+        <ModulePageWrapper moduleName="Appointments" aria-label="Appointments Management">
         <Box sx={{ height: 'calc(100vh - 32px)', display: 'flex', flexDirection: 'column', animation: 'fadeIn 0.6s ease', overflow: 'hidden', pb: 2 }}>
             {/* TOP BAR */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -205,6 +209,7 @@ const AppointmentsPage = () => {
 
             <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }`}</style>
         </Box>
+        </ModulePageWrapper>
     );
 };
 

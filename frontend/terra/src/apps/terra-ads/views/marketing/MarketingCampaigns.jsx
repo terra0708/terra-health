@@ -11,8 +11,11 @@ import {
     ExternalLink, Play, Pause, MoreVertical, Search, Plus, Filter, BarChart2
 } from 'lucide-react';
 import { useMarketingCampaigns, getPlatformIcon, getPlatformColor } from '@terra-ads/modules/marketing';
+import { ModulePageWrapper } from '@common/ui';
+import { usePerformance } from '@common/hooks';
 
 const MarketingCampaigns = () => {
+    usePerformance('MarketingCampaigns');
     const { t } = useTranslation();
     const theme = useTheme();
     const {
@@ -25,6 +28,7 @@ const MarketingCampaigns = () => {
     } = useMarketingCampaigns();
 
     return (
+        <ModulePageWrapper moduleName="Marketing" aria-label="Marketing Campaigns">
         <Box sx={{ p: { xs: 2, md: 4 } }}>
             <Box sx={{
                 mb: 4,
@@ -247,6 +251,7 @@ const MarketingCampaigns = () => {
                 </DialogActions>
             </Dialog>
         </Box>
+        </ModulePageWrapper>
     );
 };
 

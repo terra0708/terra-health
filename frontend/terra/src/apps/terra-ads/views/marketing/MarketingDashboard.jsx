@@ -14,8 +14,11 @@ import {
     BarChart, Bar, Cell as ReCell
 } from 'recharts';
 import { MarketingStatCard, useMarketingDashboard } from '@terra-ads/modules/marketing';
+import { ModulePageWrapper } from '@common/ui';
+import { usePerformance } from '@common/hooks';
 
 const MarketingDashboard = () => {
+    usePerformance('MarketingDashboard');
     const { t } = useTranslation();
     const theme = useTheme();
     const {
@@ -26,6 +29,7 @@ const MarketingDashboard = () => {
     } = useMarketingDashboard();
 
     return (
+        <ModulePageWrapper moduleName="Marketing" aria-label="Marketing Dashboard">
         <Box sx={{ p: { xs: 2, md: 4 } }}>
             <Box sx={{ mb: 4 }}>
                 <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }} spacing={3}>
@@ -180,6 +184,7 @@ const MarketingDashboard = () => {
                 </Grid>
             </Grid>
         </Box>
+        </ModulePageWrapper>
     );
 };
 

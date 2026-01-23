@@ -24,6 +24,8 @@ import { alpha } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import { Copy, ExternalLink, Hash, Search, MessageCircle, UserCircle, Smartphone, Globe } from 'lucide-react';
 import { MOCK_ATTRIBUTION_DATA_FULL } from '@mocks/marketingMocks';
+import { ModulePageWrapper } from '@common/ui';
+import { usePerformance } from '@common/hooks';
 
 const AttributionCard = ({ label, value, icon: Icon, color }) => (
     <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 4, bgcolor: alpha(color, 0.03), borderColor: alpha(color, 0.1) }}>
@@ -74,6 +76,7 @@ const MarketingAttribution = () => {
     };
 
     return (
+        <ModulePageWrapper moduleName="Marketing" aria-label="Marketing Attribution">
         <Box sx={{ p: { xs: 2, md: 4 } }}>
             <Box sx={{ mb: 4 }}>
                 <Typography variant="h4" fontWeight={900} sx={{
@@ -190,6 +193,7 @@ const MarketingAttribution = () => {
                 </Table>
             </TableContainer>
         </Box>
+        </ModulePageWrapper>
     );
 };
 

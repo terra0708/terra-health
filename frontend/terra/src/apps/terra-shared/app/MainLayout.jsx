@@ -1,10 +1,11 @@
 import { Box, Container, useMediaQuery, useTheme } from '@mui/material';
-import { Sidebar, Header } from '@common/ui';
+import { Sidebar, Header, SkipLink } from '@common/ui';
 import { Outlet } from 'react-router-dom';
 import useAuthStore from '@shared/modules/auth/hooks/useAuthStore';
 import React from 'react';
 import { useSettingsStore } from '@core';
 import { useTranslation } from 'react-i18next';
+import { ErrorBoundary } from '@common/ui';
 import HealthNotificationManager from '@terra-health/modules/customers/components/HealthNotificationManager';
 
 const MainLayout = () => {
@@ -22,39 +23,43 @@ const MainLayout = () => {
     }, [language, i18n]);
 
     return (
-        <Box sx={{ display: 'flex', width: '100%', overflowX: 'hidden' }}>
-            <HealthNotificationManager />
-            <Sidebar />
-            <Box
-                component="main"
-                sx={{
-                    flexGrow: 1,
-                    minHeight: '100vh',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    bgcolor: 'background.default',
-                    transition: 'all 0.3s ease',
-                    width: '100%',
-                    maxWidth: '100%',
-                    overflowX: 'hidden' // Sağa sola kaydırmayı engellemek için
-                }}
-            >
-                <Header onLogout={logout} />
-                <Container
-                    maxWidth="xl"
+        <ErrorBoundary level="page" moduleName="MainLayout">
+            <SkipLink />
+            <Box sx={{ display: 'flex', width: '100%', overflowX: 'hidden' }}>
+                <HealthNotificationManager />
+                <Sidebar />
+                <Box
+                    component="main"
+                    id="main-content"
                     sx={{
-                        mt: { xs: 2, sm: 4 },
-                        mb: { xs: 2, sm: 4 },
-                        px: { xs: 2, sm: 3 },
                         flexGrow: 1,
+                        minHeight: '100vh',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        bgcolor: 'background.default',
+                        transition: 'all 0.3s ease',
                         width: '100%',
-                        overflowX: 'hidden'
+                        maxWidth: '100%',
+                        overflowX: 'hidden' // Sağa sola kaydırmayı engellemek için
                     }}
                 >
-                    <Outlet />
-                </Container>
+                    <Header onLogout={logout} />
+                    <Container
+                        maxWidth="xl"
+                        sx={{
+                            mt: { xs: 2, sm: 4 },
+                            mb: { xs: 2, sm: 4 },
+                            px: { xs: 2, sm: 3 },
+                            flexGrow: 1,
+                            width: '100%',
+                            overflowX: 'hidden'
+                        }}
+                    >
+                        <Outlet />
+                    </Container>
+                </Box>
             </Box>
-        </Box>
+        </ErrorBoundary>
     );
 };
 
