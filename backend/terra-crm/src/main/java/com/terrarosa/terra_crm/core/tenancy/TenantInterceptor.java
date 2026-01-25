@@ -66,7 +66,7 @@ public class TenantInterceptor implements HandlerInterceptor {
             // Set tenant context but keep schema as public
             // Login/register operations work in public schema (users table is there)
             TenantContext.setCurrentTenant(tenantId, "public");
-            log.debug("Validated tenant for auth endpoint: tenantId={}, schemaName=public", tenantId);
+            log.info("TenantInterceptor: Set tenant context for auth endpoint - tenantId={}, schemaName=public", tenantId);
         } catch (IllegalArgumentException e) {
             log.error("Invalid tenant ID format: {}", tenantId);
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);

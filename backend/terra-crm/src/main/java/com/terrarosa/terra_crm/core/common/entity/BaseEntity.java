@@ -22,7 +22,7 @@ import java.util.UUID;
 @Setter
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @EntityListeners(AuditingEntityListener.class)
-@SQLRestriction("deleted = false")
+@SQLRestriction("COALESCE(deleted, false) = false")
 public abstract class BaseEntity {
     
     @Id

@@ -39,9 +39,21 @@ public class AuthService {
      */
     @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request, String tenantIdHeader) {
+        // CRITICAL: Ensure we're querying in public schema for login
+        // TenantContext should be set by TenantInterceptor, but verify it
+        String currentSchema = com.terrarosa.terra_crm.core.tenancy.TenantContext.getCurrentSchemaName();
+        log.debug("Login attempt for email: {}, current schema: {}, tenantId header: {}", 
+                request.getEmail(), currentSchema, tenantIdHeader);
+        
         // Find user by email
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new BadCredentialsException("Invalid email or password"));
+                .orElseThrow(() -> {
+                    log.error("User not found with email: {} in schema: {}", request.getEmail(), currentSchema);
+                    return new BadCredentialsException("Invalid email or password");
+                });
+        
+        log.debug("User found: id={}, email={}, tenantId={}, enabled={}, deleted={}", 
+                user.getId(), user.getEmail(), user.getTenant().getId(), user.getEnabled(), user.getDeleted());
         
         // Validate password
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
