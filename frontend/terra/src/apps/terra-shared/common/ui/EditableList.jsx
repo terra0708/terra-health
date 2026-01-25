@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
     Box, Typography, TextField, Button, IconButton, Stack,
     Paper, alpha, useTheme
@@ -27,6 +27,20 @@ export const EditableList = ({
     const [editingId, setEditingId] = useState(null);
     const [editText, setEditText] = useState('');
     const [editTime, setEditTime] = useState('');
+
+    // Resolve color: if it's a theme palette reference (string), convert to actual color value
+    const resolvedColor = useMemo(() => {
+        if (!color) return theme.palette.primary.main;
+        if (typeof color === 'string' && color.includes('.')) {
+            // It's a theme palette reference like 'primary.main'
+            const parts = color.split('.');
+            if (parts.length === 2) {
+                const [paletteKey, shade] = parts;
+                return theme.palette[paletteKey]?.[shade] || theme.palette.primary.main;
+            }
+        }
+        return color; // Already a hex/rgb value
+    }, [color, theme]);
 
     const handleAdd = () => {
         if (!newValue.trim()) return;
@@ -60,7 +74,7 @@ export const EditableList = ({
     return (
         <Box>
             {title && (
-                <Typography variant="subtitle2" sx={{ fontWeight: 900, mb: 2, color: color || 'primary.main', display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 900, mb: 2, color: resolvedColor, display: 'flex', alignItems: 'center', gap: 1 }}>
                     {Icon && <Icon size={18} />}
                     {title}
                 </Typography>
@@ -91,7 +105,7 @@ export const EditableList = ({
                     <Button
                         variant="contained"
                         onClick={handleAdd}
-                        sx={{ borderRadius: '12px', minWidth: 48, bgcolor: color }}
+                        sx={{ borderRadius: '12px', minWidth: 48, bgcolor: resolvedColor }}
                     >
                         <Plus size={20} />
                     </Button>
@@ -106,10 +120,10 @@ export const EditableList = ({
                         sx={{
                             p: 2,
                             borderRadius: '16px',
-                            bgcolor: alpha(color || theme.palette.primary.main, 0.02),
+                            bgcolor: alpha(resolvedColor, 0.02),
                             border: `1px solid ${theme.palette.divider}`,
                             transition: 'all 0.2s ease',
-                            '&:hover': { bgcolor: alpha(color || theme.palette.primary.main, 0.04) }
+                            '&:hover': { bgcolor: alpha(resolvedColor, 0.04) }
                         }}
                     >
                         {editingId === item.id ? (
@@ -135,7 +149,7 @@ export const EditableList = ({
                             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                 <Box sx={{ flex: 1, pr: 1 }}>
                                     {(item.reminderTime || item.time) && (
-                                        <Typography variant="caption" sx={{ fontWeight: 800, color: color || 'warning.main', display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+                                        <Typography variant="caption" sx={{ fontWeight: 800, color: resolvedColor, display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
                                             <Calendar size={12} />
                                             {item.reminderTime || item.time}
                                         </Typography>

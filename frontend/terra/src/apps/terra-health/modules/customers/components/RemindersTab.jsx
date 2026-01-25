@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Stack,
     Box,
@@ -13,13 +13,55 @@ import {
 } from '@mui/material';
 import { Bell, Plus, Calendar, Clock, X, Check } from 'lucide-react';
 import { useController } from 'react-hook-form';
-import { ReminderCard, useReminderSettingsStore } from '@shared/modules/reminders';
+import { ReminderCard, useReminderSettingsStore, useReminderStore } from '@shared/modules/reminders';
 
-export const RemindersTab = ({ control, t, i18n }) => {
+export const RemindersTab = ({ control, t, i18n, customerId }) => {
     const theme = useTheme();
     const { field: notesField } = useController({ name: 'reminder.notes', control });
     const { field: activeField } = useController({ name: 'reminder.active', control });
     const { categories, subCategories, statuses } = useReminderSettingsStore();
+    const addReminder = useReminderStore(state => state.addReminder);
+    const updateReminder = useReminderStore(state => state.updateReminder);
+    const deleteReminder = useReminderStore(state => state.deleteReminder);
+    
+    // Get reminders count and IDs for this customer (stable dependencies)
+    const remindersCount = useReminderStore(state => 
+        state.reminders.filter(r => 
+            r.relationId === customerId && 
+            (r.categoryId === 'customer' || r.categoryId === 'static_category_customer' || r.type === 'customer')
+        ).length
+    );
+    
+    const reminderIds = useReminderStore(state => 
+        state.reminders
+            .filter(r => 
+                r.relationId === customerId && 
+                (r.categoryId === 'customer' || r.categoryId === 'static_category_customer' || r.type === 'customer')
+            )
+            .map(r => r.id)
+            .sort()
+            .join(',')
+    );
+    
+    // Sync central store reminders to form when customerId changes or reminders update
+    useEffect(() => {
+        if (!customerId) {
+            notesField.onChange([]);
+            activeField.onChange(false);
+            return;
+        }
+
+        // Always fetch fresh reminders from central store
+        const centralReminders = useReminderStore.getState().reminders.filter(r => 
+            r.relationId === customerId && 
+            (r.categoryId === 'customer' || r.categoryId === 'static_category_customer' || r.type === 'customer')
+        );
+
+        // Always sync from central store to form - this ensures form always reflects latest state
+        notesField.onChange(centralReminders);
+        activeField.onChange(centralReminders.length > 0);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [customerId, remindersCount, reminderIds]);
 
     const [isAdding, setIsAdding] = useState(false);
     const [newReminder, setNewReminder] = useState({
@@ -41,11 +83,18 @@ export const RemindersTab = ({ control, t, i18n }) => {
             isCompleted: selectedStatus ? selectedStatus.isCompleted : false,
             categoryId: 'customer',
             type: 'customer',
+            relationId: customerId || null,
             createdAt: new Date().toISOString()
         };
 
+        // Add to form
         notesField.onChange([reminderToAdd, ...(notesField.value || [])]);
         if (!activeField.value) activeField.onChange(true);
+
+        // Also add to central store if customerId exists
+        if (customerId) {
+            addReminder(reminderToAdd);
+        }
 
         setIsAdding(false);
         setNewReminder({
@@ -59,7 +108,13 @@ export const RemindersTab = ({ control, t, i18n }) => {
 
     const handleUpdate = (id, updates) => {
         const current = Array.isArray(notesField.value) ? notesField.value : [];
-        notesField.onChange(current.map(n => n.id === id ? { ...n, ...updates } : n));
+        const updated = current.map(n => n.id === id ? { ...n, ...updates } : n);
+        notesField.onChange(updated);
+        
+        // Also update in central store
+        if (customerId) {
+            updateReminder(id, updates);
+        }
     };
 
     const handleDelete = (reminder) => {
@@ -67,6 +122,11 @@ export const RemindersTab = ({ control, t, i18n }) => {
         const remaining = current.filter(n => n.id !== reminder.id);
         notesField.onChange(remaining);
         if (remaining.length === 0) activeField.onChange(false);
+        
+        // Also delete from central store
+        if (customerId) {
+            deleteReminder(reminder.id);
+        }
     };
 
     const handleChangeStatus = (reminder, newStatusId) => {
@@ -75,6 +135,13 @@ export const RemindersTab = ({ control, t, i18n }) => {
             statusId: newStatusId,
             isCompleted: newStatus ? newStatus.isCompleted : false
         });
+    };
+
+    const handleEdit = (reminder) => {
+        // This will be handled by the parent component or we can add edit functionality here
+        // For now, we'll just update the reminder in both form and store
+        // In a full implementation, you might want to open an edit dialog
+        console.log('Edit reminder:', reminder);
     };
 
     return (
@@ -143,6 +210,7 @@ export const RemindersTab = ({ control, t, i18n }) => {
                             key={rem.id}
                             reminder={rem}
                             onDelete={handleDelete}
+                            onEdit={handleEdit}
                             onChangeStatus={handleChangeStatus}
                             t={t}
                             i18n={i18n}

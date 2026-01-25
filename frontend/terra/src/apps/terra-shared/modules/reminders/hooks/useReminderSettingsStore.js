@@ -29,6 +29,60 @@ export const INITIAL_STATUSES = [
 
 // generateSlug is now imported from repairDataHelpers
 
+// Helper function to sync legacy fields from customParameterTypes
+const syncLegacyFields = (customParameterTypes) => {
+    // Extract categories from customParameterTypes where isCategory is true
+    const categories = (customParameterTypes || [])
+        .filter(pt => pt.isCategory === true)
+        .map(pt => ({
+            id: pt.id,
+            label_tr: pt.label_tr,
+            label_en: pt.label_en,
+            type: pt.type || 'custom',
+            color: pt.color || '#6366f1',
+            isDefault: pt.isDefault || false
+        }));
+    
+    // Extract subCategories from customParameterTypes (non-category items)
+    const subCategories = [];
+    (customParameterTypes || []).forEach(pt => {
+        if (pt.data && pt.data.length > 0 && !pt.isCategory) {
+            pt.data.forEach(item => {
+                subCategories.push({
+                    id: item.id,
+                    label_tr: item.label_tr,
+                    label_en: item.label_en,
+                    categoryId: pt.id,
+                    color: item.color
+                });
+            });
+        }
+    });
+    
+    // Extract statuses from status category
+    const statusParamType = customParameterTypes?.find(pt => 
+        pt.id === 'static_category_status' || 
+        (pt.isCategory && (pt.label_tr === 'Durum' || pt.label_en === 'Status'))
+    );
+    const statuses = statusParamType && statusParamType.data
+        ? statusParamType.data.map(st => ({
+            id: st.id,
+            label_tr: st.label_tr,
+            label_en: st.label_en,
+            type: st.type || 'custom',
+            color: st.color || '#f59e0b',
+            isCompleted: st.isCompleted !== undefined ? st.isCompleted : false,
+            value: st.value || st.id
+        }))
+        : INITIAL_STATUSES;
+    
+    return {
+        categories: categories.length > 0 ? categories : INITIAL_CATEGORIES,
+        subCategories: subCategories.length > 0 ? subCategories : INITIAL_SUBCATEGORIES,
+        statuses
+    };
+};
+
 export const useReminderSettingsStore = create(
     persist(
         (set, get) => ({
@@ -115,8 +169,10 @@ export const useReminderSettingsStore = create(
                     const migratedTypes = [...newCategories, ...existingCategories];
 
                     console.log('ReminderSettings: Migrating types', migratedTypes);
+                    const legacyFields = syncLegacyFields(migratedTypes);
                     set({
-                        customParameterTypes: migratedTypes
+                        customParameterTypes: migratedTypes,
+                        ...legacyFields
                     });
                     console.log('ReminderSettings: Migration completed');
                 } else {
@@ -142,8 +198,10 @@ export const useReminderSettingsStore = create(
                         };
                     });
                     
+                    const legacyFields = syncLegacyFields(updatedTypes);
                     set({
-                        customParameterTypes: updatedTypes
+                        customParameterTypes: updatedTypes,
+                        ...legacyFields
                     });
                 }
             },
@@ -190,7 +248,14 @@ export const useReminderSettingsStore = create(
                     parentCategoryId: paramType.parentCategoryId || undefined,
                     categories: (paramType.isCategory || paramType.hasCategory) ? [] : undefined
                 };
-                set((state) => ({ customParameterTypes: [...state.customParameterTypes, newType] }));
+                set((state) => {
+                    const updatedTypes = [...state.customParameterTypes, newType];
+                    const legacyFields = syncLegacyFields(updatedTypes);
+                    return {
+                        customParameterTypes: updatedTypes,
+                        ...legacyFields
+                    };
+                });
                 return newType;
             },
             updateParameterType: (id, updated) => set((state) => {
@@ -212,16 +277,22 @@ export const useReminderSettingsStore = create(
                         icon: updated.icon,
                         color: updated.color
                     };
+                    const updatedTypes = state.customParameterTypes.map(pt => 
+                        pt.id === id ? { ...pt, ...allowedUpdates } : pt
+                    );
+                    const legacyFields = syncLegacyFields(updatedTypes);
                     return {
-                        customParameterTypes: state.customParameterTypes.map(pt => 
-                            pt.id === id ? { ...pt, ...allowedUpdates } : pt
-                        )
+                        customParameterTypes: updatedTypes,
+                        ...legacyFields
                     };
                 }
+                const updatedTypes = state.customParameterTypes.map(pt => 
+                    pt.id === id ? { ...pt, ...updated } : pt
+                );
+                const legacyFields = syncLegacyFields(updatedTypes);
                 return {
-                    customParameterTypes: state.customParameterTypes.map(pt => 
-                        pt.id === id ? { ...pt, ...updated } : pt
-                    )
+                    customParameterTypes: updatedTypes,
+                    ...legacyFields
                 };
             }),
             deleteParameterType: (id) => set((state) => {
@@ -239,8 +310,11 @@ export const useReminderSettingsStore = create(
                     console.warn('Korunan kategori silinemez:', paramType.label_tr);
                     return state;
                 }
+                const updatedTypes = state.customParameterTypes.filter(pt => pt.id !== id);
+                const legacyFields = syncLegacyFields(updatedTypes);
                 return {
-                    customParameterTypes: state.customParameterTypes.filter(pt => pt.id !== id)
+                    customParameterTypes: updatedTypes,
+                    ...legacyFields
                 };
             }),
 
@@ -251,13 +325,18 @@ export const useReminderSettingsStore = create(
                     id: Date.now().toString(),
                     value: value.value || generateSlug(value.label_tr || value.label_en)
                 };
-                set((state) => ({
-                    customParameterTypes: state.customParameterTypes.map(pt => 
+                set((state) => {
+                    const updatedTypes = state.customParameterTypes.map(pt => 
                         pt.id === paramTypeId 
                             ? { ...pt, data: [...(pt.data || []), newValue] }
                             : pt
-                    )
-                }));
+                    );
+                    const legacyFields = syncLegacyFields(updatedTypes);
+                    return {
+                        customParameterTypes: updatedTypes,
+                        ...legacyFields
+                    };
+                });
                 return newValue;
             },
             updateParameterValue: (paramTypeId, valueId, updated) => set((state) => {
@@ -274,27 +353,33 @@ export const useReminderSettingsStore = create(
                         label_en: updated.label_en,
                         color: updated.color
                     };
-                    return {
-                        customParameterTypes: state.customParameterTypes.map(pt => 
-                            pt.id === paramTypeId 
-                                ? { 
-                                    ...pt, 
-                                    data: pt.data.map(v => v.id === valueId ? { ...v, ...allowedUpdates } : v)
-                                }
-                                : pt
-                        )
-                    };
-                }
-                
-                return {
-                    customParameterTypes: state.customParameterTypes.map(pt => 
+                    const updatedTypes = state.customParameterTypes.map(pt => 
                         pt.id === paramTypeId 
                             ? { 
                                 ...pt, 
-                                data: pt.data.map(v => v.id === valueId ? { ...v, ...updated } : v)
+                                data: pt.data.map(v => v.id === valueId ? { ...v, ...allowedUpdates } : v)
                             }
                             : pt
-                    )
+                    );
+                    const legacyFields = syncLegacyFields(updatedTypes);
+                    return {
+                        customParameterTypes: updatedTypes,
+                        ...legacyFields
+                    };
+                }
+                
+                const updatedTypes = state.customParameterTypes.map(pt => 
+                    pt.id === paramTypeId 
+                        ? { 
+                            ...pt, 
+                            data: pt.data.map(v => v.id === valueId ? { ...v, ...updated } : v)
+                        }
+                        : pt
+                );
+                const legacyFields = syncLegacyFields(updatedTypes);
+                return {
+                    customParameterTypes: updatedTypes,
+                    ...legacyFields
                 };
             }),
             deleteParameterValue: (paramTypeId, valueId) => set((state) => {
@@ -308,12 +393,15 @@ export const useReminderSettingsStore = create(
                         return state;
                     }
                 }
+                const updatedTypes = state.customParameterTypes.map(pt => 
+                    pt.id === paramTypeId 
+                        ? { ...pt, data: pt.data.filter(v => v.id !== valueId) }
+                        : pt
+                );
+                const legacyFields = syncLegacyFields(updatedTypes);
                 return {
-                    customParameterTypes: state.customParameterTypes.map(pt => 
-                        pt.id === paramTypeId 
-                            ? { ...pt, data: pt.data.filter(v => v.id !== valueId) }
-                            : pt
-                    )
+                    customParameterTypes: updatedTypes,
+                    ...legacyFields
                 };
             }),
 
@@ -323,32 +411,47 @@ export const useReminderSettingsStore = create(
                     ...category,
                     id: Date.now().toString()
                 };
-                set((state) => ({
-                    customParameterTypes: state.customParameterTypes.map(pt => 
+                set((state) => {
+                    const updatedTypes = state.customParameterTypes.map(pt => 
                         pt.id === paramTypeId 
                             ? { ...pt, categories: [...(pt.categories || []), newCategory] }
                             : pt
-                    )
-                }));
+                    );
+                    const legacyFields = syncLegacyFields(updatedTypes);
+                    return {
+                        customParameterTypes: updatedTypes,
+                        ...legacyFields
+                    };
+                });
                 return newCategory;
             },
-            updateParameterCategory: (paramTypeId, categoryId, updated) => set((state) => ({
-                customParameterTypes: state.customParameterTypes.map(pt => 
+            updateParameterCategory: (paramTypeId, categoryId, updated) => set((state) => {
+                const updatedTypes = state.customParameterTypes.map(pt => 
                     pt.id === paramTypeId 
                         ? { 
                             ...pt, 
                             categories: pt.categories.map(c => c.id === categoryId ? { ...c, ...updated } : c)
                         }
                         : pt
-                )
-            })),
-            deleteParameterCategory: (paramTypeId, categoryId) => set((state) => ({
-                customParameterTypes: state.customParameterTypes.map(pt => 
+                );
+                const legacyFields = syncLegacyFields(updatedTypes);
+                return {
+                    customParameterTypes: updatedTypes,
+                    ...legacyFields
+                };
+            }),
+            deleteParameterCategory: (paramTypeId, categoryId) => set((state) => {
+                const updatedTypes = state.customParameterTypes.map(pt => 
                     pt.id === paramTypeId 
                         ? { ...pt, categories: pt.categories.filter(c => c.id !== categoryId) }
                         : pt
-                )
-            })),
+                );
+                const legacyFields = syncLegacyFields(updatedTypes);
+                return {
+                    customParameterTypes: updatedTypes,
+                    ...legacyFields
+                };
+            }),
         }),
         {
             name: 'terra-reminder-settings-v10', // Version bump: Customer category with "Yeni" (default, undeletable/uneditable) and "Yeni Müşteri" (deletable/editable)

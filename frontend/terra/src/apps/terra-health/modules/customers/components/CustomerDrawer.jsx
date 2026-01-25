@@ -52,7 +52,10 @@ export const CustomerDrawer = ({ open, onClose, customer, t }) => {
             if (customer) {
                 // Fetch reminders from central store for this customer
                 const centralReminders = useReminderStore.getState().reminders
-                    .filter(r => r.relationId === customer.id);
+                    .filter(r => 
+                        r.relationId === customer.id && 
+                        (r.categoryId === 'customer' || r.categoryId === 'static_category_customer' || r.type === 'customer')
+                    );
 
                 // Customer object is already merged (from useCustomers hook)
                 reset({
@@ -230,7 +233,7 @@ export const CustomerDrawer = ({ open, onClose, customer, t }) => {
 
                     <Box sx={{ flex: 1, overflowY: 'auto', p: { xs: 3, md: 5 }, bgcolor: 'background.paper' }}>
                         <Box sx={{ maxWidth: 600, mx: 'auto' }}>
-                            <ActiveTabComponent register={register} control={control} t={t} i18n={i18n} lang={i18n.language} errors={errors} />
+                            <ActiveTabComponent register={register} control={control} t={t} i18n={i18n} lang={i18n.language} errors={errors} customerId={customer?.id} />
 
                             <Box sx={{ mt: 6, display: 'flex', gap: 2 }}>
                                 <Button fullWidth variant="outlined" onClick={onClose} sx={{ borderRadius: '12px', py: 1.5, fontWeight: 800 }}>{t('common.cancel')}</Button>

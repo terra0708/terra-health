@@ -1,11 +1,13 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { isPast, isValid } from 'date-fns';
 import { useReminderStore } from './useReminderStore';
 import { useReminderSettingsStore } from './useReminderSettingsStore';
 
 export const useReminders = (options = {}) => {
     const { t, i18n } = useTranslation();
+    const [searchParams, setSearchParams] = useSearchParams();
 
     // Options: customersResolver, enableMigration, migrationConfig
     const {
@@ -23,7 +25,24 @@ export const useReminders = (options = {}) => {
         toggleComplete
     } = useReminderStore();
 
-    const { categories, subCategories, statuses } = useReminderSettingsStore();
+    const settingsStore = useReminderSettingsStore();
+    const { categories, subCategories, statuses, customParameterTypes, repairData } = settingsStore;
+    
+    // Ensure repairData is called once to sync customParameterTypes to legacy fields
+    useEffect(() => {
+        const repairKey = 'reminder-settings-repair-completed';
+        const repairCompleted = localStorage.getItem(repairKey);
+        
+        // Only call repairData if it hasn't been called yet (or if customParameterTypes is empty)
+        if (repairData && (!repairCompleted || !customParameterTypes || customParameterTypes.length === 0)) {
+            try {
+                repairData();
+                localStorage.setItem(repairKey, 'true');
+            } catch (error) {
+                console.error('repairData error:', error);
+            }
+        }
+    }, []); // Only run once on mount
 
     // UI States
     const [openAddDialog, setOpenAddDialog] = useState(false);
@@ -92,6 +111,23 @@ export const useReminders = (options = {}) => {
             localStorage.setItem(demoDataKey, 'true');
         }
     }, [enableMigration, migrationConfig, reminders.length, addReminder]);
+
+    // Auto-filter by customerId from URL params
+    useEffect(() => {
+        const customerIdFromUrl = searchParams.get('customerId');
+        if (customerIdFromUrl && customersResolver) {
+            // Set customer filter when customerId is in URL
+            const customer = customersResolver(customerIdFromUrl);
+            if (customer) {
+                // Filter by customer category and relationId
+                setFilterCategory(['customer']);
+                setLocalFilters(prev => ({
+                    ...prev,
+                    category: ['customer']
+                }));
+            }
+        }
+    }, [searchParams, customersResolver]);
 
     // Sync Main -> Local when opening filters
     useEffect(() => {
@@ -200,6 +236,12 @@ export const useReminders = (options = {}) => {
     const filteredReminders = useMemo(() => {
         let filtered = enrichedReminders;
 
+        // Customer filter from URL params
+        const customerIdFromUrl = searchParams.get('customerId');
+        if (customerIdFromUrl) {
+            filtered = filtered.filter(r => r.relationId === customerIdFromUrl);
+        }
+
         // Status / Overdue Filter
         if (currentTab.length > 0) {
             const hasOverdue = currentTab.includes('overdue');
@@ -230,7 +272,7 @@ export const useReminders = (options = {}) => {
         if (filterSubCategory.length > 0) filtered = filtered.filter(r => filterSubCategory.includes(r.subCategoryId));
 
         return filtered;
-    }, [enrichedReminders, currentTab, searchQuery, filterDateStart, filterDateEnd, filterCategory, filterSubCategory]);
+    }, [enrichedReminders, currentTab, searchQuery, filterDateStart, filterDateEnd, filterCategory, filterSubCategory, searchParams]);
 
     const activeFilterCount = useMemo(() => {
         let count = 0;
@@ -248,7 +290,7 @@ export const useReminders = (options = {}) => {
 
     return {
         // States & Stores
-        categories, subCategories, statuses,
+        categories, subCategories, statuses, customParameterTypes,
         openAddDialog, setOpenAddDialog,
         editingReminder, setEditingReminder,
         page, setPage,

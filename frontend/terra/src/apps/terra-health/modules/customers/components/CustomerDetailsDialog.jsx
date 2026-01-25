@@ -17,7 +17,7 @@ import { ReminderCard, useReminderSettingsStore, useReminderStore } from '@share
 // CustomerDetailsDialog uses merged customer object from useCustomers hook
 // No direct store import needed
 
-export const CustomerDetailsDialog = ({ open, onClose, customer }) => {
+export const CustomerDetailsDialog = ({ open, onClose, customer, client }) => {
     const theme = useTheme();
     const { t, i18n } = useTranslation();
     const { getStatus, getSource, getService, getTag } = useLookup();
@@ -27,10 +27,18 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }) => {
     const updateReminder = useReminderStore(state => state.updateReminder);
     const reminders = useReminderStore(state => state.reminders);
 
+    // Support both 'customer' and 'client' prop names for compatibility
+    const customerData = customer || client;
+
     const customerReminders = React.useMemo(() => {
-        if (!customer) return [];
-        return reminders.filter(r => r.relationId === customer.id);
-    }, [reminders, customer?.id]);
+        if (!customerData) return [];
+        // Filter reminders that belong to this customer
+        // Check both relationId and categoryId to ensure we catch all customer-related reminders
+        return reminders.filter(r => 
+            r.relationId === customerData.id && 
+            (r.categoryId === 'customer' || r.categoryId === 'static_category_customer' || r.type === 'customer')
+        );
+    }, [reminders, customerData?.id]);
 
     const [activeTab, setActiveTab] = useState(0);
     const [page, setPage] = useState(0);
@@ -42,7 +50,7 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }) => {
         setPage(0);
     }, [activeTab, open]);
 
-    if (!customer) return null;
+    if (!customerData) return null;
 
     const handleChangePage = (event, newPage) => {
         setPage(newPage);
@@ -53,10 +61,8 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }) => {
         setPage(0);
     };
 
-    if (!customer) return null;
-
-    const country = ALL_COUNTRIES.find(c => c.code === customer.country);
-    const consultant = MOCK_USERS.find(u => u.id === customer.consultantId);
+    const country = ALL_COUNTRIES.find(c => c.code === customerData.country);
+    const consultant = MOCK_USERS.find(u => u.id === customerData.consultantId);
 
 
     const SectionTitle = ({ icon: Icon, title, count }) => (
@@ -110,12 +116,12 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }) => {
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontSize: '1.8rem', boxShadow: `0 8px 16px ${alpha(theme.palette.primary.main, 0.2)}`
                     }}>
-                        {customer.name.charAt(0)}
+                        {customerData.name.charAt(0)}
                     </Box>
                     <Box>
-                        <Typography variant="h6" sx={{ fontWeight: 900, lineHeight: 1.2 }}>{customer.name}</Typography>
+                        <Typography variant="h6" sx={{ fontWeight: 900, lineHeight: 1.2 }}>{customerData.name}</Typography>
                         <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700 }}>
-                            ID: #{customer.id} • {formatLocaleDate(customer.registrationDate, lang)}
+                            ID: #{customerData.id} • {formatLocaleDate(customerData.registrationDate, lang)}
                         </Typography>
                     </Box>
                 </Box>
@@ -146,14 +152,14 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }) => {
                     <Grid container spacing={4}>
                         <Grid item xs={12} md={6}>
                             <SectionTitle icon={User} title={t('customers.basic_info')} />
-                            <DetailItem icon={Phone} label={t('customers.phone')} value={customer.phone} color={theme.palette.primary.main} />
-                            <DetailItem icon={Mail} label={t('customers.email')} value={customer.email || '-'} color={theme.palette.info.main} />
-                            <DetailItem icon={Globe} label={t('customers.country')} value={`${country?.flag} ${country?.name} (${customer.country})`} />
+                            <DetailItem icon={Phone} label={t('customers.phone')} value={customerData.phone} color={theme.palette.primary.main} />
+                            <DetailItem icon={Mail} label={t('customers.email')} value={customerData.email || '-'} color={theme.palette.info.main} />
+                            <DetailItem icon={Globe} label={t('customers.country')} value={`${country?.flag} ${country?.name} (${customerData.country})`} />
 
                             <Box sx={{ mt: 4 }}>
-                                <SectionTitle icon={Briefcase} title={t('customers.services')} count={customer.services?.length} />
+                                <SectionTitle icon={Briefcase} title={t('customers.services')} count={Array.isArray(customerData.services) ? customerData.services.length : 0} />
                                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                                    {customer.services?.map((sName, i) => {
+                                    {Array.isArray(customerData.services) && customerData.services.map((sName, i) => {
                                         const { label, color } = getService(sName);
                                         return (
                                             <Chip
@@ -172,14 +178,14 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }) => {
                             <DetailItem
                                 icon={Activity}
                                 label={t('common.status')}
-                                value={getStatus(customer.status).label}
-                                color={getStatus(customer.status).color}
+                                value={getStatus(customerData.status).label}
+                                color={getStatus(customerData.status).color}
                             />
                             <DetailItem
                                 icon={LinkIcon}
                                 label={t('customers.source')}
-                                value={getSource(typeof customer.source === 'object' ? customer.source?.type : customer.source).label}
-                                color={getSource(typeof customer.source === 'object' ? customer.source?.type : customer.source).color}
+                                value={getSource(typeof customerData.source === 'object' ? customerData.source?.type : customerData.source).label}
+                                color={getSource(typeof customerData.source === 'object' ? customerData.source?.type : customerData.source).color}
                             />
                             <DetailItem
                                 icon={UserCheck}
@@ -189,9 +195,9 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }) => {
                             />
 
                             <Box sx={{ mt: 4 }}>
-                                <SectionTitle icon={TagIcon} title={t('customers.tags')} count={customer.tags?.length} />
+                                <SectionTitle icon={TagIcon} title={t('customers.tags')} count={Array.isArray(customerData.tags) ? customerData.tags.length : 0} />
                                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                                    {customer.tags?.map((tName, i) => {
+                                    {Array.isArray(customerData.tags) && customerData.tags.map((tName, i) => {
                                         const { label, color } = getTag(tName);
                                         return (
                                             <Chip
@@ -210,12 +216,12 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }) => {
 
                 {activeTab === 1 && (
                     <Stack spacing={3} sx={{ flex: 1 }}>
-                        <SectionTitle icon={FileText} title={t('customers.notes')} count={customer.notes?.length} />
+                        <SectionTitle icon={FileText} title={t('customers.notes')} count={Array.isArray(customerData.notes) ? customerData.notes.length : 0} />
                         <Box sx={{ flex: 1, minHeight: 0 }}>
-                            {customer.notes?.length > 0 ? (
+                            {Array.isArray(customerData.notes) && customerData.notes.length > 0 ? (
                                 <>
                                     <Stack spacing={2}>
-                                        {customer.notes
+                                        {customerData.notes
                                             .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                                             .map((note) => (
                                                 <Paper key={note.id} elevation={0} sx={{ p: 2.5, borderRadius: '16px', border: `1px solid ${theme.palette.divider}`, bgcolor: alpha(theme.palette.primary.main, 0.01) }}>
@@ -226,7 +232,7 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }) => {
                                     </Stack>
                                     <TablePagination
                                         component="div"
-                                        count={customer.notes.length}
+                                        count={customerData.notes.length}
                                         page={page}
                                         onPageChange={handleChangePage}
                                         rowsPerPage={rowsPerPage}
@@ -257,7 +263,7 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }) => {
                                             .map((rem) => (
                                                 <ReminderCard
                                                     key={rem.id}
-                                                    reminder={{ ...rem, customer }}
+                                                    reminder={{ ...rem, customer: customerData }}
                                                     onChangeStatus={(reminder, newStatusId) => {
                                                         const newStatus = statuses.find(s => s.id === newStatusId);
                                                         updateReminder(rem.id, {
@@ -298,12 +304,12 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }) => {
 
                 {activeTab === 3 && (
                     <Stack spacing={2} sx={{ flex: 1 }}>
-                        <SectionTitle icon={File} title={t('customers.files_info')} count={customer.files?.length} />
+                        <SectionTitle icon={File} title={t('customers.files_info')} count={Array.isArray(customerData.files) ? customerData.files.length : 0} />
                         <Box sx={{ flex: 1, minHeight: 0 }}>
-                            {customer.files?.length > 0 ? (
+                            {Array.isArray(customerData.files) && customerData.files.length > 0 ? (
                                 <>
                                     <Stack spacing={2}>
-                                        {customer.files
+                                        {customerData.files
                                             .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                                             .map((file) => (
                                                 <Paper key={file.id} elevation={0} sx={{ p: 2, borderRadius: '16px', border: `1px solid ${theme.palette.divider}`, display: 'flex', alignItems: 'center', gap: 2, '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.02) } }}>
@@ -320,7 +326,7 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }) => {
                                     </Stack>
                                     <TablePagination
                                         component="div"
-                                        count={customer.files.length}
+                                        count={customerData.files.length}
                                         page={page}
                                         onPageChange={handleChangePage}
                                         rowsPerPage={rowsPerPage}
@@ -341,12 +347,12 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }) => {
 
                 {activeTab === 4 && (
                     <Stack spacing={3} sx={{ flex: 1 }}>
-                        <SectionTitle icon={CreditCard} title={t('customers.payments')} count={customer.payments?.length} />
+                        <SectionTitle icon={CreditCard} title={t('customers.payments')} count={Array.isArray(customerData.payments) ? customerData.payments.length : 0} />
                         <Box sx={{ flex: 1, minHeight: 0 }}>
-                            {customer.payments?.length > 0 ? (
+                            {Array.isArray(customerData.payments) && customerData.payments.length > 0 ? (
                                 <>
                                     <Stack spacing={2}>
-                                        {customer.payments
+                                        {customerData.payments
                                             .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                                             .map((pay) => (
                                                 <Paper key={pay.id} elevation={0} sx={{ p: 2.5, borderRadius: '16px', border: `1px solid ${theme.palette.divider}`, bgcolor: alpha(theme.palette.success.main, 0.02) }}>
@@ -360,7 +366,7 @@ export const CustomerDetailsDialog = ({ open, onClose, customer }) => {
                                     </Stack>
                                     <TablePagination
                                         component="div"
-                                        count={customer.payments.length}
+                                        count={customerData.payments.length}
                                         page={page}
                                         onPageChange={handleChangePage}
                                         rowsPerPage={rowsPerPage}

@@ -87,7 +87,8 @@
         "editing_customer_record": "You are editing a customer record. Changes will also be reflected in the customer profile.",
         "meeting_with": "Meeting",
         "delete_confirm": "Are you sure you want to delete this reminder?",
-        "empty_state_desc": "No reminders scheduled yet. You can start by adding a new one."
+        "empty_state_desc": "No reminders scheduled yet. You can start by adding a new one.",
+        "select_subcategory_error": "Please select a subcategory"
     },
     "settings": {
         "reminder_settings": "Reminder Settings",

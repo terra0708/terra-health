@@ -34,7 +34,7 @@ const RemindersPage = ({
     const { addReminder } = useReminderStore();
     
     const {
-        categories, subCategories, statuses,
+        categories, subCategories, statuses, customParameterTypes,
         openAddDialog, setOpenAddDialog,
         editingReminder, setEditingReminder,
         page, setPage,
@@ -155,6 +155,7 @@ const RemindersPage = ({
                 statuses={statuses}
                 categories={categories}
                 subCategories={subCategories}
+                customParameterTypes={customParameterTypes}
             />
 
             {/* Optional: Health-specific CustomerDetailsDialog */}

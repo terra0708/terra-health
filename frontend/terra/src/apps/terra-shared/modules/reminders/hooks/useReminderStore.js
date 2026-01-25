@@ -18,6 +18,7 @@ export const useReminderStore = create(
                     categoryId: reminderData.categoryId || 'personal',
                     subCategoryId: reminderData.subCategoryId || '',
                     relationId: reminderData.relationId || reminderData.customerId || null,
+                    type: reminderData.type || (reminderData.categoryId === 'customer' || reminderData.categoryId === 'static_category_customer' ? 'customer' : 'personal'),
                     isCompleted: reminderData.isCompleted || false,
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString()
