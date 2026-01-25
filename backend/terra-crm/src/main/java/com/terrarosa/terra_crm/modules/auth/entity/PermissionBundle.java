@@ -41,7 +41,13 @@ public class PermissionBundle extends BaseEntity {
     @Builder.Default
     private Set<Permission> permissions = new HashSet<>();
     
-    @ManyToMany(mappedBy = "bundles", fetch = FetchType.LAZY)
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "user_bundles",
+        schema = "public",
+        joinColumns = @JoinColumn(name = "bundle_id"),
+        inverseJoinColumns = @JoinColumn(name = "user_id")
+    )
     @Builder.Default
     private Set<User> users = new HashSet<>();
 }

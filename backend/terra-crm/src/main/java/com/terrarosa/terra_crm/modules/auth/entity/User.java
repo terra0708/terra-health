@@ -49,13 +49,7 @@ public class User extends BaseEntity {
     @Builder.Default
     private Set<Role> roles = new HashSet<>();
     
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-        name = "user_bundles",
-        schema = "public",
-        joinColumns = @JoinColumn(name = "user_id"),
-        inverseJoinColumns = @JoinColumn(name = "bundle_id")
-    )
+    @ManyToMany(mappedBy = "users", fetch = FetchType.LAZY)
     @Builder.Default
     private Set<PermissionBundle> bundles = new HashSet<>();
 }

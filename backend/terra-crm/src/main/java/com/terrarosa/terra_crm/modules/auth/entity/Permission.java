@@ -14,8 +14,8 @@ import java.util.Set;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode(callSuper = true, exclude = {"parentPermission", "childPermissions", "tenants", "users"})
-@ToString(exclude = {"parentPermission", "childPermissions", "tenants", "users"})
+@EqualsAndHashCode(callSuper = true, exclude = {"parentPermission", "childPermissions", "tenants", "users", "bundles"})
+@ToString(exclude = {"parentPermission", "childPermissions", "tenants", "users", "bundles"})
 public class Permission extends BaseEntity {
     
     @Column(nullable = false, unique = true)
@@ -43,6 +43,10 @@ public class Permission extends BaseEntity {
     @ManyToMany(mappedBy = "permission", fetch = FetchType.LAZY)
     @Builder.Default
     private Set<com.terrarosa.terra_crm.modules.auth.entity.UserPermission> users = new HashSet<>();
+    
+    @ManyToMany(mappedBy = "permissions", fetch = FetchType.LAZY)
+    @Builder.Default
+    private Set<PermissionBundle> bundles = new HashSet<>();
     
     public enum PermissionType {
         MODULE,
