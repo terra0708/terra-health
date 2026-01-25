@@ -2,9 +2,14 @@ package com.terrarosa.terra_crm.modules.auth.entity;
 
 import com.terrarosa.terra_crm.core.common.entity.BaseEntity;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 @Entity
@@ -14,8 +19,6 @@ import java.util.Set;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode(callSuper = true, exclude = {"parentPermission", "childPermissions", "tenants", "users", "bundles"})
-@ToString(exclude = {"parentPermission", "childPermissions", "tenants", "users", "bundles"})
 public class Permission extends BaseEntity {
     
     @Column(nullable = false, unique = true)
@@ -36,17 +39,31 @@ public class Permission extends BaseEntity {
     @Builder.Default
     private Set<Permission> childPermissions = new HashSet<>();
     
-    @ManyToMany(mappedBy = "permission", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "permission", fetch = FetchType.LAZY)
     @Builder.Default
     private Set<com.terrarosa.terra_crm.modules.auth.entity.TenantModule> tenants = new HashSet<>();
     
-    @ManyToMany(mappedBy = "permission", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "permission", fetch = FetchType.LAZY)
     @Builder.Default
     private Set<com.terrarosa.terra_crm.modules.auth.entity.UserPermission> users = new HashSet<>();
     
     @ManyToMany(mappedBy = "permissions", fetch = FetchType.LAZY)
     @Builder.Default
     private Set<PermissionBundle> bundles = new HashSet<>();
+    
+    // Manual equals and hashCode - only based on id to avoid circular references
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Permission that = (Permission) o;
+        return Objects.equals(getId(), that.getId());
+    }
+    
+    @Override
+    public int hashCode() {
+        return Objects.hash(getId());
+    }
     
     public enum PermissionType {
         MODULE,

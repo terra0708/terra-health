@@ -1,6 +1,7 @@
 package com.terrarosa.terra_crm.core.common.entity;
 
 import jakarta.persistence.*;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.SQLRestriction;
@@ -19,12 +20,14 @@ import java.util.UUID;
 @MappedSuperclass
 @Getter
 @Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @EntityListeners(AuditingEntityListener.class)
 @SQLRestriction("deleted = false")
 public abstract class BaseEntity {
     
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @EqualsAndHashCode.Include
     private UUID id;
     
     @CreatedDate

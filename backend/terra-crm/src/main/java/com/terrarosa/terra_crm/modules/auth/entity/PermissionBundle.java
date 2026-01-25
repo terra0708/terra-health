@@ -3,9 +3,14 @@ package com.terrarosa.terra_crm.modules.auth.entity;
 import com.terrarosa.terra_crm.core.common.entity.BaseEntity;
 import com.terrarosa.terra_crm.core.tenancy.entity.Tenant;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 @Entity
@@ -17,8 +22,6 @@ import java.util.Set;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode(callSuper = true, exclude = {"tenant", "permissions", "users"})
-@ToString(exclude = {"tenant", "permissions", "users"})
 public class PermissionBundle extends BaseEntity {
     
     @Column(nullable = false)
@@ -35,8 +38,8 @@ public class PermissionBundle extends BaseEntity {
     @JoinTable(
         name = "bundle_permissions",
         schema = "public",
-        joinColumns = @JoinColumn(name = "bundle_id"),
-        inverseJoinColumns = @JoinColumn(name = "permission_id")
+        joinColumns = @JoinColumn(name = "bundle_id", referencedColumnName = "id"),
+        inverseJoinColumns = @JoinColumn(name = "permission_id", referencedColumnName = "id")
     )
     @Builder.Default
     private Set<Permission> permissions = new HashSet<>();
@@ -45,9 +48,23 @@ public class PermissionBundle extends BaseEntity {
     @JoinTable(
         name = "user_bundles",
         schema = "public",
-        joinColumns = @JoinColumn(name = "bundle_id"),
-        inverseJoinColumns = @JoinColumn(name = "user_id")
+        joinColumns = @JoinColumn(name = "bundle_id", referencedColumnName = "id"),
+        inverseJoinColumns = @JoinColumn(name = "user_id", referencedColumnName = "id")
     )
     @Builder.Default
     private Set<User> users = new HashSet<>();
+    
+    // Manual equals and hashCode - only based on id to avoid circular references
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        PermissionBundle that = (PermissionBundle) o;
+        return Objects.equals(getId(), that.getId());
+    }
+    
+    @Override
+    public int hashCode() {
+        return Objects.hash(getId());
+    }
 }

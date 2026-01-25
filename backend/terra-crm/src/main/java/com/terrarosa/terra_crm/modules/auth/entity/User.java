@@ -3,9 +3,14 @@ package com.terrarosa.terra_crm.modules.auth.entity;
 import com.terrarosa.terra_crm.core.common.entity.BaseEntity;
 import com.terrarosa.terra_crm.core.tenancy.entity.Tenant;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 @Entity
@@ -15,8 +20,6 @@ import java.util.Set;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode(callSuper = true, exclude = {"roles", "bundles"})
-@ToString(exclude = {"password", "roles", "bundles"})
 public class User extends BaseEntity {
     
     @Column(nullable = false, unique = true)
@@ -52,4 +55,18 @@ public class User extends BaseEntity {
     @ManyToMany(mappedBy = "users", fetch = FetchType.LAZY)
     @Builder.Default
     private Set<PermissionBundle> bundles = new HashSet<>();
+    
+    // Manual equals and hashCode - only based on id to avoid circular references
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        User user = (User) o;
+        return Objects.equals(getId(), user.getId());
+    }
+    
+    @Override
+    public int hashCode() {
+        return Objects.hash(getId());
+    }
 }
