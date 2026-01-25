@@ -1,0 +1,37 @@
+GÖREVİ: Permission Altyapısı ve Admin Yönetimi
+Hedef: Frontend sidebar yapısını analiz ederek yetki listesini oluşturmak, şirketlere modül atamak ve Tenant Admin yetkilendirme mantığını kurmak.
+
+1. Analiz ve Seed Data (Frontend-Backend Senkronu)
+Görev: Sidebar içeriğini oku. Oradaki her ana başlığı (Leads, Ads, SEO, Sağlık Turizmi vb.) birer Permission olarak tanımla.
+
+Public Schema: permissions tablosuna bu yetkileri "Modül" seviyesinde kaydet (Örn: MODULE_LEADS, MODULE_ADS).
+
+2. Tenant-Level Modül Havuzu (Plan Yönetimi)
+tenant_modules Tablosu (Public): Hangi şirketin hangi modüllere erişimi olduğunu tutan tablo.
+
+tenant_id | permission_id
+
+Kural: Bir Tenant Admin, sadece bu tabloda kendi şirketi için tanımlanmış modülleri kendi personeline dağıtabilir.
+
+3. User-Level Yetkilendirme (Tenant İçi)
+user_permissions Tablosu (Public): Kullanıcı bazlı yetkiler.
+
+Validation Logic: AuthService içine şu kontrolü ekle:
+
+Bir kullanıcıya yetki verilirken; verilen yetki, o kullanıcının bağlı olduğu Tenant'ın modül havuzunda var mı? (Güvenlik kontrolü: Bir admin, sistemde var olan ama kendisine tanımlanmamış bir yetkiyi -örneğin hack ile- başkasına verememeli).
+
+4. Otomatik Şema Tetikleyici (Kritik Parça)
+TenantService.createTenant: Bu metod çalıştığında:
+
+public.tenants tablosuna kayıt atar.
+
+Belirlediğin modül yetkilerini tenant_modules'a işler.
+
+Tetikleyici: Flyway veya bir Java DataSource runner kullanarak, bu tenant için özel PostgreSQL şemasını oluşturur ve içindeki tabloları (leads vb.) kurar.
+
+Acımasız Akıl Hocanın Notu:
+Sidebar'dan yetkileri çekme fikrin çok zekice, çünkü "Single Source of Truth" (Tek Doğruluk Kaynağı) prensibine hizmet ediyor. Ama Cursor'a şu soruyu sormayı unutma:
+
+"Bir modülün (örneğin Ads) sadece sidebar'da gizlenmesi yetmez. Eğer bir kullanıcı URL üzerinden o modülün endpoint'ine (örn: /api/v1/ads) gitmeye çalışırsa, backend bunu JWT içindeki permissions claim'ine bakarak nasıl engelleyecek?"
+
+Şimdi ne yapıyoruz? Bu talimatı Cursor'a ver. Cursor önce frontend'i okuyacak, sonra backend'de bu "Yetki Havuzu" tablolarını oluşturacak.

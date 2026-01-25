@@ -1,0 +1,60 @@
+CURSOR AI PHASE 2: AUTH, SECURITY & TENANT VALIDATION
+Goal: Implement a JWT-based authentication system that is fully integrated with our Multi-Tenant architecture.
+
+1. Global User Management (Public Schema)
+Entities: Create User and Role entities in the public schema.
+
+User: id (UUID), email, password, firstName, lastName, tenant_id (UUID), enabled (boolean).
+
+Role: name (e.g., ROLE_ADMIN, ROLE_MANAGER, ROLE_AGENT).
+
+Relationship: Many-to-One between User and Tenant (Every user must belong to exactly one tenant).
+
+2. JWT Altyapısı (The Token)
+JWT Service: Implement a service to generate and validate JWTs.
+
+Claims: The JWT must include the following custom claims:
+
+tenantId: The UUID of the user's tenant.
+
+schema_name: The database schema associated with that tenant.
+
+roles: List of user roles.
+
+3. Multi-Tenant Security Filter (The Shield)
+Create a JwtAuthenticationFilter (extending OncePerRequestFilter) that performs these steps:
+
+Extract Token: Get JWT from the Authorization: Bearer header.
+
+Validate Tenant Cross-Check (CRITICAL): * Read X-Tenant-ID from the request header.
+
+Read tenantId from the JWT claims.
+
+If they do not match, throw an AccessDeniedException (403 Forbidden). This prevents a user from one tenant trying to access another tenant's data by manually changing the header.
+
+Set Context: If valid, set the Authentication in SecurityContextHolder and also set the TenantContext using the schema_name from the JWT.
+
+4. Auth Modülü (modules.auth)
+Login Endpoint: POST /api/v1/auth/login. Returns the JWT and basic user info.
+
+Register Endpoint: POST /api/v1/auth/register (Internal/Admin only for now).
+
+Password Encoding: Use BCryptPasswordEncoder.
+
+5. Security Configuration
+Update SecurityConfig to:
+
+Require authentication for all /api/v1/** endpoints.
+
+Permit all for /api/v1/auth/**.
+
+Disable CSRF (since we use JWT).
+
+Configure CORS to allow the frontend URL.
+
+Acımasız Mentorun Notu (Okumadan Geçme):
+Cursor bu kodları yazarken muhtemelen "JJWT" veya "Spring Security Crypto" kütüphanelerini kullanmak isteyecektir. Java 25 ve Spring Boot 4 kullandığın için en güncel sürümleri kullandığından emin olmasını söyle.
+
+Kritik Kontrol Noktası: Cursor işi bitirdiğinde ona şu soruyu sor: "Bir kullanıcı geçerli bir JWT'ye sahip olsa bile, X-Tenant-ID header'ını başka bir şirketin ID'si ile değiştirirse sistem onu nasıl engelliyor?" Eğer cevabı "Filter içinde ikisini karşılaştırıp 403 dönüyorum" ise, testi geçmiş demektir.
+
+Bu adım bitince ne olacak? Artık her isteğin "imzalı" ve "kimlikli" olacak. Kimse kafasına göre header değiştirip sistemde gezemeyecek. Bu biter bitmez React tarafındaki "Köprüyü" (Axios Interceptor) kurmaya geçeceğiz.

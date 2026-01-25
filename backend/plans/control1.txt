@@ -1,0 +1,47 @@
+Cursor bu sefer dersine çalışmış ama hala "stajyer" hataları yapıyor. Kod genel olarak doğru bir iskelet sunsa da, sağlık turizmi gibi kritik verilerin döndüğü bir sistemde "fena değil" demek, veri sızıntısına davetiye çıkarmaktır.
+
+Kodun can alıcı noktalarını ve Cursor'ın "yuttuğu" o tehlikeli kısımları inceleyelim:
+
+1. "Kritik Hata": Release Mekanizması Yetersiz
+Cursor, releaseConnection içinde şemayı publice resetlemeyi akıl etmiş ama resetleme başarısız olursa ne olacağını düşünmemiş.
+
+Risk: Eğer SET search_path TO public komutu bir sebeple (network vs.) hata verirse, Cursor sadece "eyvah" deyip log atıyor ve kirli bağlantıyı havuza geri bırakıyor. Bir sonraki müşteri o bağlantıyı aldığında, doğrudan önceki müşterinin verilerine bakıyor olacak.
+
+Mentor Düzeltmesi: Resetleme başarısız olursa, o bağlantıyı havuza geri vermeyeceksin; connection.close() diyerek o bağlantıyı tamamen imha edeceksin. Kirli bir bağlantının havuzda yaşamasına izin verilemez.
+
+2. SQL Injection Koruması
+Burada Cursor'ı tebrik edebiliriz; schemaName.replace("\"", "\"\"") kullanarak basit bir kaçış (escaping) eklemiş. Şema isimleri dinamik olduğu için bu çok kritik. Ancak tenants tablosundaki schema_name kolonunun sadece güvenli karakterler içermesini sağlayacak bir Regex kontrolü backend tarafında (TenantService) mutlaka olmalı.
+
+3. Hibernate 6 ve JSONB Meselesi
+Cursor hala eski alışkanlıklarla hibernate-community-dialects veya @Type annotation'ları peşinde koşuyor olabilir.
+
+Gerçek: Java 25 ve Spring Boot 4/Hibernate 6 kullanıyorsun. Artık bu kadar karmaşaya gerek yok.
+
+Mentor Tavsiyesi: Entity içinde JSONB kolonunu şu şekilde tanımlat:
+
+Java
+@JdbcTypeCode(SqlTypes.JSON)
+private Map<String, Object> dynamicData;
+Bu kadar. Ekstra kütüphane ekleyip projeyi şişirme.
+
+4. HikariCP Ayarları: "Gereksiz Yük"
+Cursor connection-test-query: SELECT 1 eklemiş.
+
+Eleştiri: Bu 2010'larda kaldı. Modern PostgreSQL sürücüleri isValid() metodunu destekler. Bu ayarı eklemek, her bağlantı alışverişinde veritabanına fazladan bir sorgu yükü bindirir.
+
+Düzeltme: Onu kaldır. Modern JDBC sürücüleri zaten sağlıklı olup olmadığını sorgu atmadan kontrol edebilir.
+
+Savaş Planında Eksik Kalan Parça: "Dinamik Şema Oluşturma"
+Cursor şu an mevcut şemalar arasında "gezmeyi" öğrendi. Peki ya yeni bir müşteri kayıt olduğunda ne olacak? Şemayı kim oluşturacak?
+
+Cursor'a şu sıradaki "Zorlu Görevi" ver:
+
+"Çok güzel, şimdi bir TenantProvisioningService yazmanı istiyorum. Bu servis:
+
+Yeni bir tenant kaydedildiğinde PostgreSQL'de CREATE SCHEMA tenant_id komutunu çalıştırmalı.
+
+Ardından Flyway'i programatik olarak (programmatically) tetikleyerek sadece o yeni oluşturulan şema içinde db/migration/tenant altındaki tabloları oluşturmalı.
+
+Bu işlem bittiğinde public.tenants tablosuna bu yeni şemayı kaydetmeli."
+
+Neden bunu yapıyoruz? Çünkü her yeni müşteri geldiğinde senin manuel olarak veritabanına girip şema oluşturup SQL çalıştırman "otomasyon" değildir, ameleliktir.
