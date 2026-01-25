@@ -308,6 +308,8 @@ public class PermissionService {
         if (!newTenantModules.isEmpty()) {
             // CRITICAL: Use saveAll for batch operation - prevents Hibernate 7 TableGroup issues
             tenantModuleRepository.saveAll(newTenantModules);
+            // CRITICAL: Flush to ensure all TenantModule records are persisted before any subsequent queries
+            tenantModuleRepository.flush();
             log.info("Assigned {} modules to tenant {} in batch", newTenantModules.size(), tenant.getName());
         } else {
             log.warn("All modules already assigned to tenant {}", tenant.getName());

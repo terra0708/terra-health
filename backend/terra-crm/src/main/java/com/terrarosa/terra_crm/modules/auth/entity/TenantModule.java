@@ -1,42 +1,50 @@
 package com.terrarosa.terra_crm.modules.auth.entity;
 
+import com.terrarosa.terra_crm.core.common.entity.BaseEntity;
 import com.terrarosa.terra_crm.core.tenancy.entity.Tenant;
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.time.LocalDateTime;
+import java.util.Objects;
 
+/**
+ * Entity representing the relationship between tenants and modules (permissions).
+ * 
+ * CRITICAL: Uses simple UUID ID instead of @IdClass to avoid Hibernate 7 TableGroup.getModelPart() errors.
+ * Unique constraint ensures data integrity (one tenant can have one instance of each module).
+ */
 @Entity
-@Table(name = "tenant_modules", schema = "public")
+@Table(name = "tenant_modules", schema = "public",
+       uniqueConstraints = @UniqueConstraint(name = "uk_tenant_modules_tenant_permission", 
+                                             columnNames = {"tenant_id", "permission_id"}))
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode(exclude = {"tenant", "permission", "createdAt", "updatedAt"})
+@EqualsAndHashCode(callSuper = true, onlyExplicitlyIncluded = true)
 @ToString(exclude = {"tenant", "permission"})
-@IdClass(TenantModuleId.class)
-@EntityListeners(AuditingEntityListener.class)
-public class TenantModule {
+public class TenantModule extends BaseEntity {
     
-    @Id
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tenant_id", nullable = false)
     private Tenant tenant;
     
-    @Id
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "permission_id", nullable = false)
     private Permission permission;
     
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    // Manual equals and hashCode - only based on id to avoid circular references
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        TenantModule that = (TenantModule) o;
+        return Objects.equals(getId(), that.getId());
+    }
     
-    @LastModifiedDate
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+    @Override
+    public int hashCode() {
+        return Objects.hash(getId());
+    }
 }
