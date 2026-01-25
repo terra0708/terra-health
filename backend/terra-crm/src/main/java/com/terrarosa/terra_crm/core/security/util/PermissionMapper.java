@@ -56,18 +56,28 @@ public class PermissionMapper {
     
     /**
      * Compress a list of permission names to shorter codes.
+     * Returns empty list if input is null or empty.
      */
     public static List<String> compressPermissions(List<String> permissions) {
+        if (permissions == null || permissions.isEmpty()) {
+            return List.of();
+        }
         return permissions.stream()
+                .filter(p -> p != null && !p.isEmpty())
                 .map(PermissionMapper::compressPermission)
                 .collect(Collectors.toList());
     }
     
     /**
      * Expand a list of compressed permission codes back to full names.
+     * Returns empty list if input is null or empty.
      */
     public static List<String> expandPermissions(List<String> compressed) {
+        if (compressed == null || compressed.isEmpty()) {
+            return List.of();
+        }
         return compressed.stream()
+                .filter(c -> c != null && !c.isEmpty())
                 .map(PermissionMapper::expandPermission)
                 .collect(Collectors.toList());
     }

@@ -42,11 +42,19 @@ public class PermissionService {
     
     /**
      * Get all permissions for a user.
+     * Uses JOIN FETCH to prevent LazyInitializationException.
      */
     @Transactional(readOnly = true)
     public List<String> getUserPermissions(UUID userId) {
-        return userPermissionRepository.findByUserId(userId).stream()
-                .map(up -> up.getPermission().getName())
+        List<UserPermission> userPermissions = userPermissionRepository.findByUserId(userId);
+        log.debug("Found {} permissions for user {}", userPermissions.size(), userId);
+        
+        return userPermissions.stream()
+                .map(up -> {
+                    String permissionName = up.getPermission().getName();
+                    log.debug("User {} has permission: {}", userId, permissionName);
+                    return permissionName;
+                })
                 .collect(Collectors.toList());
     }
     
@@ -355,20 +363,30 @@ public class PermissionService {
     @Transactional
     public void assignAllTenantPermissionsToUser(User user) {
         UUID tenantId = user.getTenant().getId();
+        UUID userId = user.getId();
+        
+        log.info("Starting permission assignment for first user {} of tenant {}", user.getEmail(), tenantId);
+        
+        // CRITICAL: Ensure user is fully persisted before assigning permissions
+        if (userId == null) {
+            throw new IllegalStateException("User must be persisted before assigning permissions");
+        }
         
         // Get all modules for the tenant
         List<Permission> tenantModules = getTenantModules(tenantId);
         
         if (tenantModules.isEmpty()) {
-            log.warn("No modules found for tenant {}. Cannot assign permissions to user {}.", 
+            log.error("No modules found for tenant {}. Cannot assign permissions to user {}. " +
+                    "This indicates modules were not properly assigned to the tenant during creation.", 
                 tenantId, user.getEmail());
             return;
         }
         
-        log.debug("Found {} modules for tenant {}. Assigning all permissions to user {}", 
+        log.info("Found {} modules for tenant {}. Assigning all permissions to user {}", 
             tenantModules.size(), tenantId, user.getEmail());
         
         int totalPermissionsAssigned = 0;
+        List<UserPermission> permissionsToSave = new java.util.ArrayList<>();
         
         // For each module, get all action-level permissions and assign them
         for (Permission module : tenantModules) {
@@ -378,10 +396,26 @@ public class PermissionService {
                 
                 for (Permission permission : modulePermissions) {
                     try {
-                        assignPermissionToUser(user, permission.getId());
+                        // Check if already assigned
+                        if (userPermissionRepository.findByUserIdAndPermissionId(userId, permission.getId()).isPresent()) {
+                            log.debug("Permission {} already assigned to user {}", permission.getName(), user.getEmail());
+                            continue;
+                        }
+                        
+                        // Validate permission assignment
+                        validatePermissionAssignment(tenantId, permission.getId());
+                        
+                        // Create UserPermission (don't save yet - batch save)
+                        UserPermission userPermission = UserPermission.builder()
+                                .user(user)
+                                .permission(permission)
+                                .build();
+                        permissionsToSave.add(userPermission);
                         totalPermissionsAssigned++;
+                        
+                        log.debug("Prepared permission {} for user {}", permission.getName(), user.getEmail());
                     } catch (Exception e) {
-                        log.warn("Failed to assign permission {} to user {}: {}", 
+                        log.warn("Failed to prepare permission {} for user {}: {}", 
                             permission.getName(), user.getEmail(), e.getMessage());
                     }
                 }
@@ -390,8 +424,23 @@ public class PermissionService {
             }
         }
         
-        log.info("Assigned {} permissions to first user {} of tenant {}", 
-            totalPermissionsAssigned, user.getEmail(), user.getTenant().getName());
+        // CRITICAL: Batch save all permissions and flush to ensure they're persisted
+        if (!permissionsToSave.isEmpty()) {
+            userPermissionRepository.saveAll(permissionsToSave);
+            userPermissionRepository.flush(); // Ensure all permissions are persisted
+            log.info("Successfully saved {} permissions to database for user {}", 
+                permissionsToSave.size(), user.getEmail());
+        }
+        
+        // Verify permissions were saved
+        List<String> savedPermissions = getUserPermissions(userId);
+        log.info("Assigned {} permissions to first user {} of tenant {}. Verified {} permissions in database.", 
+            totalPermissionsAssigned, user.getEmail(), user.getTenant().getName(), savedPermissions.size());
+        
+        if (savedPermissions.isEmpty()) {
+            log.error("CRITICAL: No permissions found in database after assignment for user {}. " +
+                    "This indicates a serious issue with permission persistence.", user.getEmail());
+        }
     }
     
     /**

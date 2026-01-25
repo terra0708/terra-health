@@ -89,6 +89,11 @@ public class AuthService {
         
         // Fetch user permissions
         List<String> permissions = permissionService.getUserPermissions(user.getId());
+        log.debug("User {} has {} permissions: {}", user.getEmail(), permissions.size(), permissions);
+        
+        if (permissions.isEmpty()) {
+            log.warn("User {} has no permissions assigned. This may indicate a problem with permission assignment.", user.getEmail());
+        }
         
         // Generate JWT token with permissions
         String token = jwtService.generateToken(
@@ -98,6 +103,8 @@ public class AuthService {
                 roles,
                 permissions
         );
+        
+        log.debug("Generated JWT token for user {} with {} permissions", user.getEmail(), permissions.size());
         
         // Build user DTO
         UserDto userDto = UserDto.builder()
