@@ -31,6 +31,15 @@ public class RegisterRequest {
     @NotBlank(message = "Last name is required")
     private String lastName;
     
-    @NotNull(message = "Tenant ID is required")
+    /**
+     * Tenant ID - required if registering to an existing tenant.
+     * If null, tenantName must be provided to create a new tenant.
+     */
     private UUID tenantId;
+    
+    /**
+     * Tenant name - required if creating a new tenant (tenantId is null).
+     * If tenantId is provided, this field is ignored.
+     */
+    private String tenantName;
 }

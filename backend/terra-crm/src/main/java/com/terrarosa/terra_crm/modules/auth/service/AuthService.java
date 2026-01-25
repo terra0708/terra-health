@@ -3,6 +3,7 @@ package com.terrarosa.terra_crm.modules.auth.service;
 import com.terrarosa.terra_crm.core.security.service.JwtService;
 import com.terrarosa.terra_crm.core.tenancy.entity.Tenant;
 import com.terrarosa.terra_crm.core.tenancy.repository.TenantRepository;
+import com.terrarosa.terra_crm.core.tenancy.service.TenantService;
 import com.terrarosa.terra_crm.modules.auth.dto.LoginRequest;
 import com.terrarosa.terra_crm.modules.auth.dto.LoginResponse;
 import com.terrarosa.terra_crm.modules.auth.dto.RegisterRequest;
@@ -29,6 +30,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final TenantRepository tenantRepository;
+    private final TenantService tenantService;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final PermissionService permissionService;
@@ -116,6 +118,9 @@ public class AuthService {
     
     /**
      * Register a new user.
+     * Supports two scenarios:
+     * 1. Register to existing tenant: Provide tenantId
+     * 2. Create new tenant and register first user: Provide tenantName (tenantId must be null)
      */
     @Transactional
     public UserDto register(RegisterRequest request) {
@@ -124,9 +129,21 @@ public class AuthService {
             throw new IllegalArgumentException("User with email " + request.getEmail() + " already exists");
         }
         
-        // Validate tenant exists
-        Tenant tenant = tenantRepository.findById(request.getTenantId())
-                .orElseThrow(() -> new IllegalArgumentException("Tenant not found with id: " + request.getTenantId()));
+        // Resolve tenant: either use existing or create new
+        Tenant tenant;
+        if (request.getTenantId() != null) {
+            // Scenario 1: Register to existing tenant
+            tenant = tenantRepository.findById(request.getTenantId())
+                    .orElseThrow(() -> new IllegalArgumentException("Tenant not found with id: " + request.getTenantId()));
+            log.info("Registering user {} to existing tenant: {}", request.getEmail(), tenant.getName());
+        } else if (request.getTenantName() != null && !request.getTenantName().isBlank()) {
+            // Scenario 2: Create new tenant and register first user
+            log.info("Creating new tenant '{}' and registering first user: {}", request.getTenantName(), request.getEmail());
+            tenant = tenantService.createTenant(request.getTenantName());
+            log.info("Created new tenant: id={}, name={}, schemaName={}", tenant.getId(), tenant.getName(), tenant.getSchemaName());
+        } else {
+            throw new IllegalArgumentException("Either tenantId (for existing tenant) or tenantName (for new tenant) must be provided");
+        }
         
         // Encode password
         String encodedPassword = passwordEncoder.encode(request.getPassword());
