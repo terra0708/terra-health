@@ -247,6 +247,15 @@ public class PermissionService {
             return;
         }
         
+        // CRITICAL: Ensure tenant and permission entities are fully persisted
+        // This prevents Hibernate 7 TableGroup.getModelPart() errors with @IdClass
+        if (tenant.getId() == null) {
+            throw new IllegalStateException("Tenant must be persisted before assigning modules");
+        }
+        if (module.getId() == null) {
+            throw new IllegalStateException("Permission must be persisted before assigning modules");
+        }
+        
         // Create and save TenantModule
         TenantModule tenantModule = TenantModule.builder()
                 .tenant(tenant)
@@ -255,6 +264,46 @@ public class PermissionService {
         
         tenantModuleRepository.save(tenantModule);
         log.info("Assigned module {} to tenant {}", moduleName, tenant.getName());
+    }
+    
+    /**
+     * Assign multiple modules to a tenant in a single batch operation.
+     * This is more efficient and prevents Hibernate 7 TableGroup issues.
+     */
+    @Transactional
+    public void assignModulesToTenant(Tenant tenant, List<String> moduleNames) {
+        if (tenant.getId() == null) {
+            throw new IllegalStateException("Tenant must be persisted before assigning modules");
+        }
+        
+        // Get all modules
+        List<Permission> modules = moduleNames.stream()
+                .map(moduleName -> {
+                    Permission module = permissionRepository.findByName(moduleName)
+                            .orElseThrow(() -> new IllegalArgumentException("Module not found: " + moduleName));
+                    if (module.getType() != Permission.PermissionType.MODULE) {
+                        throw new IllegalArgumentException("Permission '" + moduleName + "' is not a MODULE-level permission");
+                    }
+                    return module;
+                })
+                .collect(Collectors.toList());
+        
+        // Filter out already assigned modules
+        List<TenantModule> newTenantModules = modules.stream()
+                .filter(module -> !tenantModuleRepository.existsByTenantIdAndPermissionId(tenant.getId(), module.getId()))
+                .map(module -> TenantModule.builder()
+                        .tenant(tenant)
+                        .permission(module)
+                        .build())
+                .collect(Collectors.toList());
+        
+        if (!newTenantModules.isEmpty()) {
+            // CRITICAL: Use saveAll for batch operation - prevents Hibernate 7 TableGroup issues
+            tenantModuleRepository.saveAll(newTenantModules);
+            log.info("Assigned {} modules to tenant {} in batch", newTenantModules.size(), tenant.getName());
+        } else {
+            log.warn("All modules already assigned to tenant {}", tenant.getName());
+        }
     }
     
     /**
@@ -310,20 +359,34 @@ public class PermissionService {
         // Get all modules for the tenant
         List<Permission> tenantModules = getTenantModules(tenantId);
         
+        if (tenantModules.isEmpty()) {
+            log.warn("No modules found for tenant {}. Cannot assign permissions to user {}.", 
+                tenantId, user.getEmail());
+            return;
+        }
+        
+        log.debug("Found {} modules for tenant {}. Assigning all permissions to user {}", 
+            tenantModules.size(), tenantId, user.getEmail());
+        
         int totalPermissionsAssigned = 0;
         
         // For each module, get all action-level permissions and assign them
         for (Permission module : tenantModules) {
-            List<Permission> modulePermissions = getModulePermissions(module.getName());
-            
-            for (Permission permission : modulePermissions) {
-                try {
-                    assignPermissionToUser(user, permission.getId());
-                    totalPermissionsAssigned++;
-                } catch (Exception e) {
-                    log.warn("Failed to assign permission {} to user {}: {}", 
-                        permission.getName(), user.getEmail(), e.getMessage());
+            try {
+                List<Permission> modulePermissions = getModulePermissions(module.getName());
+                log.debug("Module {} has {} action permissions", module.getName(), modulePermissions.size());
+                
+                for (Permission permission : modulePermissions) {
+                    try {
+                        assignPermissionToUser(user, permission.getId());
+                        totalPermissionsAssigned++;
+                    } catch (Exception e) {
+                        log.warn("Failed to assign permission {} to user {}: {}", 
+                            permission.getName(), user.getEmail(), e.getMessage());
+                    }
                 }
+            } catch (Exception e) {
+                log.warn("Failed to get permissions for module {}: {}", module.getName(), e.getMessage());
             }
         }
         

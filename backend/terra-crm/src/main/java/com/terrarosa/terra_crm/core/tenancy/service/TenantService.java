@@ -71,6 +71,10 @@ public class TenantService {
         
         Tenant savedTenant = tenantRepository.save(tenant);
         
+        // CRITICAL: Flush to ensure tenant is fully persisted before module assignment
+        // This prevents Hibernate 7 TableGroup.getModelPart() errors with @IdClass
+        tenantRepository.flush();
+        
         // Assign core modules to the tenant
         assignCoreModulesToTenant(savedTenant);
         
@@ -79,17 +83,19 @@ public class TenantService {
     
     /**
      * Assign core modules to a tenant.
+     * Uses batch operation to prevent Hibernate 7 TableGroup.getModelPart() errors.
      */
     private void assignCoreModulesToTenant(Tenant tenant) {
-        for (String moduleName : CORE_MODULES) {
-            try {
-                permissionService.assignModuleToTenant(tenant, moduleName);
-            } catch (Exception e) {
-                log.error("Failed to assign module {} to tenant {}: {}", moduleName, tenant.getId(), e.getMessage());
-                // Continue with other modules even if one fails
-            }
+        try {
+            // CRITICAL: Use batch assignment to prevent Hibernate 7 @IdClass issues
+            // This ensures all TenantModule records are created in a single transaction
+            permissionService.assignModulesToTenant(tenant, CORE_MODULES);
+            log.info("Successfully assigned {} core modules to tenant {}", CORE_MODULES.size(), tenant.getName());
+        } catch (Exception e) {
+            log.error("Failed to assign core modules to tenant {}: {}", tenant.getId(), e.getMessage(), e);
+            // Don't throw - allow tenant creation to succeed even if module assignment fails
+            // Modules can be assigned manually later
         }
-        log.info("Assigned {} core modules to tenant {}", CORE_MODULES.size(), tenant.getName());
     }
     
     /**

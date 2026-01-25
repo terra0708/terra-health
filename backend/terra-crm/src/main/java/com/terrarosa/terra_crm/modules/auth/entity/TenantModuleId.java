@@ -10,12 +10,16 @@ import java.util.UUID;
 
 /**
  * Composite key class for TenantModule entity.
+ * 
+ * CRITICAL: Field names must match the entity's @Id field names exactly.
+ * Hibernate 7 uses these field names to map the composite key.
  */
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode
 public class TenantModuleId implements Serializable {
     
-    private UUID tenant;
-    private UUID permission;
+    // Field names must match TenantModule entity's @Id field names
+    private UUID tenant;  // Maps to TenantModule.tenant.id
+    private UUID permission;  // Maps to TenantModule.permission.id
 }
