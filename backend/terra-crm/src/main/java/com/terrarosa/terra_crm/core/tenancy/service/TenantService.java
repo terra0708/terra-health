@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.flywaydb.core.Flyway;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
@@ -36,18 +37,32 @@ public class TenantService {
     /**
      * Create a new tenant with its own schema.
      * Automatically assigns core modules to the tenant.
+     * 
+     * CRITICAL: DDL operations (schema creation, migrations) are executed OUTSIDE transaction
+     * to prevent connection pool exhaustion. Only tenant record creation and module assignment
+     * run in a transaction.
      */
-    @Transactional
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Tenant createTenant(String name) {
         // Generate schema name from tenant name (sanitized)
         String schemaName = generateSchemaName(name);
         
-        // Create the schema
+        // CRITICAL: DDL operations (schema creation, migrations) must run OUTSIDE transaction
+        // These operations commit immediately and don't need transaction management
+        // This prevents connection pool exhaustion when called from within another transaction
         createTenantSchema(schemaName);
-        
-        // Run migrations on the new schema
         runTenantMigrations(schemaName);
         
+        // Now create tenant record and assign modules in a separate transaction
+        return createTenantRecordAndAssignModules(name, schemaName);
+    }
+    
+    /**
+     * Create tenant record and assign core modules.
+     * This runs in its own transaction.
+     */
+    @Transactional
+    private Tenant createTenantRecordAndAssignModules(String name, String schemaName) {
         // Create tenant record in public schema
         Tenant tenant = Tenant.builder()
                 .name(name)
