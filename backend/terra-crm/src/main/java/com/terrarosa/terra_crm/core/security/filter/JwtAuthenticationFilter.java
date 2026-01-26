@@ -56,13 +56,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
         
+        // Extract roles from JWT to check if user is Super Admin
+        List<String> roles = jwtService.extractRoles(token);
+        boolean isSuperAdmin = roles != null && roles.contains("ROLE_SUPER_ADMIN");
+        
+        // Check if this is a Super Admin endpoint
+        String requestPath = request.getRequestURI();
+        boolean isSuperAdminEndpoint = requestPath != null && requestPath.startsWith("/api/v1/super-admin/");
+        
         // CRITICAL: Extract tenant ID from header
         String headerTenantId = request.getHeader(TENANT_HEADER);
-        
-        if (headerTenantId == null || headerTenantId.isBlank()) {
-            log.error("X-Tenant-ID header is required for authenticated requests");
-            throw new AccessDeniedException("X-Tenant-ID header is required");
-        }
         
         // CRITICAL: Extract tenant ID from JWT
         String jwtTenantId = jwtService.extractTenantId(token);
@@ -70,12 +73,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (jwtTenantId == null || jwtTenantId.isBlank()) {
             log.error("JWT token does not contain tenantId claim");
             throw new AccessDeniedException("Invalid JWT token: missing tenantId");
-        }
-        
-        // CRITICAL: Compare header tenant ID with JWT tenant ID
-        if (!jwtTenantId.equals(headerTenantId)) {
-            log.error("Tenant ID mismatch: JWT tenantId={}, Header tenantId={}", jwtTenantId, headerTenantId);
-            throw new AccessDeniedException("Tenant ID mismatch between JWT and header");
         }
         
         // Extract schema name from JWT
@@ -86,9 +83,30 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throw new AccessDeniedException("Invalid JWT token: missing schema_name");
         }
         
-        // Set TenantContext
-        TenantContext.setCurrentTenant(jwtTenantId, schemaName);
-        log.debug("Set tenant context from JWT: tenantId={}, schemaName={}", jwtTenantId, schemaName);
+        // Super Admin special handling
+        if (isSuperAdmin && isSuperAdminEndpoint) {
+            // Super Admin endpoints work in public schema
+            // X-Tenant-ID header is optional (handled by TenantInterceptor)
+            // Always use public schema for Super Admin operations
+            TenantContext.setCurrentTenant(jwtTenantId, "public");
+            log.debug("Set tenant context for Super Admin: tenantId={}, schemaName=public", jwtTenantId);
+        } else {
+            // Normal tenant user handling
+            if (headerTenantId == null || headerTenantId.isBlank()) {
+                log.error("X-Tenant-ID header is required for authenticated requests");
+                throw new AccessDeniedException("X-Tenant-ID header is required");
+            }
+            
+            // CRITICAL: Compare header tenant ID with JWT tenant ID
+            if (!jwtTenantId.equals(headerTenantId)) {
+                log.error("Tenant ID mismatch: JWT tenantId={}, Header tenantId={}", jwtTenantId, headerTenantId);
+                throw new AccessDeniedException("Tenant ID mismatch between JWT and header");
+            }
+            
+            // Set TenantContext
+            TenantContext.setCurrentTenant(jwtTenantId, schemaName);
+            log.debug("Set tenant context from JWT: tenantId={}, schemaName={}", jwtTenantId, schemaName);
+        }
         
         // Extract email and load user details
         String email = jwtService.extractEmail(token);

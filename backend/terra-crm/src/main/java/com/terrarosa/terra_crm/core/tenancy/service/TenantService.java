@@ -155,6 +155,17 @@ public class TenantService {
     }
     
     /**
+     * Get SYSTEM tenant for Super Admin users.
+     * SYSTEM tenant uses 'public' schema.
+     */
+    @Transactional(readOnly = true)
+    public Tenant getSystemTenant() {
+        return tenantRepository.findBySchemaName("public")
+                .filter(tenant -> "SYSTEM".equals(tenant.getName()))
+                .orElseThrow(() -> new IllegalStateException("SYSTEM tenant not found. Run migrations."));
+    }
+    
+    /**
      * Generate a valid PostgreSQL schema name from tenant name.
      */
     private String generateSchemaName(String name) {

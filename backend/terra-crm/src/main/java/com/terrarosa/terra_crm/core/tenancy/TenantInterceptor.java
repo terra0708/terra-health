@@ -35,6 +35,15 @@ public class TenantInterceptor implements HandlerInterceptor {
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         String path = request.getRequestURI();
         
+        // CRITICAL: Super Admin endpoints don't require X-Tenant-ID header
+        // They work in public schema and are handled by JwtAuthenticationFilter
+        if (path != null && path.startsWith("/api/v1/super-admin/")) {
+            // Set tenant context to public schema (no tenant ID needed)
+            TenantContext.setCurrentTenant(null, "public");
+            log.debug("TenantInterceptor: Super Admin endpoint detected, using public schema");
+            return true;
+        }
+        
         // Only handle tenant context for auth endpoints (login/register)
         // JWT-authenticated requests are handled by JwtAuthenticationFilter
         if (!path.startsWith("/api/v1/auth/")) {

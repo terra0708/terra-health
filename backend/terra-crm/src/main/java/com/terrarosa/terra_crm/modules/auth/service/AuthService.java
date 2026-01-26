@@ -67,31 +67,54 @@ public class AuthService {
             throw new BadCredentialsException("User account is disabled");
         }
         
-        // CRITICAL: Validate tenant ID from header matches user's tenant
-        if (tenantIdHeader == null || tenantIdHeader.isBlank()) {
-            throw new IllegalArgumentException("X-Tenant-ID header is required");
-        }
-        
-        String userTenantId = user.getTenant().getId().toString();
-        if (!userTenantId.equals(tenantIdHeader)) {
-            log.error("Tenant mismatch: User tenantId={}, Header tenantId={}", userTenantId, tenantIdHeader);
-            throw new BadCredentialsException("User does not belong to the specified tenant");
-        }
-        
-        // Get tenant and schema name
-        Tenant tenant = user.getTenant();
-        String schemaName = tenant.getSchemaName();
-        
-        // Extract roles
+        // Extract roles to check if user is Super Admin
         List<String> roles = user.getRoles().stream()
                 .map(Role::getName)
                 .collect(Collectors.toList());
+        boolean isSuperAdmin = roles.contains("ROLE_SUPER_ADMIN");
         
-        // Fetch user permissions
-        List<String> permissions = permissionService.getUserPermissions(user.getId());
+        // Get tenant and schema name
+        Tenant tenant = user.getTenant();
+        String userTenantId = tenant.getId().toString();
+        String schemaName = tenant.getSchemaName();
+        
+        // Super Admin special handling
+        if (isSuperAdmin) {
+            // Super Admin uses SYSTEM tenant and public schema
+            // X-Tenant-ID header should be SYSTEM tenant's ID
+            Tenant systemTenant = tenantService.getSystemTenant();
+            String systemTenantId = systemTenant.getId().toString();
+            
+            if (tenantIdHeader == null || tenantIdHeader.isBlank()) {
+                // If no header provided, use SYSTEM tenant ID
+                tenantIdHeader = systemTenantId;
+            } else if (!systemTenantId.equals(tenantIdHeader)) {
+                log.error("Super Admin tenant mismatch: Expected SYSTEM tenantId={}, Header tenantId={}", 
+                        systemTenantId, tenantIdHeader);
+                throw new BadCredentialsException("Super Admin must use SYSTEM tenant ID");
+            }
+            
+            // Override schema name to public for Super Admin
+            schemaName = "public";
+            log.debug("Super Admin login: tenantId={}, schemaName=public", systemTenantId);
+        } else {
+            // Normal tenant user handling
+            // CRITICAL: Validate tenant ID from header matches user's tenant
+            if (tenantIdHeader == null || tenantIdHeader.isBlank()) {
+                throw new IllegalArgumentException("X-Tenant-ID header is required");
+            }
+            
+            if (!userTenantId.equals(tenantIdHeader)) {
+                log.error("Tenant mismatch: User tenantId={}, Header tenantId={}", userTenantId, tenantIdHeader);
+                throw new BadCredentialsException("User does not belong to the specified tenant");
+            }
+        }
+        
+        // Fetch user permissions (Super Admin doesn't need permissions, role-based access)
+        List<String> permissions = isSuperAdmin ? List.of() : permissionService.getUserPermissions(user.getId());
         log.debug("User {} has {} permissions: {}", user.getEmail(), permissions.size(), permissions);
         
-        if (permissions.isEmpty()) {
+        if (!isSuperAdmin && permissions.isEmpty()) {
             log.warn("User {} has no permissions assigned. This may indicate a problem with permission assignment.", user.getEmail());
         }
         

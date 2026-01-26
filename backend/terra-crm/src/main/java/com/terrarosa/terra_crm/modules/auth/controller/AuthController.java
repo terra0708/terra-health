@@ -47,12 +47,14 @@ public class AuthController {
     
     /**
      * Register endpoint.
-     * Public endpoint for now (can be restricted later).
+     * DEPRECATED: Public registration is disabled. Use Super Admin endpoint to create tenants.
+     * This endpoint is kept for backward compatibility but returns an error.
      */
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse<UserDto>> register(@Valid @RequestBody RegisterRequest request) {
-        UserDto user = authService.register(request);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(user, "User registered successfully"));
+    @Deprecated
+    public ResponseEntity<ApiResponse<Void>> register(@Valid @RequestBody RegisterRequest request) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error("FORBIDDEN", 
+                    "Public registration is disabled. Please contact Super Admin to create your tenant."));
     }
 }
