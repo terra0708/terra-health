@@ -72,6 +72,21 @@ public class TenantInterceptor implements HandlerInterceptor {
                 return false;
             }
             
+            // CRITICAL: Check if tenant can accept requests (status validation)
+            // SUSPENDED tenants are rejected at interceptor level (before database queries)
+            if (!tenant.canAcceptRequests()) {
+                log.warn("Request rejected: Tenant {} is SUSPENDED", tenantId);
+                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                response.setContentType("application/json");
+                // Write JSON error response
+                try {
+                    response.getWriter().write("{\"error\":\"Tenant is suspended and cannot accept requests\"}");
+                } catch (java.io.IOException e) {
+                    log.error("Failed to write error response", e);
+                }
+                return false;
+            }
+            
             // Set tenant context but keep schema as public
             // Login/register operations work in public schema (users table is there)
             TenantContext.setCurrentTenant(tenantId, "public");

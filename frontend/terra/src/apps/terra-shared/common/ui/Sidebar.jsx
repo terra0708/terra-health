@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, X, ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSettingsStore } from '@core';
 import { useNavigate, useLocation } from 'react-router-dom';
+import useAuthStore from '@shared/store/authStore';
 
 const drawerWidth = 260;
 
@@ -82,6 +83,10 @@ const ICON_DATA = {
     system_settings: 'https://cdn.lordicon.com/itwlmliw.json',
     customer_panel: 'https://cdn.lordicon.com/hfftmgac.json',
     logo: 'https://cdn.lordicon.com/qlrjanhh.json',
+    tenants: 'https://cdn.lordicon.com/itwlmliw.json', // Building/Organization icon (same as system_settings)
+    user_search: 'https://cdn.lordicon.com/ntfaoelc.json',
+    schema_pool: 'https://cdn.lordicon.com/wyaqzesp.json',
+    audit_logs: 'https://cdn.lordicon.com/ojgowmvw.json',
 };
 
 const NavItem = ({ icon, text, open, active, path, onClick }) => {
@@ -322,11 +327,16 @@ const Sidebar = () => {
     const { sidebarOpen, toggleSidebar } = useSettingsStore();
     const location = useLocation();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+    const user = useAuthStore((state) => state.user);
+    
+    // Check if user is Super Admin
+    const isSuperAdmin = user?.roles?.includes('ROLE_SUPER_ADMIN') || false;
 
     const primaryHex = theme.palette.primary.main;
     const secondaryHex = theme.palette.secondary.main;
 
-    const menuItems = [
+    // Normal user menu items
+    const normalUserMenuItems = [
         { key: 'dashboard', icon: 'dashboard', label: t('menu.dashboard'), path: '/' },
         { key: 'appointments', icon: 'appointments', label: t('menu.appointments'), path: '/appointments' },
         { key: 'customers', icon: 'customers', label: t('menu.customers'), path: '/customers' },
@@ -334,6 +344,18 @@ const Sidebar = () => {
         { key: 'statistics', icon: 'statistics', label: t('menu.statistics'), path: '/statistics' },
         { key: 'notifications', icon: 'notifications', label: t('menu.notifications'), path: '/notifications' },
     ];
+
+    // Super Admin menu items
+    const superAdminMenuItems = [
+        { key: 'super_dashboard', icon: 'dashboard', label: t('menu.super_admin.dashboard', 'Dashboard'), path: '/super-admin/dashboard' },
+        { key: 'tenants', icon: 'tenants', label: t('menu.super_admin.tenants', 'Tenants'), path: '/super-admin/tenants' },
+        { key: 'user_search', icon: 'user_search', label: t('menu.super_admin.user_search', 'User Search'), path: '/super-admin/users/search' },
+        { key: 'schema_pool', icon: 'schema_pool', label: t('menu.super_admin.schema_pool', 'Schema Pool'), path: '/super-admin/schema-pool' },
+        { key: 'audit_logs', icon: 'audit_logs', label: t('menu.super_admin.audit_logs', 'System Logs'), path: '/super-admin/audit-logs' },
+    ];
+
+    // Use appropriate menu items based on user role
+    const menuItems = isSuperAdmin ? superAdminMenuItems : normalUserMenuItems;
 
     const marketingDropdown = {
         key: 'marketing',
@@ -433,25 +455,30 @@ const Sidebar = () => {
                     />
                 ))}
 
-                <DropdownNavItem
-                    key={marketingDropdown.key}
-                    icon={marketingDropdown.icon}
-                    text={marketingDropdown.label}
-                    open={isMobile ? true : sidebarOpen}
-                    subItems={marketingDropdown.subItems}
-                    currentPath={location.pathname}
-                    onClick={isMobile ? toggleSidebar : undefined}
-                />
+                {/* Only show marketing and settings dropdowns for normal users */}
+                {!isSuperAdmin && (
+                    <>
+                        <DropdownNavItem
+                            key={marketingDropdown.key}
+                            icon={marketingDropdown.icon}
+                            text={marketingDropdown.label}
+                            open={isMobile ? true : sidebarOpen}
+                            subItems={marketingDropdown.subItems}
+                            currentPath={location.pathname}
+                            onClick={isMobile ? toggleSidebar : undefined}
+                        />
 
-                <DropdownNavItem
-                    key={settingsDropdown.key}
-                    icon={settingsDropdown.icon}
-                    text={settingsDropdown.label}
-                    open={isMobile ? true : sidebarOpen}
-                    subItems={settingsDropdown.subItems}
-                    currentPath={location.pathname}
-                    onClick={isMobile ? toggleSidebar : undefined}
-                />
+                        <DropdownNavItem
+                            key={settingsDropdown.key}
+                            icon={settingsDropdown.icon}
+                            text={settingsDropdown.label}
+                            open={isMobile ? true : sidebarOpen}
+                            subItems={settingsDropdown.subItems}
+                            currentPath={location.pathname}
+                            onClick={isMobile ? toggleSidebar : undefined}
+                        />
+                    </>
+                )}
             </List>
 
             <Box sx={{ flexGrow: 1 }} />

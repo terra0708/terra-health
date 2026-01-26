@@ -1,6 +1,7 @@
 package com.terrarosa.terra_crm.core.security.config;
 
 import com.terrarosa.terra_crm.core.security.filter.JwtAuthenticationFilter;
+import com.terrarosa.terra_crm.core.maintenance.filter.MaintenanceModeFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,6 +34,7 @@ import java.util.List;
 public class SecurityConfig {
     
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final MaintenanceModeFilter maintenanceModeFilter;
     private final PermissionEvaluator permissionEvaluator;
     
     @Bean
@@ -46,7 +48,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/**").authenticated()
                 .anyRequest().permitAll()
             )
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterAfter(maintenanceModeFilter, JwtAuthenticationFilter.class);
         
         return http.build();
     }

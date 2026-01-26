@@ -53,7 +53,8 @@ public class TenantService {
     @Transactional
     public Tenant createTenant(String name) {
         // 1. Get READY schema from pool (FIFO, row-level lock with timeout)
-        SchemaPool schemaPool = schemaPoolRepository.findOldestReadySchema(SchemaPoolStatus.READY)
+        // CRITICAL: Native queries require enum name as string, not enum ordinal
+        SchemaPool schemaPool = schemaPoolRepository.findOldestReadySchema(SchemaPoolStatus.READY.name())
                 .orElseThrow(() -> new NoAvailableSchemaException("No ready schemas available in pool. Please wait for pool replenishment."));
         
         String schemaName = schemaPool.getSchemaName();

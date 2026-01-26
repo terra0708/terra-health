@@ -3,6 +3,8 @@ package com.terrarosa.terra_crm.core.security.filter;
 import com.terrarosa.terra_crm.core.security.service.CustomUserDetailsService;
 import com.terrarosa.terra_crm.core.security.service.JwtService;
 import com.terrarosa.terra_crm.core.tenancy.TenantContext;
+import com.terrarosa.terra_crm.core.tenancy.entity.Tenant;
+import com.terrarosa.terra_crm.core.tenancy.repository.TenantRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,6 +22,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * JWT Authentication Filter that validates JWT tokens and sets authentication context.
@@ -36,6 +39,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     
     private final JwtService jwtService;
     private final CustomUserDetailsService userDetailsService;
+    private final TenantRepository tenantRepository;
     
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -101,6 +105,29 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (!jwtTenantId.equals(headerTenantId)) {
                 log.error("Tenant ID mismatch: JWT tenantId={}, Header tenantId={}", jwtTenantId, headerTenantId);
                 throw new AccessDeniedException("Tenant ID mismatch between JWT and header");
+            }
+            
+            // CRITICAL: Check if tenant can accept requests (status validation)
+            // SUSPENDED tenants are rejected at filter level (before business logic)
+            try {
+                UUID tenantUuid = UUID.fromString(jwtTenantId);
+                Tenant tenant = tenantRepository.findById(tenantUuid).orElse(null);
+                
+                if (tenant == null) {
+                    log.error("Tenant not found with ID: {}", jwtTenantId);
+                    throw new AccessDeniedException("Tenant not found");
+                }
+                
+                if (!tenant.canAcceptRequests()) {
+                    log.warn("Request rejected: Tenant {} is SUSPENDED", jwtTenantId);
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"error\":\"Tenant is suspended and cannot accept requests\"}");
+                    return;
+                }
+            } catch (IllegalArgumentException e) {
+                log.error("Invalid tenant ID format: {}", jwtTenantId);
+                throw new AccessDeniedException("Invalid tenant ID format");
             }
             
             // Set TenantContext

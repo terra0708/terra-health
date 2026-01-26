@@ -3,11 +3,7 @@ package com.terrarosa.terra_crm.core.tenancy.repository;
 import com.terrarosa.terra_crm.core.common.repository.SoftDeleteRepository;
 import com.terrarosa.terra_crm.core.tenancy.entity.SchemaPool;
 import com.terrarosa.terra_crm.core.tenancy.entity.SchemaPoolStatus;
-import jakarta.persistence.LockModeType;
-import jakarta.persistence.QueryHint;
-import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.jpa.repository.QueryHints;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
@@ -30,18 +26,25 @@ public interface SchemaPoolRepository extends SoftDeleteRepository<SchemaPool, U
     
     /**
      * Find the oldest READY schema (FIFO - First In First Out).
-     * Uses pessimistic write lock to prevent concurrent access.
-     * Timeout set to 2 seconds to prevent deadlocks.
+     * Uses pessimistic write lock via FOR UPDATE to prevent concurrent access.
      * 
      * CRITICAL: This method locks the row until transaction commits.
      * Only one transaction can acquire this lock at a time.
+     * 
+     * CRITICAL: Native queries cannot use @Lock annotation (Hibernate limitation).
+     * Instead, we use FOR UPDATE in SQL which provides pessimistic locking.
+     * 
+     * CRITICAL: JPQL query with explicit LIMIT using setMaxResults is not possible in repository interface.
+     * Using native query with LIMIT 1 to ensure only one result is returned.
+     * When using @Query, Spring Data JPA's "findFirst" semantics don't apply,
+     * so we must explicitly add LIMIT 1 in the SQL.
+     * 
+     * CRITICAL: In native queries, Hibernate sends enum as SMALLINT (ordinal) by default, not as string.
+     * Since the database column is VARCHAR, we must accept String parameter and compare directly.
+     * The service layer should pass status.name() (e.g., "READY") to this method.
      */
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @QueryHints({
-        @QueryHint(name = "jakarta.persistence.lock.timeout", value = "2000")
-    })
-    @Query("SELECT sp FROM SchemaPool sp WHERE sp.status = :status AND sp.deleted = false ORDER BY sp.createdAt ASC")
-    Optional<SchemaPool> findOldestReadySchema(@Param("status") SchemaPoolStatus status);
+    @Query(value = "SELECT * FROM schema_pool sp WHERE sp.status = :status AND COALESCE(sp.deleted, false) = false ORDER BY sp.created_at ASC LIMIT 1 FOR UPDATE", nativeQuery = true)
+    Optional<SchemaPool> findOldestReadySchema(@Param("status") String status);
     
     /**
      * Find schema by schema name (excluding deleted).

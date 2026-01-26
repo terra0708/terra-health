@@ -272,4 +272,92 @@ public class JwtService {
     public boolean isTokenExpired(String token) {
         return extractClaim(token, Claims::getExpiration).before(new Date());
     }
+    
+    // ========== Impersonation Methods ==========
+    
+    /**
+     * Generate impersonation token for a user.
+     * This token allows a Super Admin to act as another user.
+     * 
+     * CRITICAL: The token includes:
+     * - impersonated_user_id: The user being impersonated
+     * - is_impersonation: true flag
+     * - original_user_id: The Super Admin who started impersonation
+     * - All claims from the impersonated user (roles, permissions, tenant, schema)
+     * 
+     * @param impersonatedEmail Email of the user being impersonated
+     * @param impersonatedTenantId Tenant ID of the impersonated user
+     * @param impersonatedSchemaName Schema name of the impersonated user
+     * @param impersonatedRoles Roles of the impersonated user
+     * @param impersonatedPermissions Permissions of the impersonated user
+     * @param originalUserId UUID of the Super Admin who started impersonation
+     * @return Impersonation JWT token
+     */
+    public String generateImpersonationToken(
+            String impersonatedEmail,
+            String impersonatedTenantId,
+            String impersonatedSchemaName,
+            List<String> impersonatedRoles,
+            List<String> impersonatedPermissions,
+            String originalUserId) {
+        
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + expiration); // 15 minutes (same as access token)
+        
+        // Compress permissions to reduce JWT size
+        List<String> compressedPermissions = PermissionMapper.compressPermissions(impersonatedPermissions);
+        
+        return Jwts.builder()
+                .subject(impersonatedEmail) // Subject is the impersonated user's email
+                .claim("tenantId", impersonatedTenantId)
+                .claim("schema_name", impersonatedSchemaName)
+                .claim("roles", impersonatedRoles)
+                .claim("permissions", compressedPermissions)
+                .claim("type", "access") // Token type is still "access"
+                .claim("is_impersonation", true) // CRITICAL: Flag indicating this is an impersonation token
+                .claim("impersonated_user_id", impersonatedEmail) // User being impersonated (email for now)
+                .claim("original_user_id", originalUserId) // Super Admin who started impersonation
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .signWith(getSigningKey())
+                .compact();
+    }
+    
+    /**
+     * Check if a token is an impersonation token.
+     * 
+     * @param token JWT token
+     * @return true if token is an impersonation token, false otherwise
+     */
+    public boolean isImpersonationToken(String token) {
+        Boolean isImpersonation = extractClaim(token, claims -> claims.get("is_impersonation", Boolean.class));
+        return isImpersonation != null && isImpersonation;
+    }
+    
+    /**
+     * Extract impersonated user ID from token.
+     * Returns the email of the user being impersonated.
+     * 
+     * @param token JWT token
+     * @return Impersonated user email or null if not an impersonation token
+     */
+    public String extractImpersonatedUserId(String token) {
+        if (!isImpersonationToken(token)) {
+            return null;
+        }
+        return extractClaim(token, claims -> claims.get("impersonated_user_id", String.class));
+    }
+    
+    /**
+     * Extract original user ID from token (Super Admin who started impersonation).
+     * 
+     * @param token JWT token
+     * @return Original user ID (Super Admin) or null if not an impersonation token
+     */
+    public String extractOriginalUserId(String token) {
+        if (!isImpersonationToken(token)) {
+            return null;
+        }
+        return extractClaim(token, claims -> claims.get("original_user_id", String.class));
+    }
 }
