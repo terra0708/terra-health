@@ -41,4 +41,15 @@ public interface RefreshTokenRepository extends SoftDeleteRepository<RefreshToke
     @Modifying
     @Query("DELETE FROM RefreshToken rt WHERE rt.expiresAt < :now AND rt.deleted = false")
     void deleteExpiredTokens(@Param("now") LocalDateTime now);
+    
+    /**
+     * Delete expired or revoked tokens (hard delete for disk space cleanup).
+     * This method physically removes tokens from database regardless of deleted flag.
+     * 
+     * @param now Current timestamp for expiration check
+     * @return Number of tokens deleted
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM RefreshToken rt WHERE rt.expiresAt < :now OR rt.revoked = true")
+    int deleteExpiredOrRevokedTokens(@Param("now") LocalDateTime now);
 }

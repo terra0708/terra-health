@@ -171,41 +171,14 @@ public class AuthService {
     }
     
     /**
-     * Refresh access token using refresh token from cookie.
-     * Implements token rotation: old refresh token is invalidated, new one is created.
+     * Create authentication response (access token and optionally refresh token).
+     * Helper method to avoid code duplication (DRY principle).
      * 
-     * @param refreshTokenString Refresh token from cookie
-     * @return RefreshTokenResponse containing new access token and refresh token
+     * @param user User entity
+     * @param includeRefreshToken If true, generates and saves new refresh token (token rotation)
+     * @return RefreshTokenResponse with access token and optionally refresh token
      */
-    @Transactional
-    public RefreshTokenResponse refreshToken(String refreshTokenString) {
-        // Validate refresh token format and expiration
-        if (!jwtService.validateRefreshToken(refreshTokenString)) {
-            log.warn("Invalid refresh token format or expired");
-            throw new BadCredentialsException("Invalid or expired refresh token");
-        }
-        
-        // Find refresh token in database
-        RefreshToken refreshToken = refreshTokenRepository.findByToken(refreshTokenString)
-                .orElseThrow(() -> {
-                    log.warn("Refresh token not found in database");
-                    return new BadCredentialsException("Invalid refresh token");
-                });
-        
-        // Check if token is valid (not revoked, not expired)
-        if (!refreshToken.isValid()) {
-            log.warn("Refresh token is revoked or expired for user {}", refreshToken.getUser().getEmail());
-            throw new BadCredentialsException("Refresh token is invalid");
-        }
-        
-        // CRITICAL: Token Rotation - Revoke old token
-        refreshToken.revoke();
-        refreshTokenRepository.save(refreshToken);
-        log.debug("Revoked old refresh token for user {}", refreshToken.getUser().getEmail());
-        
-        // Get user and permissions
-        User user = refreshToken.getUser();
-        
+    private RefreshTokenResponse createAuthResponse(User user, boolean includeRefreshToken) {
         // Extract roles
         List<String> roles = user.getRoles().stream()
                 .map(Role::getName)
@@ -224,8 +197,8 @@ public class AuthService {
         // Fetch permissions
         List<String> permissions = isSuperAdmin ? List.of() : permissionService.getUserPermissions(user.getId());
         
-        // Generate new access token
-        String newAccessToken = jwtService.generateAccessToken(
+        // Generate access token
+        String accessToken = jwtService.generateAccessToken(
                 user.getEmail(),
                 userTenantId,
                 schemaName,
@@ -233,27 +206,100 @@ public class AuthService {
                 permissions
         );
         
-        // Generate new refresh token (token rotation)
-        String newTokenId = UUID.randomUUID().toString();
-        String newRefreshTokenString = jwtService.generateRefreshToken(user.getEmail(), newTokenId);
+        RefreshTokenResponse.RefreshTokenResponseBuilder responseBuilder = RefreshTokenResponse.builder()
+                .accessToken(accessToken)
+                .expiresIn(900000L); // 15 minutes
         
-        // Save new refresh token to database
-        LocalDateTime expiresAt = LocalDateTime.now().plusDays(7);
-        RefreshToken newRefreshToken = RefreshToken.builder()
-                .user(user)
-                .token(newRefreshTokenString)
-                .expiresAt(expiresAt)
-                .revoked(false)
-                .build();
+        if (includeRefreshToken) {
+            // Generate new refresh token (token rotation)
+            String newTokenId = UUID.randomUUID().toString();
+            String newRefreshTokenString = jwtService.generateRefreshToken(user.getEmail(), newTokenId);
+            
+            // Save new refresh token to database
+            LocalDateTime expiresAt = LocalDateTime.now().plusDays(7);
+            RefreshToken newRefreshToken = RefreshToken.builder()
+                    .user(user)
+                    .token(newRefreshTokenString)
+                    .expiresAt(expiresAt)
+                    .revoked(false)
+                    .build();
+            
+            refreshTokenRepository.save(newRefreshToken);
+            responseBuilder.refreshToken(newRefreshTokenString);
+            log.info("Generated new access and refresh tokens for user {} (token rotation)", user.getEmail());
+        } else {
+            // Grace period: No refresh token rotation
+            responseBuilder.refreshToken(null);
+        }
         
-        refreshTokenRepository.save(newRefreshToken);
-        log.info("Generated new access and refresh tokens for user {} (token rotation)", user.getEmail());
+        return responseBuilder.build();
+    }
+    
+    /**
+     * Refresh access token using refresh token from cookie.
+     * Implements token rotation: old refresh token is invalidated, new one is created.
+     * Includes grace period (30 seconds) for revoked tokens to handle race conditions.
+     * 
+     * @param refreshTokenString Refresh token from cookie
+     * @return RefreshTokenResponse containing new access token and refresh token (or null if grace period)
+     */
+    @Transactional
+    public RefreshTokenResponse refreshToken(String refreshTokenString) {
+        // Validate refresh token format and expiration
+        if (!jwtService.validateRefreshToken(refreshTokenString)) {
+            log.warn("Invalid refresh token format or expired");
+            throw new BadCredentialsException("Invalid or expired refresh token");
+        }
         
-        return RefreshTokenResponse.builder()
-                .accessToken(newAccessToken)
-                .refreshToken(newRefreshTokenString) // Will be sent as cookie by controller
-                .expiresIn(900000L) // 15 minutes
-                .build();
+        // Find refresh token in database
+        RefreshToken refreshToken = refreshTokenRepository.findByToken(refreshTokenString)
+                .orElseThrow(() -> {
+                    log.warn("Refresh token not found in database");
+                    return new BadCredentialsException("Invalid refresh token");
+                });
+        
+        // Check if token is expired
+        if (refreshToken.isExpired()) {
+            log.warn("Refresh token is expired for user {}", refreshToken.getUser().getEmail());
+            throw new BadCredentialsException("Refresh token is expired");
+        }
+        
+        // Check if token is revoked - implement grace period (MANUEL KONTROL, isValid() kullanma)
+        if (refreshToken.getRevoked()) {
+            LocalDateTime revokedAt = refreshToken.getRevokedAt();
+            if (revokedAt == null) {
+                // Old token without revokedAt timestamp - reject
+                log.warn("Revoked token without revokedAt timestamp. Token ID: {}", refreshToken.getId());
+                throw new BadCredentialsException("Refresh token is invalid");
+            }
+            
+            // Calculate time since revocation
+            long secondsSinceRevocation = java.time.Duration.between(revokedAt, LocalDateTime.now()).getSeconds();
+            
+            if (secondsSinceRevocation < 30) {
+                // Grace period: Accept request but don't rotate token
+                log.warn("Revoked token accepted within grace period. Token ID: {}", refreshToken.getId());
+                
+                // Use helper method with includeRefreshToken = false
+                User user = refreshToken.getUser();
+                return createAuthResponse(user, false);
+            } else {
+                // Reuse attack: Token revoked more than 30 seconds ago
+                log.error("Potential token reuse attack detected. Token ID: {}, revokedAt: {}, secondsSinceRevocation: {}", 
+                        refreshToken.getId(), revokedAt, secondsSinceRevocation);
+                throw new BadCredentialsException("Refresh token has been revoked");
+            }
+        }
+        
+        // Normal flow: Token is valid, perform rotation
+        // CRITICAL: Token Rotation - Revoke old token
+        refreshToken.revoke();
+        refreshTokenRepository.save(refreshToken);
+        log.debug("Revoked old refresh token for user {}", refreshToken.getUser().getEmail());
+        
+        // Use helper method with includeRefreshToken = true
+        User user = refreshToken.getUser();
+        return createAuthResponse(user, true);
     }
     
     /**

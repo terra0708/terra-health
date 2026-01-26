@@ -6,7 +6,6 @@ import com.terrarosa.terra_crm.modules.auth.dto.LoginRequest;
 import com.terrarosa.terra_crm.modules.auth.dto.LoginResponse;
 import com.terrarosa.terra_crm.modules.auth.dto.RefreshTokenResponse;
 import com.terrarosa.terra_crm.modules.auth.dto.RegisterRequest;
-import com.terrarosa.terra_crm.modules.auth.dto.UserDto;
 import com.terrarosa.terra_crm.modules.auth.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -91,17 +90,26 @@ public class AuthController {
         try {
             RefreshTokenResponse response = authService.refreshToken(refreshToken);
             
-            // Create new refresh token cookie (token rotation)
-            ResponseCookie refreshTokenCookie = cookieUtil.createRefreshTokenCookie(response.getRefreshToken());
-            
             // Remove refreshToken from response body (it's in cookie)
             RefreshTokenResponse responseWithoutRefreshToken = RefreshTokenResponse.builder()
                     .accessToken(response.getAccessToken())
                     .expiresIn(response.getExpiresIn())
                     .build();
             
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString())
+            ResponseEntity.BodyBuilder responseBuilder = ResponseEntity.ok();
+            
+            // Only update cookie if new refresh token is provided (token rotation occurred)
+            if (response.getRefreshToken() != null && !response.getRefreshToken().isBlank()) {
+                // Create new refresh token cookie (token rotation)
+                ResponseCookie refreshTokenCookie = cookieUtil.createRefreshTokenCookie(response.getRefreshToken());
+                responseBuilder.header(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString());
+                log.debug("Refresh token cookie updated (token rotation)");
+            } else {
+                // Grace period: Keep existing cookie, don't update
+                log.debug("Refresh token cookie not updated (grace period)");
+            }
+            
+            return responseBuilder
                     .body(ApiResponse.success(responseWithoutRefreshToken, "Token refreshed successfully"));
         } catch (Exception e) {
             log.error("Failed to refresh token: {}", e.getMessage());
