@@ -22,7 +22,7 @@ import java.util.Objects;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode(callSuper = true, onlyExplicitlyIncluded = true)
+//EqualsAndHashCode(callSuper = true, onlyExplicitlyIncluded = true)
 @ToString(exclude = {"tenant", "permission"})
 public class TenantModule extends BaseEntity {
     
