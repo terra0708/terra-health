@@ -1,21 +1,85 @@
-import { Box, Paper, Typography, Container, Alert } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Box, Paper, Typography, Container, Alert, TextField } from '@mui/material';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { SettingsSwitchers } from '@common/ui';
 import { LoginForm, useAuthStore } from '@shared/modules/auth';
 
+// UUID format validasyonu (basit regex kontrolü)
+const isValidUUID = (str) => {
+    if (!str || typeof str !== 'string') return false;
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(str.trim());
+};
+
 const LoginPage = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    
+    // Auth store hooks
     const login = useAuthStore((state) => state.login);
+    const loading = useAuthStore((state) => state.loading);
+    const authError = useAuthStore((state) => state.error);
+    const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+    
+    // Local state
+    const [tenantIdInput, setTenantIdInput] = useState('');
+    const [error, setError] = useState(null);
+
+    // URL parametresinden tenantId okuma ve TextField'a otomatik doldurma
+    useEffect(() => {
+        const tenantIdFromUrl = searchParams.get('tenantId');
+        if (tenantIdFromUrl) {
+            setTenantIdInput(tenantIdFromUrl);
+        }
+    }, [searchParams]);
+
+    // Auth store error'ını local error state'e senkronize et
+    useEffect(() => {
+        if (authError) {
+            setError(authError.message || 'An error occurred');
+        }
+    }, [authError]);
+
+    // Login başarılı olunca error temizle ve navigate et
+    useEffect(() => {
+        if (isAuthenticated) {
+            setError(null);
+            navigate('/', { replace: true });
+        }
+    }, [isAuthenticated, navigate]);
 
     const onSubmit = async (data) => {
-        if (data.email === 'admin@terra.com' && data.password === 'admin123') {
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-            login({ name: 'Admin User', role: 'admin' }, 'demo-token-123');
-            navigate('/');
-        } else {
-            alert(t('auth.invalid_credentials'));
+        // Error state'i temizle
+        setError(null);
+
+        // Tenant ID'yi al (URL parametresi veya TextField'dan)
+        const tenantId = searchParams.get('tenantId') || tenantIdInput?.trim();
+
+        // Tenant ID kontrolü
+        if (!tenantId) {
+            setError('Tenant ID is required');
+            return;
+        }
+
+        // UUID format validasyonu
+        if (!isValidUUID(tenantId)) {
+            setError('Tenant ID must be a valid UUID format (e.g., 123e4567-e89b-12d3-a456-426614174000)');
+            return;
+        }
+
+        try {
+            await login({ 
+                email: data.email, 
+                password: data.password, 
+                tenantId: tenantId 
+            });
+            // Navigate işlemi useEffect'te yapılıyor (isAuthenticated değiştiğinde)
+        } catch (error) {
+            // api.js'den normalize edilmiş hata gelir
+            // error.message, error.code, error.status direkt kullanılabilir
+            setError(error.message || 'Login failed');
         }
     };
 
@@ -49,6 +113,30 @@ const LoginPage = () => {
                     </Typography>
 
                     <SettingsSwitchers sx={{ my: 2 }} />
+
+                    {/* Tenant ID Input */}
+                    <TextField
+                        label="Tenant ID (UUID)"
+                        value={tenantIdInput}
+                        onChange={(e) => setTenantIdInput(e.target.value)}
+                        fullWidth
+                        required
+                        sx={{ mb: 2 }}
+                        helperText="URL'den otomatik alınır (?tenantId=xxx) veya manuel girebilirsiniz"
+                        placeholder="123e4567-e89b-12d3-a456-426614174000"
+                        disabled={loading}
+                    />
+
+                    {/* Error Alert */}
+                    {error && (
+                        <Alert 
+                            severity="error" 
+                            sx={{ mb: 2, width: '100%' }} 
+                            onClose={() => setError(null)}
+                        >
+                            {error}
+                        </Alert>
+                    )}
 
                     <LoginForm onSubmit={onSubmit} t={t} />
 

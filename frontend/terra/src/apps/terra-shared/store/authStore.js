@@ -6,6 +6,7 @@ const useAuthStore = create(
     persist(
         (set, get) => ({
             // State
+            _hasHydrated: false, // Hydration flag
             user: null,
             isAuthenticated: false,
             loading: false,
@@ -88,9 +89,16 @@ const useAuthStore = create(
         {
             name: 'terra-auth-storage', // api.js ile uyumlu
             storage: createJSONStorage(() => localStorage),
+            onRehydrateStorage: () => (state) => {
+                // Hydration tamamlandığında flag'i set et
+                if (state) {
+                    state._hasHydrated = true;
+                }
+            },
             partialize: (state) => ({
                 // Sadece user ve isAuthenticated persist edilmeli
                 // loading ve error persist edilmemeli (sayfa yenilemede eski durum görünmemeli)
+                // _hasHydrated persist edilmemeli (her render'da false başlamalı)
                 user: state.user,
                 isAuthenticated: state.isAuthenticated
             })

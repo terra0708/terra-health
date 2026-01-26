@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useState, useEffect } from 'react';
 import { Navigate, Routes, Route } from 'react-router-dom';
 import LoginPage from '@shared/views/Login/LoginPage';
 import useAuthStore from '@shared/modules/auth/hooks/useAuthStore';
@@ -22,10 +22,49 @@ const RemindersPage = lazy(() => import('@terra-health/views/Reminders/Reminders
 const ReminderSettingsPage = lazy(() => import('@shared/views/Settings/ReminderSettingsPage'));
 const SystemSettingsPage = lazy(() => import('@shared/views/Settings/SystemSettingsPage'));
 
-// Protected Route component with Error Boundary
+// Protected Route component with Hydration Control
 const ProtectedRoute = ({ children }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  return isAuthenticated ? children : <Navigate to="/login" />;
+  const hasHydrated = useAuthStore((state) => state._hasHydrated);
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  // Hydration durumunu takip et + Timeout kontrolü
+  useEffect(() => {
+    // Normal hydration
+    if (hasHydrated) {
+      setIsHydrated(true);
+      return;
+    }
+
+    // KRİTİK: Sonsuz bekleme riski - Timeout kontrolü
+    // Eğer localStorage bozulursa veya onRehydrateStorage tetiklenmezse
+    // 500ms sonra zorla hydration'ı tamamla (production seviyesi güvenlik)
+    const timeoutId = setTimeout(() => {
+      setIsHydrated(true);
+    }, 500); // 500ms timeout
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [hasHydrated]);
+
+  // Hydration tamamlanana kadar loading göster
+  // KRİTİK: PageSkeleton kullan (flickering önlemek için)
+  // Hydration genellikle 10-50ms sürer, LoadingSpinner yanıp sönebilir
+  // PageSkeleton sayfa geçişini daha yumuşak hissettirir (UX iyileştirmesi)
+  if (!isHydrated) {
+    return <PageSkeleton />;
+  }
+
+  // Hydration tamamlandı, yetki kontrolü yap
+  // KRİTİK: replace flag'i hayati önem taşıyor
+  // Kullanıcı login sayfasına yönlendirildiğinde tarayıcının "geri" butonuyla
+  // o kısıtlı alana tekrar girmeye çalışmasını bu flag engeller
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
 };
 
 // Lazy loaded route wrapper with Suspense and Error Boundary
