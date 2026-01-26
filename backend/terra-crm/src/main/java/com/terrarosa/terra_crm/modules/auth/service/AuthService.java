@@ -6,10 +6,13 @@ import com.terrarosa.terra_crm.core.tenancy.repository.TenantRepository;
 import com.terrarosa.terra_crm.core.tenancy.service.TenantService;
 import com.terrarosa.terra_crm.modules.auth.dto.LoginRequest;
 import com.terrarosa.terra_crm.modules.auth.dto.LoginResponse;
+import com.terrarosa.terra_crm.modules.auth.dto.RefreshTokenResponse;
 import com.terrarosa.terra_crm.modules.auth.dto.RegisterRequest;
 import com.terrarosa.terra_crm.modules.auth.dto.UserDto;
+import com.terrarosa.terra_crm.modules.auth.entity.RefreshToken;
 import com.terrarosa.terra_crm.modules.auth.entity.Role;
 import com.terrarosa.terra_crm.modules.auth.entity.User;
+import com.terrarosa.terra_crm.modules.auth.repository.RefreshTokenRepository;
 import com.terrarosa.terra_crm.modules.auth.repository.RoleRepository;
 import com.terrarosa.terra_crm.modules.auth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +22,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -34,12 +39,14 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final PermissionService permissionService;
+    private final RefreshTokenRepository refreshTokenRepository;
     
     /**
      * Login user with email and password.
      * Validates that user belongs to the tenant specified in X-Tenant-ID header.
      */
-    @Transactional(readOnly = true)
+//    @Transactional(readOnly = true)
+    @Transactional
     public LoginResponse login(LoginRequest request, String tenantIdHeader) {
         // CRITICAL: Ensure we're querying in public schema for login
         // TenantContext should be set by TenantInterceptor, but verify it
@@ -118,8 +125,8 @@ public class AuthService {
             log.warn("User {} has no permissions assigned. This may indicate a problem with permission assignment.", user.getEmail());
         }
         
-        // Generate JWT token with permissions
-        String token = jwtService.generateToken(
+        // Generate access token (15 minutes)
+        String accessToken = jwtService.generateAccessToken(
                 user.getEmail(),
                 userTenantId,
                 schemaName,
@@ -127,7 +134,23 @@ public class AuthService {
                 permissions
         );
         
-        log.debug("Generated JWT token for user {} with {} permissions", user.getEmail(), permissions.size());
+        log.debug("Generated access token for user {} with {} permissions", user.getEmail(), permissions.size());
+        
+        // Generate refresh token (7 days) with token rotation
+        String tokenId = UUID.randomUUID().toString();
+        String refreshTokenString = jwtService.generateRefreshToken(user.getEmail(), tokenId);
+        
+        // Save refresh token to database
+        LocalDateTime expiresAt = LocalDateTime.now().plusDays(7);
+        RefreshToken refreshToken = RefreshToken.builder()
+                .user(user)
+                .token(refreshTokenString)
+                .expiresAt(expiresAt)
+                .revoked(false)
+                .build();
+        
+        refreshTokenRepository.save(refreshToken);
+        log.debug("Created refresh token for user {} with tokenId {}", user.getEmail(), tokenId);
         
         // Build user DTO
         UserDto userDto = UserDto.builder()
@@ -140,9 +163,96 @@ public class AuthService {
                 .build();
         
         return LoginResponse.builder()
-                .token(token)
+                .token(accessToken) // Access token in JSON body
                 .user(userDto)
-                .expiresIn(86400000L) // 24 hours in milliseconds
+                .expiresIn(900000L) // 15 minutes in milliseconds
+                .refreshToken(refreshTokenString) // Refresh token (will be sent as cookie by controller)
+                .build();
+    }
+    
+    /**
+     * Refresh access token using refresh token from cookie.
+     * Implements token rotation: old refresh token is invalidated, new one is created.
+     * 
+     * @param refreshTokenString Refresh token from cookie
+     * @return RefreshTokenResponse containing new access token and refresh token
+     */
+    @Transactional
+    public RefreshTokenResponse refreshToken(String refreshTokenString) {
+        // Validate refresh token format and expiration
+        if (!jwtService.validateRefreshToken(refreshTokenString)) {
+            log.warn("Invalid refresh token format or expired");
+            throw new BadCredentialsException("Invalid or expired refresh token");
+        }
+        
+        // Find refresh token in database
+        RefreshToken refreshToken = refreshTokenRepository.findByToken(refreshTokenString)
+                .orElseThrow(() -> {
+                    log.warn("Refresh token not found in database");
+                    return new BadCredentialsException("Invalid refresh token");
+                });
+        
+        // Check if token is valid (not revoked, not expired)
+        if (!refreshToken.isValid()) {
+            log.warn("Refresh token is revoked or expired for user {}", refreshToken.getUser().getEmail());
+            throw new BadCredentialsException("Refresh token is invalid");
+        }
+        
+        // CRITICAL: Token Rotation - Revoke old token
+        refreshToken.revoke();
+        refreshTokenRepository.save(refreshToken);
+        log.debug("Revoked old refresh token for user {}", refreshToken.getUser().getEmail());
+        
+        // Get user and permissions
+        User user = refreshToken.getUser();
+        
+        // Extract roles
+        List<String> roles = user.getRoles().stream()
+                .map(Role::getName)
+                .collect(Collectors.toList());
+        boolean isSuperAdmin = roles.contains("ROLE_SUPER_ADMIN");
+        
+        // Get tenant and schema
+        Tenant tenant = user.getTenant();
+        String userTenantId = tenant.getId().toString();
+        String schemaName = tenant.getSchemaName();
+        
+        if (isSuperAdmin) {
+            schemaName = "public";
+        }
+        
+        // Fetch permissions
+        List<String> permissions = isSuperAdmin ? List.of() : permissionService.getUserPermissions(user.getId());
+        
+        // Generate new access token
+        String newAccessToken = jwtService.generateAccessToken(
+                user.getEmail(),
+                userTenantId,
+                schemaName,
+                roles,
+                permissions
+        );
+        
+        // Generate new refresh token (token rotation)
+        String newTokenId = UUID.randomUUID().toString();
+        String newRefreshTokenString = jwtService.generateRefreshToken(user.getEmail(), newTokenId);
+        
+        // Save new refresh token to database
+        LocalDateTime expiresAt = LocalDateTime.now().plusDays(7);
+        RefreshToken newRefreshToken = RefreshToken.builder()
+                .user(user)
+                .token(newRefreshTokenString)
+                .expiresAt(expiresAt)
+                .revoked(false)
+                .build();
+        
+        refreshTokenRepository.save(newRefreshToken);
+        log.info("Generated new access and refresh tokens for user {} (token rotation)", user.getEmail());
+        
+        return RefreshTokenResponse.builder()
+                .accessToken(newAccessToken)
+                .refreshToken(newRefreshTokenString) // Will be sent as cookie by controller
+                .expiresIn(900000L) // 15 minutes
                 .build();
     }
     

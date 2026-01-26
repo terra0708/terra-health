@@ -11,7 +11,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class LoginResponse {
     
-    private String token;
+    private String token; // Access token
     private UserDto user;
-    private Long expiresIn;
+    private Long expiresIn; // Access token expiration (15 minutes)
+    private String refreshToken; // Refresh token (will be sent as HttpOnly cookie, included here for service layer)
 }

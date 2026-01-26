@@ -27,7 +27,10 @@ public class JwtService {
     private String secretKey;
     
     @Value("${jwt.expiration}")
-    private Long expiration;
+    private Long expiration; // Access token expiration (15 minutes)
+    
+    @Value("${jwt.refresh-expiration}")
+    private Long refreshExpiration; // Refresh token expiration (7 days)
     
     /**
      * Validate secret key on bean initialization.
@@ -64,12 +67,20 @@ public class JwtService {
     }
     
     /**
-     * Generate JWT token for a user.
+     * Generate access token for a user.
+     * Short-lived token (15 minutes) containing all authorization information.
      * Permissions are compressed to reduce JWT size.
+     * 
+     * @param email User email
+     * @param tenantId Tenant ID
+     * @param schemaName Schema name
+     * @param roles User roles
+     * @param permissions User permissions
+     * @return Access token string
      */
-    public String generateToken(String email, String tenantId, String schemaName, List<String> roles, List<String> permissions) {
+    public String generateAccessToken(String email, String tenantId, String schemaName, List<String> roles, List<String> permissions) {
         Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + expiration);
+        Date expiryDate = new Date(now.getTime() + expiration); // 15 minutes
         
         // Compress permissions to reduce JWT size
         List<String> compressedPermissions = PermissionMapper.compressPermissions(permissions);
@@ -80,6 +91,7 @@ public class JwtService {
                 .claim("schema_name", schemaName)
                 .claim("roles", roles)
                 .claim("permissions", compressedPermissions)
+                .claim("type", "access") // Token type claim
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(getSigningKey())
@@ -87,10 +99,93 @@ public class JwtService {
     }
     
     /**
-     * Generate JWT token for a user (backward compatibility - without permissions).
+     * Generate refresh token for a user.
+     * Long-lived token (7 days) containing only user identity and token ID.
+     * Token ID is used for token rotation - when refresh token is used, it's invalidated.
+     * 
+     * @param email User email
+     * @param tokenId Unique token ID (UUID) for token rotation
+     * @return Refresh token string
      */
+    public String generateRefreshToken(String email, String tokenId) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + refreshExpiration); // 7 days
+        
+        return Jwts.builder()
+                .subject(email)
+                .claim("tokenId", tokenId) // Token ID for rotation
+                .claim("type", "refresh") // Token type claim
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .signWith(getSigningKey())
+                .compact();
+    }
+    
+    /**
+     * Extract token ID from refresh token.
+     * Used for token rotation validation.
+     */
+    public String extractTokenId(String token) {
+        return extractClaim(token, claims -> claims.get("tokenId", String.class));
+    }
+    
+    /**
+     * Extract token type from token.
+     */
+    public String extractTokenType(String token) {
+        return extractClaim(token, claims -> claims.get("type", String.class));
+    }
+    
+    /**
+     * Validate refresh token.
+     * Checks if token is valid, not expired, and is a refresh token type.
+     * 
+     * @param token Refresh token string
+     * @return true if token is valid refresh token, false otherwise
+     */
+    public boolean validateRefreshToken(String token) {
+        try {
+            if (!validateToken(token)) {
+                return false;
+            }
+            
+            // Check if token is expired
+            if (isTokenExpired(token)) {
+                log.warn("Refresh token is expired");
+                return false;
+            }
+            
+            // Check if token type is "refresh"
+            String tokenType = extractTokenType(token);
+            if (tokenType == null || !"refresh".equals(tokenType)) {
+                log.warn("Token is not a refresh token. Type: {}", tokenType);
+                return false;
+            }
+            
+            return true;
+        } catch (Exception e) {
+            log.error("Failed to validate refresh token: {}", e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Generate JWT token for a user.
+     * DEPRECATED: Use generateAccessToken instead.
+     * Kept for backward compatibility.
+     */
+    @Deprecated
+    public String generateToken(String email, String tenantId, String schemaName, List<String> roles, List<String> permissions) {
+        return generateAccessToken(email, tenantId, schemaName, roles, permissions);
+    }
+    
+    /**
+     * Generate JWT token for a user (backward compatibility - without permissions).
+     * DEPRECATED: Use generateAccessToken instead.
+     */
+    @Deprecated
     public String generateToken(String email, String tenantId, String schemaName, List<String> roles) {
-        return generateToken(email, tenantId, schemaName, roles, List.of());
+        return generateAccessToken(email, tenantId, schemaName, roles, List.of());
     }
     
     /**

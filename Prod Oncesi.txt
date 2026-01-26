@@ -1,0 +1,8 @@
+(Canlı) Ortamına Geçişte Yapılması Gerekenler
+Canlıya çıkarken şu iki noktayı mutlaka güncelle:
+
+CookieUtil Sınıfı: Secure(false) olan ayarı Secure(true) yapmalısın (HTTPS gerektirir).
+
+application.yaml: jwt.refresh-expiration değerini ve JWT secret key'i canlı ortam değişkenlerine göre ayarla.
+
+CORS: Backend üzerindeki allowedOrigins listesine sadece gerçek frontend URL'ini ekle.
