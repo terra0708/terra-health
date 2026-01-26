@@ -1,3 +1,5 @@
+----------------------------------
+
 (Canlı) Ortamına Geçişte Yapılması Gerekenler
 Canlıya çıkarken şu iki noktayı mutlaka güncelle:
 
@@ -6,3 +8,25 @@ CookieUtil Sınıfı: Secure(false) olan ayarı Secure(true) yapmalısın (HTTPS
 application.yaml: jwt.refresh-expiration değerini ve JWT secret key'i canlı ortam değişkenlerine göre ayarla.
 
 CORS: Backend üzerindeki allowedOrigins listesine sadece gerçek frontend URL'ini ekle.
+
+
+--------------------------------------------------
+
+ Teknik Borç Kaydı: Tenant ID Giriş Yöntemi
+1. Tanım (Description): Kullanıcı giriş sürecinde, organizasyonun benzersiz kimliği (Tenant UUID) son kullanıcıdan manuel girdi olarak talep edilmektedir. Mevcut durumda kullanıcı, karmaşık bir UUID formatını (örn: 123e4567-e89b...) bilmek ve giriş formuna elle yazmak zorundadır.
+
+2. Borcun Nedeni (Rationale): Sistemin ana "sinir sistemi" olan Multi-tenant Auth altyapısını, Interceptor Queuing mekanizmasını ve Grace Period mantığını bir an önce test edebilmek amacıyla UX (Kullanıcı Deneyimi) ikinci plana atılmıştır. Geliştirme hızını artırmak ve çekirdek mimariyi doğrulamak için bu geçici yöntem tercih edilmiştir.
+
+3. Etki Analizi (Impact Analysis):
+
+UX (Kullanıcı Deneyimi): Çok düşük. Son kullanıcının bu veriyi ezberlemesi veya kopyalaması imkansıza yakındır.
+
+Güvenlik: Orta. Şirket kimliklerinin (Tenant ID) ifşa olması, saldırganlar için hedef belirlemeyi kolaylaştırır.
+
+Teknik: Düşük. Mevcut Axios ve Zustand altyapısı bu ID'nin "nasıl" geldiğiyle ilgilenmez, sadece "varlığıyla" ilgilenir. Bu yüzden mimari bir tıkanıklık yaratmaz.
+
+4. Çözüm Planı (Remediation): Bu borç, "Tenant Discovery" (Şirket Keşfi) mekanizması ile ödenecektir. İlerleyen aşamalarda şu iki yöntemden biri entegre edilecektir:
+
+Email Discovery: Kullanıcı e-postasını girdiğinde sistemin arka planda ilgili Tenant ID'yi otomatik bulması.
+
+Subdomain Mapping: URL üzerindeki alt alan adından (örn: hastane.terra.com) ID'nin otomatik çözülmesi.

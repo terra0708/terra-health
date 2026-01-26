@@ -1,19 +1,26 @@
 package com.terrarosa.terra_crm.core.config;
 
 import com.terrarosa.terra_crm.core.tenancy.service.TenantService;
+import com.terrarosa.terra_crm.modules.auth.entity.Permission;
 import com.terrarosa.terra_crm.modules.auth.entity.Role;
 import com.terrarosa.terra_crm.modules.auth.entity.SuperAdmin;
 import com.terrarosa.terra_crm.modules.auth.entity.User;
+import com.terrarosa.terra_crm.modules.auth.entity.UserPermission;
+import com.terrarosa.terra_crm.modules.auth.repository.PermissionRepository;
 import com.terrarosa.terra_crm.modules.auth.repository.RoleRepository;
 import com.terrarosa.terra_crm.modules.auth.repository.SuperAdminRepository;
+import com.terrarosa.terra_crm.modules.auth.repository.UserPermissionRepository;
 import com.terrarosa.terra_crm.modules.auth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -33,6 +40,7 @@ import java.util.UUID;
 @Component
 @RequiredArgsConstructor
 @Order(100) // Run after migrations (which typically run at order 1-10)
+@DependsOn("flyway") // CRITICAL: Wait for Flyway migrations to complete before initializing
 public class SuperAdminInitializer implements CommandLineRunner {
     
     private static final String DEFAULT_SUPER_ADMIN_EMAIL = "admin@terra.com";
@@ -43,6 +51,8 @@ public class SuperAdminInitializer implements CommandLineRunner {
     private final RoleRepository roleRepository;
     private final SuperAdminRepository superAdminRepository;
     private final PasswordEncoder passwordEncoder;
+    private final PermissionRepository permissionRepository;
+    private final UserPermissionRepository userPermissionRepository;
     
     @Override
     public void run(String... args) {
@@ -105,12 +115,78 @@ public class SuperAdminInitializer implements CommandLineRunner {
             
             superAdminRepository.save(superAdmin);
             log.info("Initial Super Admin created successfully: {}", DEFAULT_SUPER_ADMIN_EMAIL);
+            
+            // CRITICAL: Assign all permissions to Super Admin
+            assignAllPermissionsToSuperAdmin(savedUser);
+            
             log.warn("IMPORTANT: Change the default Super Admin password in production!");
             
         } catch (Exception e) {
             log.error("Failed to initialize Super Admin user", e);
             // Don't throw - allow application to start even if initialization fails
             // Admin can be created manually later
+        }
+    }
+    
+    /**
+     * Assign all available permissions to Super Admin user.
+     * This bypasses tenant module validation since Super Admin has system-wide access.
+     * 
+     * @param superAdminUser The Super Admin user to assign permissions to
+     */
+    @Transactional
+    private void assignAllPermissionsToSuperAdmin(User superAdminUser) {
+        try {
+            UUID userId = superAdminUser.getId();
+            
+            // Get all permissions from database
+            List<Permission> allPermissions = permissionRepository.findAll();
+            
+            if (allPermissions.isEmpty()) {
+                log.warn("No permissions found in database. Super Admin will have no permissions.");
+                return;
+            }
+            
+            log.info("Found {} permissions. Assigning all to Super Admin user: {}", 
+                allPermissions.size(), superAdminUser.getEmail());
+            
+            int assignedCount = 0;
+            int skippedCount = 0;
+            
+            for (Permission permission : allPermissions) {
+                // Check if already assigned
+                if (userPermissionRepository.findByUserIdAndPermissionId(userId, permission.getId()).isPresent()) {
+                    skippedCount++;
+                    continue;
+                }
+                
+                // Create UserPermission (bypass tenant validation for Super Admin)
+                UserPermission userPermission = UserPermission.builder()
+                        .user(superAdminUser)
+                        .permission(permission)
+                        .build();
+                
+                userPermissionRepository.save(userPermission);
+                assignedCount++;
+            }
+            
+            log.info("Permission assignment completed for Super Admin: {} assigned, {} already existed, {} total permissions", 
+                assignedCount, skippedCount, allPermissions.size());
+            
+            // Verify permissions were assigned
+            List<UserPermission> userPermissions = userPermissionRepository.findByUserId(userId);
+            log.info("Verified: Super Admin user {} now has {} permissions", 
+                superAdminUser.getEmail(), userPermissions.size());
+            
+            if (userPermissions.isEmpty()) {
+                log.error("CRITICAL: No permissions found after assignment for Super Admin user. " +
+                    "This indicates a serious issue with permission persistence.");
+            }
+            
+        } catch (Exception e) {
+            log.error("Failed to assign permissions to Super Admin user: {}", e.getMessage(), e);
+            // Don't throw - allow application to start even if permission assignment fails
+            // Permissions can be assigned manually later
         }
     }
 }

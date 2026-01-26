@@ -1,4 +1,4 @@
-﻿{
+{
     "common": {
         "save": "Kaydet",
         "cancel": "İptal",
@@ -381,6 +381,11 @@
         "demo_email": "E-posta",
         "demo_password": "Şifre",
         "invalid_credentials": "Geçersiz e-posta veya şifre",
+        "continue": "Devam Et",
+        "select_tenant": "Organizasyonunuzu Seçin",
+        "multiple_tenants_message": "E-posta adresiniz birden fazla organizasyona bağlı. Devam etmek için birini seçin.",
+        "back": "Geri",
+        "logging_in_to": "Giriş yapılıyor",
         "validation": {
             "email_required": "E-posta adresi zorunludur",
             "email_invalid": "Geçersiz e-posta adresi formatı",
@@ -390,5 +395,25 @@
     "placeholders": {
         "under_development": "Bu sayfa şu anda geliştirme aşamasındadır.",
         "content_will_be_here": "içeriği çok yakında burada olacak."
+    },
+    "schema_pool": {
+        "title": "Şema Havuzu İzleme",
+        "ready": "Hazır",
+        "assigned": "Atanmış",
+        "error": "Hata",
+        "total": "Toplam",
+        "min_threshold": "Minimum Eşik",
+        "system_health": "Sistem Sağlığı",
+        "activity_log": "Aktivite Logu",
+        "last_provisioning": "Son Şema Üretimi",
+        "no_provisioning_yet": "Henüz şema üretilmedi",
+        "critical_warning": "KRİTİK: Yeni müşteri kaydı alınamaz!",
+        "stagnation_warning": "Durgunluk: Son işlem 1 saatten fazla önce",
+        "loading": "Yükleniyor...",
+        "error_loading": "Veriler yüklenirken bir hata oluştu",
+        "retry": "Tekrar Dene",
+        "access_denied": "Erişim Reddedildi",
+        "access_denied_message": "Bu alan sadece Sistem Yönetim Merkezi üzerinden erişilebilirdir",
+        "access_denied_subtitle": "Lütfen sistem yöneticisi ile iletişime geçin"
     }
 }

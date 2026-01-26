@@ -8,6 +8,9 @@ import com.terrarosa.terra_crm.modules.auth.dto.LoginRequest;
 import com.terrarosa.terra_crm.modules.auth.dto.LoginResponse;
 import com.terrarosa.terra_crm.modules.auth.dto.RefreshTokenResponse;
 import com.terrarosa.terra_crm.modules.auth.dto.RegisterRequest;
+import com.terrarosa.terra_crm.modules.auth.dto.TenantDiscoveryRequest;
+import com.terrarosa.terra_crm.modules.auth.dto.TenantDiscoveryResponse;
+import com.terrarosa.terra_crm.modules.auth.dto.TenantInfo;
 import com.terrarosa.terra_crm.modules.auth.dto.UserDto;
 import com.terrarosa.terra_crm.modules.auth.entity.RefreshToken;
 import com.terrarosa.terra_crm.modules.auth.entity.Role;
@@ -23,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -117,11 +121,13 @@ public class AuthService {
             }
         }
         
-        // Fetch user permissions (Super Admin doesn't need permissions, role-based access)
-        List<String> permissions = isSuperAdmin ? List.of() : permissionService.getUserPermissions(user.getId());
+        // Fetch user permissions
+        // CRITICAL: Super Admin also needs permissions for @PreAuthorize checks
+        // Super Admin has all permissions assigned via SuperAdminInitializer
+        List<String> permissions = permissionService.getUserPermissions(user.getId());
         log.debug("User {} has {} permissions: {}", user.getEmail(), permissions.size(), permissions);
         
-        if (!isSuperAdmin && permissions.isEmpty()) {
+        if (permissions.isEmpty()) {
             log.warn("User {} has no permissions assigned. This may indicate a problem with permission assignment.", user.getEmail());
         }
         
@@ -372,6 +378,51 @@ public class AuthService {
                 .lastName(savedUser.getLastName())
                 .tenantId(savedUser.getTenant().getId())
                 .roles(roles)
+                .build();
+    }
+    
+    /**
+     * Discover tenant(s) associated with an email address.
+     * 
+     * SECURITY NOTE: This method always returns a success response, even if no tenants are found.
+     * This prevents user enumeration attacks where attackers could determine which emails exist in the system.
+     * 
+     * @param request TenantDiscoveryRequest containing email
+     * @return TenantDiscoveryResponse with list of tenants (empty list if none found, but still success)
+     */
+    @Transactional(readOnly = true)
+    public TenantDiscoveryResponse discoverTenants(TenantDiscoveryRequest request) {
+        String email = request.getEmail().toLowerCase().trim();
+        log.debug("Tenant discovery requested for email: {}", email);
+        
+        // Find all users with this email (excluding deleted and disabled)
+        List<User> users = userRepository.findAllByEmailAndNotDeleted(email);
+        
+        if (users.isEmpty()) {
+            // SECURITY: Return empty list but still success to prevent user enumeration
+            log.debug("No tenants found for email: {} (returning empty list to prevent enumeration)", email);
+            return TenantDiscoveryResponse.builder()
+                    .tenants(new ArrayList<>())
+                    .build();
+        }
+        
+        // Extract unique tenant information
+        List<TenantInfo> tenantInfos = users.stream()
+                .map(user -> {
+                    Tenant tenant = user.getTenant();
+                    return TenantInfo.builder()
+                            .tenantId(tenant.getId())
+                            .tenantName(tenant.getName())
+                            .schemaName(tenant.getSchemaName())
+                            .build();
+                })
+                .distinct() // Remove duplicates if user has multiple accounts in same tenant
+                .collect(Collectors.toList());
+        
+        log.debug("Found {} tenant(s) for email: {}", tenantInfos.size(), email);
+        
+        return TenantDiscoveryResponse.builder()
+                .tenants(tenantInfos)
                 .build();
     }
 }

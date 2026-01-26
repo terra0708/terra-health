@@ -21,6 +21,7 @@ const DashboardPage = lazy(() => import('@terra-health/views/Dashboard/Dashboard
 const RemindersPage = lazy(() => import('@terra-health/views/Reminders/RemindersPage'));
 const ReminderSettingsPage = lazy(() => import('@shared/views/Settings/ReminderSettingsPage'));
 const SystemSettingsPage = lazy(() => import('@shared/views/Settings/SystemSettingsPage'));
+const SchemaPoolDashboard = lazy(() => import('@shared/views/SuperAdmin/SchemaPoolDashboard'));
 
 // Protected Route component with Hydration Control
 const ProtectedRoute = ({ children }) => {
@@ -110,6 +111,9 @@ function App() {
             <Route path="permissions" element={<LazyRoute moduleName="Settings"><PermissionsPage /></LazyRoute>} />
             <Route path="reminders" element={<LazyRoute moduleName="Settings"><ReminderSettingsPage /></LazyRoute>} />
             <Route path="customer-panel" element={<LazyRoute moduleName="Settings"><CustomerPanel /></LazyRoute>} />
+          </Route>
+          <Route path="super-admin">
+            <Route path="schema-pool" element={<LazyRoute moduleName="SchemaPool"><SchemaPoolDashboard /></LazyRoute>} />
           </Route>
         </Route>
 

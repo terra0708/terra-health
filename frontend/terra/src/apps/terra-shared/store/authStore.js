@@ -11,11 +11,15 @@ const useAuthStore = create(
             isAuthenticated: false,
             loading: false,
             error: null,
+            discoveredTenantId: null, // Tenant ID discovered from email (for login flow)
 
             // Actions
             login: async ({ email, password, tenantId }) => {
                 // KRİTİK: tenantId kontrolü
-                if (!tenantId) {
+                // Önce parametreden, sonra discoveredTenantId'den, sonra localStorage'dan al
+                const finalTenantId = tenantId || get().discoveredTenantId || localStorage.getItem('tenantId');
+                
+                if (!finalTenantId) {
                     const error = new Error('Tenant ID is required for login');
                     set({ error, loading: false });
                     throw error;
@@ -25,7 +29,7 @@ const useAuthStore = create(
 
                 try {
                     const response = await apiClient.post(
-                        '/auth/login',
+                        '/v1/auth/login',
                         { email, password },
                         { headers: { 'X-Tenant-ID': tenantId } }
                     );
@@ -40,7 +44,8 @@ const useAuthStore = create(
                         user: response.user,
                         isAuthenticated: true,
                         loading: false,
-                        error: null
+                        error: null,
+                        discoveredTenantId: null // Clear after successful login
                     });
                 } catch (error) {
                     // api.js'den normalize edilmiş hata gelir
@@ -60,7 +65,8 @@ const useAuthStore = create(
                     user: null,
                     isAuthenticated: false,
                     error: null,
-                    loading: false
+                    loading: false,
+                    discoveredTenantId: null
                 });
 
                 // Hard redirect - güvenli ve temiz
@@ -84,6 +90,16 @@ const useAuthStore = create(
             // Helper: Error state'i temizle
             clearError: () => {
                 set({ error: null });
+            },
+
+            // Set discovered tenant ID (from email discovery)
+            setDiscoveredTenantId: (tenantId) => {
+                set({ discoveredTenantId: tenantId });
+            },
+
+            // Clear discovered tenant ID
+            clearDiscoveredTenantId: () => {
+                set({ discoveredTenantId: null });
             }
         }),
         {

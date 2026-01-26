@@ -33,6 +33,7 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
+    baseline-version: 0
     locations: classpath:db/migration/public
     schemas: public
     default-schema: public
@@ -44,6 +45,11 @@ jwt:
   secret: ${JWT_SECRET:LnjfynBNtf0wU7Qa87kxGhihPAHcFOuOhy2vyO19eUA=} # BASE64 encoded, minimum 32 bytes (256 bits) for HS256
   expiration: 900000 # 15 minutes in milliseconds (access token)
   refresh-expiration: 604800000 # 7 days in milliseconds (refresh token)
+
+schema-pool:
+  min-ready-count: 3  # Minimum READY şema sayısı (pool replenishment threshold)
+  schema-prefix: "tp_"  # Şema prefix'i
+  schema-name-length: 8  # Random karakter sayısı (prefix hariç)
 
 logging:
   level:

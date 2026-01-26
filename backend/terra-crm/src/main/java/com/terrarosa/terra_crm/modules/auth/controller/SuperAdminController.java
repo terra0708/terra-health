@@ -1,8 +1,12 @@
 package com.terrarosa.terra_crm.modules.auth.controller;
 
 import com.terrarosa.terra_crm.core.common.dto.ApiResponse;
+import com.terrarosa.terra_crm.core.tenancy.TenantContext;
+import com.terrarosa.terra_crm.core.tenancy.dto.SchemaPoolStatsResponse;
 import com.terrarosa.terra_crm.core.tenancy.entity.Tenant;
 import com.terrarosa.terra_crm.core.tenancy.repository.TenantRepository;
+import com.terrarosa.terra_crm.core.tenancy.service.SchemaPoolService;
+import com.terrarosa.terra_crm.core.tenancy.service.TenantService;
 import com.terrarosa.terra_crm.modules.auth.dto.CreateTenantRequest;
 import com.terrarosa.terra_crm.modules.auth.dto.TenantAdminDto;
 import com.terrarosa.terra_crm.modules.auth.dto.TenantDto;
@@ -12,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -35,6 +40,8 @@ public class SuperAdminController {
     
     private final SuperAdminService superAdminService;
     private final TenantRepository tenantRepository;
+    private final SchemaPoolService schemaPoolService;
+    private final TenantService tenantService;
     
     /**
      * Create a new tenant with admin user and assigned modules.
@@ -94,5 +101,36 @@ public class SuperAdminController {
                 .build();
         
         return ResponseEntity.ok(ApiResponse.success(tenantDto));
+    }
+    
+    /**
+     * Get schema pool statistics for Super Admin dashboard.
+     * Provides comprehensive information about READY, ASSIGNED, and ERROR schema counts,
+     * total count, minimum ready threshold, and last provisioning time.
+     * 
+     * CRITICAL: This endpoint requires SYSTEM tenant context for additional security.
+     * Defense in depth: Both filter layer and controller layer validate SYSTEM tenant.
+     */
+    @GetMapping("/schema-pool/stats")
+    public ResponseEntity<ApiResponse<SchemaPoolStatsResponse>> getPoolStats() {
+        log.info("Super Admin requesting schema pool statistics");
+        
+        // SYSTEM Tenant validation (defense in depth)
+        Tenant systemTenant = tenantService.getSystemTenant();
+        String systemTenantId = systemTenant.getId().toString();
+        String currentTenantId = TenantContext.getCurrentTenantId();
+        
+        if (currentTenantId == null || !systemTenantId.equals(currentTenantId)) {
+            log.error("Schema pool stats access denied: Expected SYSTEM tenantId={}, but got tenantId={}",
+                    systemTenantId, currentTenantId);
+            throw new AccessDeniedException("Schema pool stats can only be accessed with SYSTEM tenant context");
+        }
+        
+        SchemaPoolStatsResponse stats = schemaPoolService.getPoolStats();
+        
+        log.debug("Schema pool statistics retrieved: READY={}, ASSIGNED={}, ERROR={}, TOTAL={}",
+                stats.readyCount(), stats.assignedCount(), stats.errorCount(), stats.totalCount());
+        
+        return ResponseEntity.ok(ApiResponse.success(stats));
     }
 }

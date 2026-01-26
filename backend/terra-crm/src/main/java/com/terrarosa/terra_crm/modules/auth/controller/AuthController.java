@@ -6,6 +6,8 @@ import com.terrarosa.terra_crm.modules.auth.dto.LoginRequest;
 import com.terrarosa.terra_crm.modules.auth.dto.LoginResponse;
 import com.terrarosa.terra_crm.modules.auth.dto.RefreshTokenResponse;
 import com.terrarosa.terra_crm.modules.auth.dto.RegisterRequest;
+import com.terrarosa.terra_crm.modules.auth.dto.TenantDiscoveryRequest;
+import com.terrarosa.terra_crm.modules.auth.dto.TenantDiscoveryResponse;
 import com.terrarosa.terra_crm.modules.auth.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -121,6 +123,33 @@ public class AuthController {
                     .header(HttpHeaders.SET_COOKIE, clearCookie.toString())
                     .body(ApiResponse.error("UNAUTHORIZED", "Invalid or expired refresh token"));
         }
+    }
+    
+    /**
+     * Tenant discovery endpoint.
+     * Public endpoint - no authentication required.
+     * 
+     * Discovers which tenant(s) a user belongs to based on their email address.
+     * This allows the frontend to automatically determine the tenant without requiring
+     * manual tenant ID input.
+     * 
+     * SECURITY: Always returns success response, even if no tenants found.
+     * This prevents user enumeration attacks.
+     * 
+     * Returns:
+     * - List of TenantInfo objects (single tenant: one element, multiple tenants: multiple elements)
+     * - Empty list if no tenants found (but still success response)
+     */
+    @PostMapping("/discover")
+    public ResponseEntity<ApiResponse<TenantDiscoveryResponse>> discoverTenants(
+            @Valid @RequestBody TenantDiscoveryRequest request) {
+        
+        TenantDiscoveryResponse response = authService.discoverTenants(request);
+        
+        // Always return success to prevent user enumeration
+        // Even if tenants list is empty, return success with empty list
+        return ResponseEntity.ok()
+                .body(ApiResponse.success(response, "Tenant discovery completed"));
     }
     
     /**

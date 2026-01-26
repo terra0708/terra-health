@@ -1,6 +1,10 @@
 package com.terrarosa.terra_crm.core.tenancy.service;
 
+import com.terrarosa.terra_crm.core.tenancy.entity.SchemaPool;
+import com.terrarosa.terra_crm.core.tenancy.entity.SchemaPoolStatus;
 import com.terrarosa.terra_crm.core.tenancy.entity.Tenant;
+import com.terrarosa.terra_crm.core.tenancy.exception.NoAvailableSchemaException;
+import com.terrarosa.terra_crm.core.tenancy.repository.SchemaPoolRepository;
 import com.terrarosa.terra_crm.core.tenancy.repository.TenantRepository;
 import com.terrarosa.terra_crm.modules.auth.service.PermissionService;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 
@@ -23,6 +28,7 @@ import java.util.List;
 public class TenantService {
     
     private final TenantRepository tenantRepository;
+    private final SchemaPoolRepository schemaPoolRepository;
     private final JdbcTemplate jdbcTemplate;
     private final PermissionService permissionService;
     
@@ -35,15 +41,46 @@ public class TenantService {
     );
     
     /**
-     * Create a new tenant with its own schema.
+     * Create a new tenant using a pre-provisioned schema from the schema pool.
      * Automatically assigns core modules to the tenant.
      * 
-     * CRITICAL: DDL operations (schema creation, migrations) are executed OUTSIDE transaction
-     * to prevent connection pool exhaustion. Only tenant record creation and module assignment
-     * run in a transaction.
+     * CRITICAL: This method uses schema pool for fast tenant provisioning.
+     * Schema is pre-created and migrated, so tenant creation is instant.
+     * 
+     * Transaction rollback: If any exception occurs, Spring's transaction management
+     * will automatically rollback the schemaPool status change. No manual catch-save needed.
      */
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @Transactional
     public Tenant createTenant(String name) {
+        // 1. Get READY schema from pool (FIFO, row-level lock with timeout)
+        SchemaPool schemaPool = schemaPoolRepository.findOldestReadySchema(SchemaPoolStatus.READY)
+                .orElseThrow(() -> new NoAvailableSchemaException("No ready schemas available in pool. Please wait for pool replenishment."));
+        
+        String schemaName = schemaPool.getSchemaName();
+        log.info("Assigning schema {} from pool to tenant: {}", schemaName, name);
+        
+        // 2. Mark schema as ASSIGNED
+        schemaPool.setStatus(SchemaPoolStatus.ASSIGNED);
+        schemaPool.setAssignedAt(LocalDateTime.now());
+        schemaPoolRepository.save(schemaPool);
+        
+        // 3. Create tenant record and assign modules
+        // CRITICAL: Spring transaction yönetimi otomatik rollback yapacak
+        // Eğer exception fırlarsa, schemaPool değişiklikleri otomatik geri alınır
+        // Manuel catch-save yapmaya gerek yok - Spring'in transaction yönetimine güven
+        return createTenantRecordAndAssignModules(name, schemaName);
+    }
+    
+    /**
+     * Create a new tenant with its own schema (legacy method).
+     * This method creates schema on-the-fly instead of using schema pool.
+     * 
+     * @deprecated Use createTenant(String) which uses schema pool for better performance.
+     * This method is kept for backward compatibility and emergency use cases.
+     */
+    @Deprecated
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public Tenant createTenantLegacy(String name) {
         // Generate schema name from tenant name (sanitized)
         String schemaName = generateSchemaName(name);
         
@@ -167,7 +204,11 @@ public class TenantService {
     
     /**
      * Generate a valid PostgreSQL schema name from tenant name.
+     * 
+     * @deprecated This method is only used by legacy createTenantLegacy method.
+     * Schema pool uses different naming convention (tp_ prefix).
      */
+    @Deprecated
     private String generateSchemaName(String name) {
         // Convert to lowercase, replace spaces and special chars with underscores
         String schemaName = name.toLowerCase()
@@ -191,8 +232,10 @@ public class TenantService {
     /**
      * Validate schema name contains only safe characters.
      * Throws IllegalArgumentException if validation fails.
+     * 
+     * Public for use by SchemaPoolService.
      */
-    private void validateSchemaName(String schemaName) {
+    public void validateSchemaName(String schemaName) {
         if (schemaName == null || schemaName.isBlank()) {
             throw new IllegalArgumentException("Schema name cannot be null or blank");
         }
@@ -214,8 +257,10 @@ public class TenantService {
     
     /**
      * Sanitize schema name to prevent SQL injection.
+     * 
+     * Public for use by SchemaPoolService.
      */
-    private String sanitizeSchemaName(String schemaName) {
+    public String sanitizeSchemaName(String schemaName) {
         // Remove any characters that could be used for SQL injection
         // Only allow alphanumeric, underscore, and ensure it doesn't start with numbers
         return schemaName.replaceAll("[^a-zA-Z0-9_]", "");

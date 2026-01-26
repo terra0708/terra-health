@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -17,6 +18,14 @@ public interface UserRepository extends SoftDeleteRepository<User, UUID> {
     
     @Query("SELECT u FROM User u LEFT JOIN FETCH u.roles WHERE u.email = :email AND u.tenant.id = :tenantId")
     Optional<User> findByEmailAndTenantId(@Param("email") String email, @Param("tenantId") UUID tenantId);
+    
+    /**
+     * Find all users with the given email (excluding deleted).
+     * Used for tenant discovery - a user can belong to multiple tenants.
+     * Returns distinct tenants associated with the email.
+     */
+    @Query("SELECT DISTINCT u FROM User u JOIN FETCH u.tenant WHERE u.email = :email AND u.deleted = false AND u.enabled = true")
+    List<User> findAllByEmailAndNotDeleted(@Param("email") String email);
     
     /**
      * Count users by tenant ID (excluding deleted).

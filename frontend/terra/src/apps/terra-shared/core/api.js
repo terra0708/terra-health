@@ -118,7 +118,7 @@ apiClient.interceptors.response.use(
         // 401 Hata Kontrolü
         if (error.response?.status === 401) {
             // KRİTİK: Refresh isteğinin kendisi hata verdi mi?
-            if (originalRequest.url === '/auth/refresh' || originalRequest._retry) {
+            if (originalRequest.url === '/v1/auth/refresh' || originalRequest._retry) {
                 // Sonsuz döngüyü önle - Logout yap
                 isRefreshing = false;
                 failedQueue = [];
@@ -154,12 +154,14 @@ apiClient.interceptors.response.use(
             try {
                 // KRİTİK: Refresh isteğini apiClient (interceptor'lı) yerine direkt axios ile at
                 // Böylece interceptor'dan geçmez ve sonsuz döngü oluşmaz
+                // baseURL zaten '/api' olduğu için, endpoint path'inde sadece '/v1/auth/refresh' kullan
+                const baseURL = import.meta.env.VITE_API_URL || '/api';
                 const response = await axios.post(
-                    `${import.meta.env.VITE_API_URL || '/api'}/auth/refresh`,
+                    '/v1/auth/refresh',
                     {},
                     {
                         withCredentials: true,
-                        baseURL: import.meta.env.VITE_API_URL || '/api'
+                        baseURL: baseURL
                     }
                 );
                 

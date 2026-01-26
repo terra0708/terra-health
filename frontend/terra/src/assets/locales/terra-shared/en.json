@@ -1,4 +1,4 @@
-﻿{
+{
     "common": {
         "save": "Save",
         "cancel": "Cancel",
@@ -381,6 +381,11 @@
         "demo_email": "Email",
         "demo_password": "Password",
         "invalid_credentials": "Invalid email or password",
+        "continue": "Continue",
+        "select_tenant": "Select Your Organization",
+        "multiple_tenants_message": "Your email is associated with multiple organizations. Please select one to continue.",
+        "back": "Back",
+        "logging_in_to": "Logging in to",
         "validation": {
             "email_required": "Email is required",
             "email_invalid": "Invalid email format",
@@ -390,5 +395,25 @@
     "placeholders": {
         "under_development": "This page is currently under development.",
         "content_will_be_here": "content will be here very soon."
+    },
+    "schema_pool": {
+        "title": "Schema Pool Monitoring",
+        "ready": "Ready",
+        "assigned": "Assigned",
+        "error": "Error",
+        "total": "Total",
+        "min_threshold": "Minimum Threshold",
+        "system_health": "System Health",
+        "activity_log": "Activity Log",
+        "last_provisioning": "Last Schema Provisioning",
+        "no_provisioning_yet": "No schema provisioned yet",
+        "critical_warning": "CRITICAL: New customer registration cannot be processed!",
+        "stagnation_warning": "Stagnation: Last operation was more than 1 hour ago",
+        "loading": "Loading...",
+        "error_loading": "An error occurred while loading data",
+        "retry": "Retry",
+        "access_denied": "Access Denied",
+        "access_denied_message": "This area can only be accessed through the System Management Center",
+        "access_denied_subtitle": "Please contact the system administrator"
     }
 }
