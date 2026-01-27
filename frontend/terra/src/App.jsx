@@ -27,46 +27,70 @@ const TenantsPage = lazy(() => import('@shared/views/SuperAdmin/TenantsPage'));
 const UserSearchPage = lazy(() => import('@shared/views/SuperAdmin/UserSearchPage'));
 const AuditLogsPage = lazy(() => import('@shared/views/SuperAdmin/AuditLogsPage'));
 
-// Protected Route component with Hydration Control
-const ProtectedRoute = ({ children }) => {
+// Protected Route component with Hydration Control and Permission System
+const ProtectedRoute = ({ children, requiredPermission, requiredRole }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const hasHydrated = useAuthStore((state) => state._hasHydrated);
+  const hasPermission = useAuthStore((state) => state.hasPermission);
+  const user = useAuthStore((state) => state.user);
   const [isHydrated, setIsHydrated] = useState(false);
 
   // Hydration durumunu takip et + Timeout kontrolü
   useEffect(() => {
-    // Normal hydration
     if (hasHydrated) {
       setIsHydrated(true);
       return;
     }
 
-    // KRİTİK: Sonsuz bekleme riski - Timeout kontrolü
-    // Eğer localStorage bozulursa veya onRehydrateStorage tetiklenmezse
-    // 500ms sonra zorla hydration'ı tamamla (production seviyesi güvenlik)
     const timeoutId = setTimeout(() => {
       setIsHydrated(true);
-    }, 500); // 500ms timeout
+    }, 500);
 
-    return () => {
-      clearTimeout(timeoutId);
-    };
+    return () => clearTimeout(timeoutId);
   }, [hasHydrated]);
 
-  // Hydration tamamlanana kadar loading göster
-  // KRİTİK: PageSkeleton kullan (flickering önlemek için)
-  // Hydration genellikle 10-50ms sürer, LoadingSpinner yanıp sönebilir
-  // PageSkeleton sayfa geçişini daha yumuşak hissettirir (UX iyileştirmesi)
   if (!isHydrated) {
     return <PageSkeleton />;
   }
 
-  // Hydration tamamlandı, yetki kontrolü yap
-  // KRİTİK: replace flag'i hayati önem taşıyor
-  // Kullanıcı login sayfasına yönlendirildiğinde tarayıcının "geri" butonuyla
-  // o kısıtlı alana tekrar girmeye çalışmasını bu flag engeller
+  // Not authenticated? -> Login
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Role check if required
+  if (requiredRole && !user?.roles?.includes(requiredRole)) {
+    console.warn(`Access Denied: Required role ${requiredRole} missing.`);
+    return <Navigate to="/" replace />;
+  }
+
+  // Permission check if required
+  if (requiredPermission && !hasPermission(requiredPermission)) {
+    console.warn(`Access Denied: Required permission ${requiredPermission} missing.`);
+
+    const currentPath = window.location.pathname;
+    if (currentPath === '/' || currentPath === '/dashboard') {
+      // Find the first module this user CAN see
+      const fallbacks = [
+        { path: '/appointments', perm: ['APPOINTMENTS_VIEW', 'MODULE_APPOINTMENTS'] },
+        { path: '/customers', perm: ['CUSTOMERS_VIEW', 'MODULE_CUSTOMERS'] },
+        { path: '/reminders', perm: ['REMINDERS_VIEW', 'MODULE_REMINDERS'] },
+        { path: '/marketing/dashboard', perm: ['MARKETING_DASHBOARD_VIEW', 'MODULE_MARKETING'] },
+        { path: '/statistics', perm: ['STATISTICS_VIEW', 'MODULE_STATISTICS'] },
+        { path: '/notifications', perm: ['NOTIFICATIONS_VIEW', 'MODULE_NOTIFICATIONS'] },
+        { path: '/settings', perm: ['SETTINGS_SYSTEM_UPDATE', 'MODULE_SETTINGS'] }
+      ];
+
+      const firstAllowed = fallbacks.find(route => hasPermission(route.perm));
+
+      if (firstAllowed) {
+        return <Navigate to={firstAllowed.path} replace />;
+      }
+
+      return <Navigate to="/403" replace />;
+    }
+
+    return <Navigate to="/" replace />;
   }
 
   return children;
@@ -79,6 +103,19 @@ const LazyRoute = ({ children, moduleName }) => (
       {children}
     </Suspense>
   </ErrorBoundary>
+);
+
+const AccessDenied = () => (
+  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', padding: '20px', textAlign: 'center' }}>
+    <h1 style={{ color: '#d32f2f' }}>403 - Erişim Engellendi</h1>
+    <p>Bu sayfayı görüntülemek için gerekli yetkiniz bulunmamaktadır.</p>
+    <button
+      onClick={() => window.location.href = '/'}
+      style={{ marginTop: '20px', padding: '10px 20px', cursor: 'pointer', backgroundColor: '#1976d2', color: 'white', border: 'none', borderRadius: '4px' }}
+    >
+      Pano'ya Dön
+    </button>
+  </div>
 );
 
 function App() {
@@ -96,33 +133,34 @@ function App() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<LazyRoute moduleName="Dashboard"><DashboardPage /></LazyRoute>} />
-          <Route path="appointments" element={<LazyRoute moduleName="Appointments"><AppointmentsPage /></LazyRoute>} />
-          <Route path="customers" element={<LazyRoute moduleName="Customers"><CustomersPage /></LazyRoute>} />
-          <Route path="reminders" element={<LazyRoute moduleName="Reminders"><RemindersPage /></LazyRoute>} />
+          <Route index element={<ProtectedRoute requiredPermission={['DASHBOARD_VIEW', 'MODULE_DASHBOARD']}><LazyRoute moduleName="Dashboard"><DashboardPage /></LazyRoute></ProtectedRoute>} />
+          <Route path="403" element={<AccessDenied />} />
+          <Route path="appointments" element={<ProtectedRoute requiredPermission={['APPOINTMENTS_VIEW', 'MODULE_APPOINTMENTS']}><LazyRoute moduleName="Appointments"><AppointmentsPage /></LazyRoute></ProtectedRoute>} />
+          <Route path="customers" element={<ProtectedRoute requiredPermission={['CUSTOMERS_VIEW', 'MODULE_CUSTOMERS']}><LazyRoute moduleName="Customers"><CustomersPage /></LazyRoute></ProtectedRoute>} />
+          <Route path="reminders" element={<ProtectedRoute requiredPermission={['REMINDERS_VIEW', 'MODULE_REMINDERS']}><LazyRoute moduleName="Reminders"><RemindersPage /></LazyRoute></ProtectedRoute>} />
           <Route path="marketing">
             <Route index element={<Navigate to="/marketing/dashboard" replace />} />
-            <Route path="dashboard" element={<LazyRoute moduleName="Marketing"><MarketingDashboard /></LazyRoute>} />
-            <Route path="campaigns" element={<LazyRoute moduleName="Marketing"><MarketingCampaigns /></LazyRoute>} />
-            <Route path="campaigns/:id" element={<LazyRoute moduleName="Marketing"><MarketingCampaignDetail /></LazyRoute>} />
-            <Route path="attribution" element={<LazyRoute moduleName="Marketing"><MarketingAttribution /></LazyRoute>} />
+            <Route path="dashboard" element={<ProtectedRoute requiredPermission={['MARKETING_DASHBOARD_VIEW', 'MODULE_MARKETING']}><LazyRoute moduleName="Marketing"><MarketingDashboard /></LazyRoute></ProtectedRoute>} />
+            <Route path="campaigns" element={<ProtectedRoute requiredPermission={['MARKETING_CAMPAIGNS_VIEW', 'MODULE_MARKETING']}><LazyRoute moduleName="Marketing"><MarketingCampaigns /></LazyRoute></ProtectedRoute>} />
+            <Route path="campaigns/:id" element={<ProtectedRoute requiredPermission={['MARKETING_CAMPAIGNS_VIEW', 'MODULE_MARKETING']}><LazyRoute moduleName="Marketing"><MarketingCampaignDetail /></LazyRoute></ProtectedRoute>} />
+            <Route path="attribution" element={<ProtectedRoute requiredPermission={['MARKETING_ATTRIBUTION_VIEW', 'MODULE_MARKETING']}><LazyRoute moduleName="Marketing"><MarketingAttribution /></LazyRoute></ProtectedRoute>} />
           </Route>
-          <Route path="statistics" element={<LazyRoute moduleName="Statistics"><Views.Statistics /></LazyRoute>} />
-          <Route path="notifications" element={<LazyRoute moduleName="Notifications"><NotificationsPage /></LazyRoute>} />
+          <Route path="statistics" element={<ProtectedRoute requiredPermission={['STATISTICS_VIEW', 'MODULE_STATISTICS']}><LazyRoute moduleName="Statistics"><Views.Statistics /></LazyRoute></ProtectedRoute>} />
+          <Route path="notifications" element={<ProtectedRoute requiredPermission={['NOTIFICATIONS_VIEW', 'MODULE_NOTIFICATIONS']}><LazyRoute moduleName="Notifications"><NotificationsPage /></LazyRoute></ProtectedRoute>} />
           <Route path="settings">
-            <Route index element={<LazyRoute moduleName="Settings"><SystemSettingsPage /></LazyRoute>} />
-            <Route path="users" element={<LazyRoute moduleName="Settings"><UsersPage /></LazyRoute>} />
-            <Route path="permissions" element={<LazyRoute moduleName="Settings"><PermissionsPage /></LazyRoute>} />
-            <Route path="reminders" element={<LazyRoute moduleName="Settings"><ReminderSettingsPage /></LazyRoute>} />
-            <Route path="customer-panel" element={<LazyRoute moduleName="Settings"><CustomerPanel /></LazyRoute>} />
+            <Route index element={<ProtectedRoute requiredPermission={['SETTINGS_SYSTEM_UPDATE', 'MODULE_SETTINGS']}><LazyRoute moduleName="Settings"><SystemSettingsPage /></LazyRoute></ProtectedRoute>} />
+            <Route path="users" element={<ProtectedRoute requiredPermission={['SETTINGS_USERS_VIEW', 'MODULE_SETTINGS']}><LazyRoute moduleName="Settings"><UsersPage /></LazyRoute></ProtectedRoute>} />
+            <Route path="permissions" element={<ProtectedRoute requiredPermission={['SETTINGS_ROLES_VIEW', 'MODULE_SETTINGS']}><LazyRoute moduleName="Settings"><PermissionsPage /></LazyRoute></ProtectedRoute>} />
+            <Route path="reminders" element={<ProtectedRoute requiredPermission={['SETTINGS_SYSTEM_UPDATE', 'MODULE_SETTINGS']}><LazyRoute moduleName="Settings"><ReminderSettingsPage /></LazyRoute></ProtectedRoute>} />
+            <Route path="customer-panel" element={<ProtectedRoute requiredPermission={['SETTINGS_CUSTOMER_PANEL_MANAGE', 'MODULE_SETTINGS']}><LazyRoute moduleName="Settings"><CustomerPanel /></LazyRoute></ProtectedRoute>} />
           </Route>
           <Route path="super-admin">
             <Route index element={<Navigate to="/super-admin/dashboard" replace />} />
-            <Route path="dashboard" element={<LazyRoute moduleName="SuperAdmin"><SuperAdminDashboard /></LazyRoute>} />
-            <Route path="tenants" element={<LazyRoute moduleName="SuperAdmin"><TenantsPage /></LazyRoute>} />
-            <Route path="users/search" element={<LazyRoute moduleName="SuperAdmin"><UserSearchPage /></LazyRoute>} />
-            <Route path="schema-pool" element={<LazyRoute moduleName="SchemaPool"><SchemaPoolDashboard /></LazyRoute>} />
-            <Route path="audit-logs" element={<LazyRoute moduleName="SuperAdmin"><AuditLogsPage /></LazyRoute>} />
+            <Route path="dashboard" element={<ProtectedRoute requiredRole="ROLE_SUPER_ADMIN"><LazyRoute moduleName="SuperAdmin"><SuperAdminDashboard /></LazyRoute></ProtectedRoute>} />
+            <Route path="tenants" element={<ProtectedRoute requiredRole="ROLE_SUPER_ADMIN"><LazyRoute moduleName="SuperAdmin"><TenantsPage /></LazyRoute></ProtectedRoute>} />
+            <Route path="users/search" element={<ProtectedRoute requiredRole="ROLE_SUPER_ADMIN"><LazyRoute moduleName="SuperAdmin"><UserSearchPage /></LazyRoute></ProtectedRoute>} />
+            <Route path="schema-pool" element={<ProtectedRoute requiredRole="ROLE_SUPER_ADMIN"><LazyRoute moduleName="SchemaPool"><SchemaPoolDashboard /></LazyRoute></ProtectedRoute>} />
+            <Route path="audit-logs" element={<ProtectedRoute requiredRole="ROLE_SUPER_ADMIN"><LazyRoute moduleName="SuperAdmin"><AuditLogsPage /></LazyRoute></ProtectedRoute>} />
           </Route>
         </Route>
 

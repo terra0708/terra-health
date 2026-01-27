@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { Box, Typography, Grid, Button, Alert } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { ModulePageWrapper } from '@common/ui';
@@ -16,23 +16,35 @@ import { RefreshCw } from 'lucide-react';
  * Schema Pool Dashboard Page
  * Superadmin panel for monitoring schema pool status
  * 
- * Features:
- * - Auto-refresh every 30 seconds
- * - Critical alerts for low capacity
- * - System health gauge
- * - Activity log with live relative time updates
- * - Access denied handling for 403 errors
+ * Performance Optimized:
+ * - Render counting for debugging
+ * - Stabilized refetch handler
+ * - Memoized components
  */
 const SchemaPoolDashboard = () => {
+    // Track render count for performance analysis
+    const renderCount = useRef(0);
+    useEffect(() => {
+        renderCount.current += 1;
+        if (import.meta.env.DEV) {
+            console.log(`[SchemaPoolDashboard] Render #${renderCount.current}`);
+        }
+    });
+
     usePerformance('SchemaPoolDashboard');
     const { t } = useTranslation();
     const { data: stats, isLoading, error, refetch } = useSchemaPoolStats();
-    
+
+    // Stable refetch handler
+    const handleRefetch = useCallback(() => {
+        refetch();
+    }, [refetch]);
+
     // Check if error is 403 (Access Denied)
-    const isAccessDenied = error?.response?.status === 403 || 
-                          error?.status === 403 ||
-                          (error?.message && error.message.includes('403'));
-    
+    const isAccessDenied = error?.response?.status === 403 ||
+        error?.status === 403 ||
+        (error?.message && error.message.includes('403'));
+
     // Loading state
     if (isLoading) {
         return (
@@ -48,7 +60,7 @@ const SchemaPoolDashboard = () => {
             </ModulePageWrapper>
         );
     }
-    
+
     // Access Denied state (403)
     if (isAccessDenied) {
         return (
@@ -57,19 +69,19 @@ const SchemaPoolDashboard = () => {
             </ModulePageWrapper>
         );
     }
-    
+
     // Error state (other errors)
     if (error) {
         return (
             <ModulePageWrapper moduleName="SchemaPoolDashboard">
                 <Box sx={{ p: { xs: 2, md: 4 } }}>
-                    <Alert 
-                        severity="error" 
+                    <Alert
+                        severity="error"
                         action={
-                            <Button 
-                                color="inherit" 
-                                size="small" 
-                                onClick={() => refetch()}
+                            <Button
+                                color="inherit"
+                                size="small"
+                                onClick={handleRefetch}
                                 startIcon={<RefreshCw size={16} />}
                             >
                                 {t('schema_pool.retry')}
@@ -83,7 +95,7 @@ const SchemaPoolDashboard = () => {
             </ModulePageWrapper>
         );
     }
-    
+
     // Success state - render dashboard
     return (
         <ModulePageWrapper moduleName="SchemaPoolDashboard">
@@ -97,13 +109,13 @@ const SchemaPoolDashboard = () => {
                         {t('schema_pool.system_health')}
                     </Typography>
                 </Box>
-                
+
                 {/* Critical Alert */}
                 {stats && <SchemaPoolCriticalAlert readyCount={stats.readyCount} t={t} />}
-                
+
                 {/* Stats Cards */}
                 {stats && <SchemaPoolStatsCards stats={stats} t={t} />}
-                
+
                 {/* System Health and Activity Log */}
                 <Grid container spacing={3}>
                     <Grid item xs={12} md={6}>

@@ -18,7 +18,7 @@ const useAuthStore = create(
                 // KRİTİK: tenantId kontrolü
                 // Önce parametreden, sonra discoveredTenantId'den, sonra localStorage'dan al
                 const finalTenantId = tenantId || get().discoveredTenantId || localStorage.getItem('tenantId');
-                
+
                 if (!finalTenantId) {
                     const error = new Error('Tenant ID is required for login');
                     set({ error, loading: false });
@@ -97,9 +97,34 @@ const useAuthStore = create(
                 set({ discoveredTenantId: tenantId });
             },
 
-            // Clear discovered tenant ID
+            // Helper: Discover tenant ID based on email
             clearDiscoveredTenantId: () => {
                 set({ discoveredTenantId: null });
+            },
+
+            // Helper: Check if current user has a specific permission or role
+            // Supports both single string and array of strings (OR condition)
+            hasPermission: (permission) => {
+                const user = get().user;
+                if (!user) return false;
+
+                // Super Admin has all access
+                if (user.roles?.includes('ROLE_SUPER_ADMIN')) return true;
+
+                const userPermissions = user.permissions || [];
+
+                if (Array.isArray(permission)) {
+                    return permission.some(p => userPermissions.includes(p));
+                }
+
+                return userPermissions.includes(permission);
+            },
+
+            // Helper: Check if current user has a specific role
+            hasRole: (role) => {
+                const user = get().user;
+                if (!user) return false;
+                return user.roles?.includes(role);
             }
         }),
         {

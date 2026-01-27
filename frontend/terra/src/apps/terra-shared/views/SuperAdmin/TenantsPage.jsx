@@ -10,47 +10,46 @@ import { ModulePageWrapper, LoadingSpinner } from '@common/ui';
 import { usePerformance } from '@common/hooks';
 import {
     useTenants, useSuspendTenant, useActivateTenant, useDeleteTenant,
-    useToggleModule, useSetQuotas, useCreateTenant
+    useCreateTenant, useAvailableModules
 } from '@shared/modules/super-admin';
+import TenantSettingsDialog from './TenantSettingsDialog';
 
 /**
  * Tenant Management Page
  * Super Admin can manage tenants: create, suspend, activate, delete, toggle modules, set quotas
  */
+
+
+
 const TenantsPage = () => {
     usePerformance('TenantsPage');
     const { t } = useTranslation();
     const theme = useTheme();
     const { data: tenants, isLoading, isError, error } = useTenants();
+    const { data: availableModules = [], isLoading: modulesLoading } = useAvailableModules();
+
+    // DEBUG: Log modules data
+    console.log('🔍 TenantsPage - availableModules:', availableModules);
+    console.log('🔍 TenantsPage - modulesLoading:', modulesLoading);
+
     const suspendTenant = useSuspendTenant();
     const activateTenant = useActivateTenant();
     const deleteTenant = useDeleteTenant();
-    const toggleModule = useToggleModule();
-    const setQuotas = useSetQuotas();
     const createTenant = useCreateTenant();
-    
+
     const [selectedTenant, setSelectedTenant] = useState(null);
-    const [moduleDialogOpen, setModuleDialogOpen] = useState(false);
-    const [quotaDialogOpen, setQuotaDialogOpen] = useState(false);
+    const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
     const [formData, setFormData] = useState({
         tenantName: '',
+        domain: '',
+        maxUsers: 10,
         adminFirstName: '',
         adminLastName: '',
         adminEmail: '',
         adminPassword: '',
-        moduleNames: ['MODULE_DASHBOARD', 'MODULE_APPOINTMENTS', 'MODULE_CUSTOMERS', 'MODULE_REMINDERS']
+        moduleNames: []
     });
-    
-    // Available modules
-    const availableModules = [
-        { id: 'MODULE_DASHBOARD', label: 'Dashboard' },
-        { id: 'MODULE_APPOINTMENTS', label: 'Appointments' },
-        { id: 'MODULE_CUSTOMERS', label: 'Customers' },
-        { id: 'MODULE_REMINDERS', label: 'Reminders' },
-        { id: 'MODULE_MARKETING', label: 'Marketing' },
-        { id: 'MODULE_STATISTICS', label: 'Statistics' },
-    ];
 
     const getStatusColor = (status) => {
         switch (status) {
@@ -83,11 +82,13 @@ const TenantsPage = () => {
             setCreateDialogOpen(false);
             setFormData({
                 tenantName: '',
+                domain: '',
+                maxUsers: 10,
                 adminFirstName: '',
                 adminLastName: '',
                 adminEmail: '',
                 adminPassword: '',
-                moduleNames: ['MODULE_DASHBOARD', 'MODULE_APPOINTMENTS', 'MODULE_CUSTOMERS', 'MODULE_REMINDERS']
+                moduleNames: []
             });
         } catch (error) {
             console.error('Failed to create tenant:', error);
@@ -200,9 +201,10 @@ const TenantsPage = () => {
                                                     size="small"
                                                     onClick={() => {
                                                         setSelectedTenant(tenant);
-                                                        setModuleDialogOpen(true);
+                                                        setSettingsDialogOpen(true);
                                                     }}
                                                     sx={{ color: 'primary.main' }}
+                                                    title={t('super_admin.tenants.settings', 'Settings')}
                                                 >
                                                     <Settings size={18} />
                                                 </IconButton>
@@ -243,6 +245,25 @@ const TenantsPage = () => {
                             />
                             <TextField
                                 fullWidth
+                                label={t('super_admin.tenants.domain', 'Domain')}
+                                placeholder="example.com"
+                                value={formData.domain}
+                                onChange={(e) => {
+                                    const domain = e.target.value.toLowerCase().replace(/\s/g, '');
+                                    setFormData({ ...formData, domain });
+                                }}
+                                required
+                            />
+                            <TextField
+                                fullWidth
+                                type="number"
+                                label={t('super_admin.tenants.max_users', 'Max Users')}
+                                value={formData.maxUsers}
+                                onChange={(e) => setFormData({ ...formData, maxUsers: parseInt(e.target.value) })}
+                                required
+                            />
+                            <TextField
+                                fullWidth
                                 label={t('super_admin.tenants.admin_first_name', 'Admin First Name')}
                                 value={formData.adminFirstName}
                                 onChange={(e) => setFormData({ ...formData, adminFirstName: e.target.value })}
@@ -259,8 +280,23 @@ const TenantsPage = () => {
                                 fullWidth
                                 type="email"
                                 label={t('super_admin.tenants.admin_email', 'Admin Email')}
-                                value={formData.adminEmail}
-                                onChange={(e) => setFormData({ ...formData, adminEmail: e.target.value })}
+                                value={formData.domain ? formData.adminEmail.split('@')[0] : formData.adminEmail}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (formData.domain) {
+                                        const prefix = val.split('@')[0].toLowerCase().trim();
+                                        setFormData({ ...formData, adminEmail: `${prefix}@${formData.domain}` });
+                                    } else {
+                                        setFormData({ ...formData, adminEmail: val });
+                                    }
+                                }}
+                                InputProps={{
+                                    endAdornment: formData.domain ? (
+                                        <Typography variant="body2" color="text.secondary" sx={{ ml: 1, whiteSpace: 'nowrap', userSelect: 'none', pointerEvents: 'none' }}>
+                                            @{formData.domain}
+                                        </Typography>
+                                    ) : null
+                                }}
                                 required
                             />
                             <TextField
@@ -275,20 +311,24 @@ const TenantsPage = () => {
                                 <Typography variant="subtitle2" sx={{ mb: 1 }}>
                                     {t('super_admin.tenants.select_modules', 'Select Modules')}
                                 </Typography>
-                                <FormGroup>
-                                    {availableModules.map((module) => (
-                                        <FormControlLabel
-                                            key={module.id}
-                                            control={
-                                                <Checkbox
-                                                    checked={formData.moduleNames.includes(module.id)}
-                                                    onChange={() => handleModuleToggle(module.id)}
-                                                />
-                                            }
-                                            label={module.label}
-                                        />
-                                    ))}
-                                </FormGroup>
+                                {modulesLoading ? (
+                                    <CircularProgress size={20} />
+                                ) : (
+                                    <FormGroup>
+                                        {availableModules.map((module) => (
+                                            <FormControlLabel
+                                                key={module.name}
+                                                control={
+                                                    <Checkbox
+                                                        checked={formData.moduleNames.includes(module.name)}
+                                                        onChange={() => handleModuleToggle(module.name)}
+                                                    />
+                                                }
+                                                label={`${module.description || module.name}`}
+                                            />
+                                        ))}
+                                    </FormGroup>
+                                )}
                             </Box>
                         </Stack>
                     </DialogContent>
@@ -299,7 +339,7 @@ const TenantsPage = () => {
                         <Button
                             variant="contained"
                             onClick={handleCreateTenant}
-                            disabled={createTenant.isPending || !formData.tenantName || !formData.adminEmail || !formData.adminPassword || formData.moduleNames.length === 0}
+                            disabled={createTenant.isPending || !formData.tenantName || !formData.domain || !formData.adminEmail || !formData.adminPassword || formData.moduleNames.length === 0}
                         >
                             {createTenant.isPending ? (
                                 <>
@@ -312,6 +352,16 @@ const TenantsPage = () => {
                         </Button>
                     </DialogActions>
                 </Dialog>
+
+                {/* Tenant Settings Dialog */}
+                <TenantSettingsDialog
+                    open={settingsDialogOpen}
+                    onClose={() => {
+                        setSettingsDialogOpen(false);
+                        setSelectedTenant(null);
+                    }}
+                    tenant={selectedTenant}
+                />
             </Box>
         </ModulePageWrapper>
     );

@@ -35,7 +35,7 @@ export const useTenant = (tenantId) => {
  */
 export const useSuspendTenant = () => {
     const queryClient = useQueryClient();
-    
+
     return useMutation({
         mutationFn: async ({ tenantId, reason }) => {
             const response = await apiClient.put(`/v1/super-admin/tenants/${tenantId}/suspend`, { reason });
@@ -53,7 +53,7 @@ export const useSuspendTenant = () => {
  */
 export const useActivateTenant = () => {
     const queryClient = useQueryClient();
-    
+
     return useMutation({
         mutationFn: async (tenantId) => {
             const response = await apiClient.put(`/v1/super-admin/tenants/${tenantId}/activate`);
@@ -71,7 +71,7 @@ export const useActivateTenant = () => {
  */
 export const useDeleteTenant = () => {
     const queryClient = useQueryClient();
-    
+
     return useMutation({
         mutationFn: async (tenantId) => {
             const response = await apiClient.delete(`/v1/super-admin/tenants/${tenantId}`);
@@ -89,7 +89,7 @@ export const useDeleteTenant = () => {
  */
 export const useToggleModule = () => {
     const queryClient = useQueryClient();
-    
+
     return useMutation({
         mutationFn: async ({ tenantId, moduleName, enabled }) => {
             const response = await apiClient.put(`/v1/super-admin/tenants/${tenantId}/modules`, {
@@ -110,7 +110,7 @@ export const useToggleModule = () => {
  */
 export const useSetQuotas = () => {
     const queryClient = useQueryClient();
-    
+
     return useMutation({
         mutationFn: async ({ tenantId, quotas }) => {
             const response = await apiClient.put(`/v1/super-admin/tenants/${tenantId}/quotas`, { quotas });
@@ -135,5 +135,22 @@ export const useTenantModules = (tenantId) => {
         },
         enabled: !!tenantId,
         retry: 1,
+    });
+};
+
+/**
+ * Hook for updating tenant details (name, domain, maxUsers).
+ */
+export const useUpdateTenant = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async ({ tenantId, ...data }) => {
+            const response = await apiClient.put(`/v1/super-admin/tenants/${tenantId}`, data);
+            return response;
+        },
+        onSuccess: (data, variables) => {
+            queryClient.invalidateQueries({ queryKey: ['super-admin', 'tenants'] });
+            queryClient.invalidateQueries({ queryKey: ['super-admin', 'tenants', variables.tenantId] });
+        },
     });
 };

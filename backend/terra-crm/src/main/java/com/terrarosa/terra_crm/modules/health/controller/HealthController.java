@@ -26,62 +26,62 @@ import java.util.UUID;
 @RequestMapping("/api/v1/health")
 @RequiredArgsConstructor
 public class HealthController {
-    
+
     private final LeadService leadService;
-    
+
     /**
      * Get all leads for the current tenant.
-     * Requires CUSTOMERS_VIEW permission (leads are part of customers module).
+     * Requires HEALTH_PATIENTS_VIEW permission.
      */
     @GetMapping("/leads")
-    @PreAuthorize("@permissionEvaluator.hasPermission(authentication, 'CUSTOMERS_VIEW')")
+    @PreAuthorize("@permissionEvaluator.hasPermission(authentication, 'HEALTH_PATIENTS_VIEW')")
     public ResponseEntity<ApiResponse<List<LeadDto>>> getAllLeads() {
         List<LeadDto> leads = leadService.getAllLeads();
         return ResponseEntity.ok(ApiResponse.success(leads));
     }
-    
+
     /**
      * Get a lead by ID.
-     * Requires CUSTOMERS_VIEW permission.
+     * Requires HEALTH_PATIENTS_VIEW permission.
      */
     @GetMapping("/leads/{id}")
-    @PreAuthorize("@permissionEvaluator.hasPermission(authentication, 'CUSTOMERS_VIEW')")
+    @PreAuthorize("@permissionEvaluator.hasPermission(authentication, 'HEALTH_PATIENTS_VIEW')")
     public ResponseEntity<ApiResponse<LeadDto>> getLeadById(@PathVariable UUID id) {
         LeadDto lead = leadService.getLeadById(id);
         return ResponseEntity.ok(ApiResponse.success(lead));
     }
-    
+
     /**
      * Create a new lead.
-     * Requires CUSTOMERS_CREATE permission.
+     * Requires HEALTH_PATIENTS_EDIT permission.
      */
     @PostMapping("/leads")
-    @PreAuthorize("@permissionEvaluator.hasPermission(authentication, 'CUSTOMERS_CREATE')")
+    @PreAuthorize("@permissionEvaluator.hasPermission(authentication, 'HEALTH_PATIENTS_EDIT')")
     public ResponseEntity<ApiResponse<LeadDto>> createLead(@Valid @RequestBody LeadCreateRequest request) {
         LeadDto lead = leadService.createLead(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(lead, "Lead created successfully"));
     }
-    
+
     /**
      * Update an existing lead.
-     * Requires CUSTOMERS_UPDATE permission.
+     * Requires HEALTH_PATIENTS_EDIT permission.
      */
     @PutMapping("/leads/{id}")
-    @PreAuthorize("@permissionEvaluator.hasPermission(authentication, 'CUSTOMERS_UPDATE')")
+    @PreAuthorize("@permissionEvaluator.hasPermission(authentication, 'HEALTH_PATIENTS_EDIT')")
     public ResponseEntity<ApiResponse<LeadDto>> updateLead(
             @PathVariable UUID id,
             @Valid @RequestBody LeadUpdateRequest request) {
         LeadDto lead = leadService.updateLead(id, request);
         return ResponseEntity.ok(ApiResponse.success(lead, "Lead updated successfully"));
     }
-    
+
     /**
      * Delete a lead.
-     * Requires CUSTOMERS_DELETE permission.
+     * Requires HEALTH_PATIENTS_EDIT permission.
      */
     @DeleteMapping("/leads/{id}")
-    @PreAuthorize("@permissionEvaluator.hasPermission(authentication, 'CUSTOMERS_DELETE')")
+    @PreAuthorize("@permissionEvaluator.hasPermission(authentication, 'HEALTH_PATIENTS_EDIT')")
     public ResponseEntity<ApiResponse<Void>> deleteLead(@PathVariable UUID id) {
         leadService.deleteLead(id);
         return ResponseEntity.ok(ApiResponse.success(null, "Lead deleted successfully"));

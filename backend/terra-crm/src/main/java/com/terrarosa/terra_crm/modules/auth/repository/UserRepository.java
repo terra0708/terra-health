@@ -12,30 +12,30 @@ import java.util.UUID;
 
 @Repository
 public interface UserRepository extends SoftDeleteRepository<User, UUID> {
-    
-    @Query("SELECT u FROM User u LEFT JOIN FETCH u.roles WHERE u.email = :email")
+
+    @Query("SELECT u FROM User u LEFT JOIN FETCH u.roles WHERE LOWER(u.email) = LOWER(:email)")
     Optional<User> findByEmail(@Param("email") String email);
-    
-    @Query("SELECT u FROM User u LEFT JOIN FETCH u.roles WHERE u.email = :email AND u.tenant.id = :tenantId")
+
+    @Query("SELECT u FROM User u LEFT JOIN FETCH u.roles WHERE LOWER(u.email) = LOWER(:email) AND u.tenant.id = :tenantId")
     Optional<User> findByEmailAndTenantId(@Param("email") String email, @Param("tenantId") UUID tenantId);
-    
+
     /**
      * Find all users with the given email (excluding deleted).
      * Used for tenant discovery - a user can belong to multiple tenants.
      * Returns distinct tenants associated with the email.
      */
-    @Query("SELECT DISTINCT u FROM User u JOIN FETCH u.tenant WHERE u.email = :email AND u.deleted = false AND u.enabled = true")
+    @Query("SELECT DISTINCT u FROM User u JOIN FETCH u.tenant WHERE LOWER(u.email) = LOWER(:email) AND u.deleted = false AND u.enabled = true")
     List<User> findAllByEmailAndNotDeleted(@Param("email") String email);
-    
+
     /**
      * Count users by tenant ID (excluding deleted).
      */
     long countByTenantId(UUID tenantId);
-    
+
     /**
      * Check if a user with the given email exists (excluding deleted).
      * Used for restore validation to prevent email conflicts.
      */
-    @Query("SELECT COUNT(u) > 0 FROM User u WHERE u.email = :email AND u.deleted = false")
+    @Query("SELECT COUNT(u) > 0 FROM User u WHERE LOWER(u.email) = LOWER(:email) AND u.deleted = false")
     boolean existsByEmailAndNotDeleted(@Param("email") String email);
 }

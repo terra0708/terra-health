@@ -17,7 +17,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
- 
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -32,14 +31,14 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class PermissionService {
-    
+
     private final PermissionRepository permissionRepository;
     private final TenantModuleRepository tenantModuleRepository;
     private final UserPermissionRepository userPermissionRepository;
     private final UserRepository userRepository;
     private final TenantRepository tenantRepository;
     private final PermissionBundleRepository permissionBundleRepository;
-    
+
     /**
      * Get all permissions for a user.
      * Uses JOIN FETCH to prevent LazyInitializationException.
@@ -48,7 +47,7 @@ public class PermissionService {
     public List<String> getUserPermissions(UUID userId) {
         List<UserPermission> userPermissions = userPermissionRepository.findByUserId(userId);
         log.debug("Found {} permissions for user {}", userPermissions.size(), userId);
-        
+
         return userPermissions.stream()
                 .map(up -> {
                     String permissionName = up.getPermission().getName();
@@ -57,9 +56,10 @@ public class PermissionService {
                 })
                 .collect(Collectors.toList());
     }
-    
+
     /**
-     * Validate that a permission can be assigned to a user from the tenant's module pool.
+     * Validate that a permission can be assigned to a user from the tenant's module
+     * pool.
      * 
      * CRITICAL VALIDATION LOGIC:
      * 1. Check if permission exists
@@ -71,98 +71,101 @@ public class PermissionService {
     public void validatePermissionAssignment(UUID tenantId, UUID permissionId) {
         Permission permission = permissionRepository.findById(permissionId)
                 .orElseThrow(() -> new IllegalArgumentException("Permission not found with id: " + permissionId));
-        
+
         if (permission.getType() == Permission.PermissionType.MODULE) {
             // For MODULE-level permissions, check if it's directly in tenant_modules
             boolean exists = tenantModuleRepository.existsByTenantIdAndPermissionId(tenantId, permissionId);
             if (!exists) {
                 throw new IllegalArgumentException(
-                    String.format("Permission '%s' is not available for tenant. Module must be assigned to tenant first.", permission.getName())
-                );
+                        String.format(
+                                "Permission '%s' is not available for tenant. Module must be assigned to tenant first.",
+                                permission.getName()));
             }
         } else if (permission.getType() == Permission.PermissionType.ACTION) {
             // For ACTION-level permissions, check if parent MODULE is in tenant_modules
             if (permission.getParentPermission() == null) {
                 throw new IllegalStateException(
-                    String.format("ACTION-level permission '%s' must have a parent MODULE permission.", permission.getName())
-                );
+                        String.format("ACTION-level permission '%s' must have a parent MODULE permission.",
+                                permission.getName()));
             }
-            
+
             UUID parentModuleId = permission.getParentPermission().getId();
-            boolean parentModuleExists = tenantModuleRepository.existsByTenantIdAndPermissionId(tenantId, parentModuleId);
+            boolean parentModuleExists = tenantModuleRepository.existsByTenantIdAndPermissionId(tenantId,
+                    parentModuleId);
             if (!parentModuleExists) {
                 throw new IllegalArgumentException(
-                    String.format("Permission '%s' is not available for tenant. Parent module '%s' must be assigned to tenant first.", 
-                        permission.getName(), permission.getParentPermission().getName())
-                );
+                        String.format(
+                                "Permission '%s' is not available for tenant. Parent module '%s' must be assigned to tenant first.",
+                                permission.getName(), permission.getParentPermission().getName()));
             }
         }
     }
-    
+
     /**
      * Assign a permission to a user with validation.
-     * Validates that the permission is in the tenant's module pool before assignment.
+     * Validates that the permission is in the tenant's module pool before
+     * assignment.
      */
     @Transactional
     public void assignPermissionToUser(UUID userId, UUID permissionId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + userId));
-        
+
         UUID tenantId = user.getTenant().getId();
-        
+
         // Validate permission assignment
         validatePermissionAssignment(tenantId, permissionId);
-        
+
         // Check if already assigned
         if (userPermissionRepository.findByUserIdAndPermissionId(userId, permissionId).isPresent()) {
             log.warn("Permission {} already assigned to user {}", permissionId, userId);
             return;
         }
-        
+
         // Get permission
         Permission permission = permissionRepository.findById(permissionId)
                 .orElseThrow(() -> new IllegalArgumentException("Permission not found with id: " + permissionId));
-        
+
         // Create and save UserPermission
         UserPermission userPermission = UserPermission.builder()
                 .user(user)
                 .permission(permission)
                 .build();
-        
+
         userPermissionRepository.save(userPermission);
         log.info("Assigned permission {} to user {}", permission.getName(), user.getEmail());
     }
-    
+
     /**
      * Assign a permission to a user (with User entity provided).
      */
     @Transactional
     public void assignPermissionToUser(User user, UUID permissionId) {
         UUID tenantId = user.getTenant().getId();
-        
+
         // Validate permission assignment
         validatePermissionAssignment(tenantId, permissionId);
-        
+
         // Check if already assigned
         if (userPermissionRepository.findByUserIdAndPermissionId(user.getId(), permissionId).isPresent()) {
             log.warn("Permission {} already assigned to user {}", permissionId, user.getId());
             return;
         }
-        
+
         // Get permission
         Permission permission = permissionRepository.findById(permissionId)
                 .orElseThrow(() -> new IllegalArgumentException("Permission not found with id: " + permissionId));
-        
+
         // Create and save UserPermission
         UserPermission userPermission = UserPermission.builder()
                 .user(user)
                 .permission(permission)
                 .build();
-        
+
         userPermissionRepository.save(userPermission);
         log.info("Assigned permission {} to user {}", permission.getName(), user.getEmail());
     }
-    
+
     /**
      * Remove a permission from a user.
      */
@@ -171,7 +174,7 @@ public class PermissionService {
         userPermissionRepository.deleteByUserIdAndPermissionId(userId, permissionId);
         log.info("Removed permission {} from user {}", permissionId, userId);
     }
-    
+
     /**
      * Get all modules available to a tenant.
      */
@@ -182,7 +185,7 @@ public class PermissionService {
                 .filter(p -> p.getType() == Permission.PermissionType.MODULE)
                 .collect(Collectors.toList());
     }
-    
+
     /**
      * Get all action-level permissions for a module.
      */
@@ -190,14 +193,14 @@ public class PermissionService {
     public List<Permission> getModulePermissions(String moduleName) {
         Permission module = permissionRepository.findByName(moduleName)
                 .orElseThrow(() -> new IllegalArgumentException("Module not found: " + moduleName));
-        
+
         if (module.getType() != Permission.PermissionType.MODULE) {
             throw new IllegalArgumentException("Permission '" + moduleName + "' is not a MODULE-level permission");
         }
-        
+
         return permissionRepository.findByParentPermission(module);
     }
-    
+
     /**
      * Get all available permissions.
      */
@@ -205,7 +208,18 @@ public class PermissionService {
     public List<Permission> getAllPermissions() {
         return permissionRepository.findAll();
     }
-    
+
+    /**
+     * Get all MODULE-level permissions (available modules).
+     * Used by Super Admin to see what modules can be assigned to tenants.
+     */
+    @Transactional(readOnly = true)
+    public List<Permission> getAllModuleLevelPermissions() {
+        return permissionRepository.findAll().stream()
+                .filter(p -> p.getType() == Permission.PermissionType.MODULE)
+                .collect(Collectors.toList());
+    }
+
     /**
      * Assign a module to a tenant.
      */
@@ -213,30 +227,30 @@ public class PermissionService {
     public void assignModuleToTenant(UUID tenantId, String moduleName) {
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new IllegalArgumentException("Tenant not found with id: " + tenantId));
-        
+
         Permission module = permissionRepository.findByName(moduleName)
                 .orElseThrow(() -> new IllegalArgumentException("Module not found: " + moduleName));
-        
+
         if (module.getType() != Permission.PermissionType.MODULE) {
             throw new IllegalArgumentException("Permission '" + moduleName + "' is not a MODULE-level permission");
         }
-        
+
         // Check if already assigned
         if (tenantModuleRepository.existsByTenantIdAndPermissionId(tenantId, module.getId())) {
             log.warn("Module {} already assigned to tenant {}", moduleName, tenantId);
             return;
         }
-        
+
         // Create and save TenantModule
         TenantModule tenantModule = TenantModule.builder()
                 .tenant(tenant)
                 .permission(module)
                 .build();
-        
+
         tenantModuleRepository.save(tenantModule);
         log.info("Assigned module {} to tenant {}", moduleName, tenant.getName());
     }
-    
+
     /**
      * Assign a module to a tenant (with Tenant entity provided).
      */
@@ -244,17 +258,17 @@ public class PermissionService {
     public void assignModuleToTenant(Tenant tenant, String moduleName) {
         Permission module = permissionRepository.findByName(moduleName)
                 .orElseThrow(() -> new IllegalArgumentException("Module not found: " + moduleName));
-        
+
         if (module.getType() != Permission.PermissionType.MODULE) {
             throw new IllegalArgumentException("Permission '" + moduleName + "' is not a MODULE-level permission");
         }
-        
+
         // Check if already assigned
         if (tenantModuleRepository.existsByTenantIdAndPermissionId(tenant.getId(), module.getId())) {
             log.warn("Module {} already assigned to tenant {}", moduleName, tenant.getId());
             return;
         }
-        
+
         // CRITICAL: Ensure tenant and permission entities are fully persisted
         // This prevents Hibernate 7 TableGroup.getModelPart() errors with @IdClass
         if (tenant.getId() == null) {
@@ -263,17 +277,17 @@ public class PermissionService {
         if (module.getId() == null) {
             throw new IllegalStateException("Permission must be persisted before assigning modules");
         }
-        
+
         // Create and save TenantModule
         TenantModule tenantModule = TenantModule.builder()
                 .tenant(tenant)
                 .permission(module)
                 .build();
-        
+
         tenantModuleRepository.save(tenantModule);
         log.info("Assigned module {} to tenant {}", moduleName, tenant.getName());
     }
-    
+
     /**
      * Assign multiple modules to a tenant in a single batch operation.
      * This is more efficient and prevents Hibernate 7 TableGroup issues.
@@ -283,39 +297,65 @@ public class PermissionService {
         if (tenant.getId() == null) {
             throw new IllegalStateException("Tenant must be persisted before assigning modules");
         }
-        
+
         // Get all modules
         List<Permission> modules = moduleNames.stream()
                 .map(moduleName -> {
                     Permission module = permissionRepository.findByName(moduleName)
                             .orElseThrow(() -> new IllegalArgumentException("Module not found: " + moduleName));
                     if (module.getType() != Permission.PermissionType.MODULE) {
-                        throw new IllegalArgumentException("Permission '" + moduleName + "' is not a MODULE-level permission");
+                        throw new IllegalArgumentException(
+                                "Permission '" + moduleName + "' is not a MODULE-level permission");
                     }
                     return module;
                 })
                 .collect(Collectors.toList());
-        
+
         // Filter out already assigned modules
         List<TenantModule> newTenantModules = modules.stream()
-                .filter(module -> !tenantModuleRepository.existsByTenantIdAndPermissionId(tenant.getId(), module.getId()))
+                .filter(module -> !tenantModuleRepository.existsByTenantIdAndPermissionId(tenant.getId(),
+                        module.getId()))
                 .map(module -> TenantModule.builder()
                         .tenant(tenant)
                         .permission(module)
                         .build())
                 .collect(Collectors.toList());
-        
+
         if (!newTenantModules.isEmpty()) {
-            // CRITICAL: Use saveAll for batch operation - prevents Hibernate 7 TableGroup issues
+            // CRITICAL: Use saveAll for batch operation - prevents Hibernate 7 TableGroup
+            // issues
             tenantModuleRepository.saveAll(newTenantModules);
-            // CRITICAL: Flush to ensure all TenantModule records are persisted before any subsequent queries
+            // CRITICAL: Flush to ensure all TenantModule records are persisted before any
+            // subsequent queries
             tenantModuleRepository.flush();
             log.info("Assigned {} modules to tenant {} in batch", newTenantModules.size(), tenant.getName());
         } else {
             log.warn("All modules already assigned to tenant {}", tenant.getName());
         }
     }
-    
+
+    /**
+     * Clear all modules and assign new ones for a tenant.
+     * Use this when you want to explicitly define the module set (e.g., in
+     * SuperAdmin creation flow).
+     */
+    @Transactional
+    public void setModulesForTenant(Tenant tenant, List<String> moduleNames) {
+        if (tenant.getId() == null) {
+            throw new IllegalStateException("Tenant must be persisted before setting modules");
+        }
+
+        log.info("Setting modules for tenant {}: {}", tenant.getName(), moduleNames);
+
+        // 1. Clear existing modules
+        tenantModuleRepository.deleteAllByTenantId(tenant.getId());
+        // CRITICAL: Flush to ensure deletion is reflected in database before re-adding
+        tenantModuleRepository.flush();
+
+        // 2. Assign new modules
+        assignModulesToTenant(tenant, moduleNames);
+    }
+
     /**
      * Remove a module from a tenant.
      * CRITICAL: Cascade invalidation - removes all permissions from that module
@@ -325,39 +365,39 @@ public class PermissionService {
     public void removeModuleFromTenant(UUID tenantId, String moduleName) {
         Permission module = permissionRepository.findByName(moduleName)
                 .orElseThrow(() -> new IllegalArgumentException("Module not found: " + moduleName));
-        
+
         if (module.getType() != Permission.PermissionType.MODULE) {
             throw new IllegalArgumentException("Permission '" + moduleName + "' is not a MODULE-level permission");
         }
-        
+
         // Get all action permissions for this module
         List<Permission> modulePermissions = getModulePermissions(moduleName);
         Set<UUID> permissionIdsToRemove = modulePermissions.stream()
                 .map(Permission::getId)
                 .collect(Collectors.toSet());
         permissionIdsToRemove.add(module.getId()); // Include the module itself
-        
+
         // CRITICAL: Cascade invalidation - remove permissions from all tenant bundles
         List<PermissionBundle> tenantBundles = permissionBundleRepository.findByTenantId(tenantId);
         for (PermissionBundle bundle : tenantBundles) {
             Set<Permission> permissionsToRemove = bundle.getPermissions().stream()
                     .filter(p -> permissionIdsToRemove.contains(p.getId()))
                     .collect(Collectors.toSet());
-            
+
             if (!permissionsToRemove.isEmpty()) {
                 bundle.getPermissions().removeAll(permissionsToRemove);
                 permissionBundleRepository.save(bundle);
-                log.info("Removed {} permissions from bundle {} due to module removal", 
-                    permissionsToRemove.size(), bundle.getName());
+                log.info("Removed {} permissions from bundle {} due to module removal",
+                        permissionsToRemove.size(), bundle.getName());
             }
         }
-        
+
         // Remove module from tenant_modules
         tenantModuleRepository.deleteByTenantIdAndPermissionId(tenantId, module.getId());
-        log.info("Removed module {} from tenant {} and invalidated related bundle permissions", 
-            moduleName, tenantId);
+        log.info("Removed module {} from tenant {} and invalidated related bundle permissions",
+                moduleName, tenantId);
     }
-    
+
     /**
      * Assign all permissions from tenant's module pool to a user.
      * Used for initial admin assignment (first user of a tenant).
@@ -366,85 +406,96 @@ public class PermissionService {
     public void assignAllTenantPermissionsToUser(User user) {
         UUID tenantId = user.getTenant().getId();
         UUID userId = user.getId();
-        
+
         log.info("Starting permission assignment for first user {} of tenant {}", user.getEmail(), tenantId);
-        
+
         // CRITICAL: Ensure user is fully persisted before assigning permissions
         if (userId == null) {
             throw new IllegalStateException("User must be persisted before assigning permissions");
         }
-        
+
         // Get all modules for the tenant
         List<Permission> tenantModules = getTenantModules(tenantId);
-        
+
         if (tenantModules.isEmpty()) {
             log.error("No modules found for tenant {}. Cannot assign permissions to user {}. " +
-                    "This indicates modules were not properly assigned to the tenant during creation.", 
-                tenantId, user.getEmail());
+                    "This indicates modules were not properly assigned to the tenant during creation.",
+                    tenantId, user.getEmail());
             return;
         }
-        
-        log.info("Found {} modules for tenant {}. Assigning all permissions to user {}", 
-            tenantModules.size(), tenantId, user.getEmail());
-        
+
+        log.info("Found {} modules for tenant {}. Assigning all permissions to user {}",
+                tenantModules.size(), tenantId, user.getEmail());
+
         int totalPermissionsAssigned = 0;
         List<UserPermission> permissionsToSave = new java.util.ArrayList<>();
-        
-        // For each module, get all action-level permissions and assign them
+
+        // For each module, assign the module itself and all its action-level
+        // permissions
         for (Permission module : tenantModules) {
             try {
+                // 1. Assign the MODULE permission itself
+                if (userPermissionRepository.findByUserIdAndPermissionId(userId, module.getId()).isEmpty()) {
+                    permissionsToSave.add(UserPermission.builder()
+                            .user(user)
+                            .permission(module)
+                            .build());
+                    totalPermissionsAssigned++;
+                    log.debug("Prepared MODULE permission {} for user {}", module.getName(), user.getEmail());
+                }
+
+                // 2. Assign all ACTION-level permissions for this module
                 List<Permission> modulePermissions = getModulePermissions(module.getName());
                 log.debug("Module {} has {} action permissions", module.getName(), modulePermissions.size());
-                
+
                 for (Permission permission : modulePermissions) {
                     try {
                         // Check if already assigned
-                        if (userPermissionRepository.findByUserIdAndPermissionId(userId, permission.getId()).isPresent()) {
-                            log.debug("Permission {} already assigned to user {}", permission.getName(), user.getEmail());
+                        if (userPermissionRepository.findByUserIdAndPermissionId(userId, permission.getId())
+                                .isPresent()) {
                             continue;
                         }
-                        
+
                         // Validate permission assignment
                         validatePermissionAssignment(tenantId, permission.getId());
-                        
-                        // Create UserPermission (don't save yet - batch save)
-                        UserPermission userPermission = UserPermission.builder()
+
+                        // Create UserPermission
+                        permissionsToSave.add(UserPermission.builder()
                                 .user(user)
                                 .permission(permission)
-                                .build();
-                        permissionsToSave.add(userPermission);
+                                .build());
                         totalPermissionsAssigned++;
-                        
+
                         log.debug("Prepared permission {} for user {}", permission.getName(), user.getEmail());
                     } catch (Exception e) {
-                        log.warn("Failed to prepare permission {} for user {}: {}", 
-                            permission.getName(), user.getEmail(), e.getMessage());
+                        log.warn("Failed to prepare permission {} for user {}: {}",
+                                permission.getName(), user.getEmail(), e.getMessage());
                     }
                 }
             } catch (Exception e) {
                 log.warn("Failed to get permissions for module {}: {}", module.getName(), e.getMessage());
             }
         }
-        
+
         // CRITICAL: Batch save all permissions and flush to ensure they're persisted
         if (!permissionsToSave.isEmpty()) {
             userPermissionRepository.saveAll(permissionsToSave);
             userPermissionRepository.flush(); // Ensure all permissions are persisted
-            log.info("Successfully saved {} permissions to database for user {}", 
-                permissionsToSave.size(), user.getEmail());
+            log.info("Successfully saved {} permissions to database for user {}",
+                    permissionsToSave.size(), user.getEmail());
         }
-        
+
         // Verify permissions were saved
         List<String> savedPermissions = getUserPermissions(userId);
-        log.info("Assigned {} permissions to first user {} of tenant {}. Verified {} permissions in database.", 
-            totalPermissionsAssigned, user.getEmail(), user.getTenant().getName(), savedPermissions.size());
-        
+        log.info("Assigned {} permissions to first user {} of tenant {}. Verified {} permissions in database.",
+                totalPermissionsAssigned, user.getEmail(), user.getTenant().getName(), savedPermissions.size());
+
         if (savedPermissions.isEmpty()) {
             log.error("CRITICAL: No permissions found in database after assignment for user {}. " +
                     "This indicates a serious issue with permission persistence.", user.getEmail());
         }
     }
-    
+
     /**
      * Create a permission bundle for a tenant.
      * Validates that all permissions are from the tenant's module pool.
@@ -453,23 +504,23 @@ public class PermissionService {
     public PermissionBundle createBundle(UUID tenantId, String name, String description, List<UUID> permissionIds) {
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new IllegalArgumentException("Tenant not found with id: " + tenantId));
-        
+
         // Check if bundle with same name already exists for this tenant
         if (permissionBundleRepository.findByNameAndTenantId(name, tenantId).isPresent()) {
             throw new IllegalArgumentException("Bundle with name '" + name + "' already exists for this tenant");
         }
-        
+
         // Validate all permissions are in tenant's module pool
         for (UUID permissionId : permissionIds) {
             validatePermissionAssignment(tenantId, permissionId);
         }
-        
+
         // Get permission entities
         Set<Permission> permissions = permissionIds.stream()
                 .map(id -> permissionRepository.findById(id)
                         .orElseThrow(() -> new IllegalArgumentException("Permission not found with id: " + id)))
                 .collect(Collectors.toSet());
-        
+
         // Create bundle
         PermissionBundle bundle = PermissionBundle.builder()
                 .name(name)
@@ -477,14 +528,14 @@ public class PermissionService {
                 .tenant(tenant)
                 .permissions(permissions)
                 .build();
-        
+
         PermissionBundle savedBundle = permissionBundleRepository.save(bundle);
-        log.info("Created permission bundle '{}' for tenant {} with {} permissions", 
-            name, tenant.getName(), permissions.size());
-        
+        log.info("Created permission bundle '{}' for tenant {} with {} permissions",
+                name, tenant.getName(), permissions.size());
+
         return savedBundle;
     }
-    
+
     /**
      * Assign a bundle to a user.
      * Copies all permissions from the bundle to user_permissions table.
@@ -493,19 +544,19 @@ public class PermissionService {
     public void assignBundleToUser(UUID userId, UUID bundleId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + userId));
-        
+
         PermissionBundle bundle = permissionBundleRepository.findById(bundleId)
                 .orElseThrow(() -> new IllegalArgumentException("Bundle not found with id: " + bundleId));
-        
+
         // Validate bundle belongs to user's tenant
         if (!bundle.getTenant().getId().equals(user.getTenant().getId())) {
             throw new IllegalArgumentException("Bundle does not belong to user's tenant");
         }
-        
+
         // Add bundle to user's bundles (for tracking)
         user.getBundles().add(bundle);
         userRepository.save(user);
-        
+
         // Copy all permissions from bundle to user_permissions
         int permissionsAssigned = 0;
         for (Permission permission : bundle.getPermissions()) {
@@ -513,15 +564,15 @@ public class PermissionService {
                 assignPermissionToUser(user, permission.getId());
                 permissionsAssigned++;
             } catch (Exception e) {
-                log.warn("Failed to assign permission {} from bundle {} to user {}: {}", 
-                    permission.getName(), bundle.getName(), user.getEmail(), e.getMessage());
+                log.warn("Failed to assign permission {} from bundle {} to user {}: {}",
+                        permission.getName(), bundle.getName(), user.getEmail(), e.getMessage());
             }
         }
-        
-        log.info("Assigned bundle '{}' to user {}. {} permissions copied to user_permissions", 
-            bundle.getName(), user.getEmail(), permissionsAssigned);
+
+        log.info("Assigned bundle '{}' to user {}. {} permissions copied to user_permissions",
+                bundle.getName(), user.getEmail(), permissionsAssigned);
     }
-    
+
     /**
      * Remove a bundle from a user.
      * Removes the bundle association but does NOT remove individual permissions
@@ -531,16 +582,16 @@ public class PermissionService {
     public void removeBundleFromUser(UUID userId, UUID bundleId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + userId));
-        
+
         PermissionBundle bundle = permissionBundleRepository.findById(bundleId)
                 .orElseThrow(() -> new IllegalArgumentException("Bundle not found with id: " + bundleId));
-        
+
         user.getBundles().remove(bundle);
         userRepository.save(user);
-        
+
         log.info("Removed bundle '{}' from user {}", bundle.getName(), user.getEmail());
     }
-    
+
     /**
      * Update bundle permissions.
      * Validates all new permissions are in tenant's module pool.
@@ -549,28 +600,28 @@ public class PermissionService {
     public PermissionBundle updateBundle(UUID bundleId, List<UUID> permissionIds) {
         PermissionBundle bundle = permissionBundleRepository.findById(bundleId)
                 .orElseThrow(() -> new IllegalArgumentException("Bundle not found with id: " + bundleId));
-        
+
         UUID tenantId = bundle.getTenant().getId();
-        
+
         // Validate all permissions are in tenant's module pool
         for (UUID permissionId : permissionIds) {
             validatePermissionAssignment(tenantId, permissionId);
         }
-        
+
         // Get permission entities
         Set<Permission> permissions = permissionIds.stream()
                 .map(id -> permissionRepository.findById(id)
                         .orElseThrow(() -> new IllegalArgumentException("Permission not found with id: " + id)))
                 .collect(Collectors.toSet());
-        
+
         bundle.setPermissions(permissions);
         PermissionBundle updatedBundle = permissionBundleRepository.save(bundle);
-        
+
         log.info("Updated bundle '{}' with {} permissions", bundle.getName(), permissions.size());
-        
+
         return updatedBundle;
     }
-    
+
     /**
      * Get all bundles for a tenant.
      */
@@ -578,7 +629,7 @@ public class PermissionService {
     public List<PermissionBundle> getTenantBundles(UUID tenantId) {
         return permissionBundleRepository.findByTenantId(tenantId);
     }
-    
+
     /**
      * Get user ID by email (helper for security checks).
      */

@@ -19,10 +19,12 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TenantDto {
-    
+
     private UUID id;
     private String name;
     private String schemaName;
+    private String domain;
+    private Integer maxUsers;
     private TenantStatus status;
     private Map<String, Object> quotaLimits;
     private List<String> assignedModules;

@@ -22,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import com.terrarosa.terra_crm.core.quota.service.QuotaService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,7 +36,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class AuthService {
-    
+
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final TenantRepository tenantRepository;
@@ -44,108 +45,125 @@ public class AuthService {
     private final JwtService jwtService;
     private final PermissionService permissionService;
     private final RefreshTokenRepository refreshTokenRepository;
-    
+    private final QuotaService quotaService;
+
     /**
      * Login user with email and password.
      * Validates that user belongs to the tenant specified in X-Tenant-ID header.
      */
-//    @Transactional(readOnly = true)
+    // @Transactional(readOnly = true)
     @Transactional
     public LoginResponse login(LoginRequest request, String tenantIdHeader) {
         // CRITICAL: Ensure we're querying in public schema for login
         // TenantContext should be set by TenantInterceptor, but verify it
         String currentSchema = com.terrarosa.terra_crm.core.tenancy.TenantContext.getCurrentSchemaName();
-        log.debug("Login attempt for email: {}, current schema: {}, tenantId header: {}", 
-                request.getEmail(), currentSchema, tenantIdHeader);
-        
+        // Normalize email
+        String email = request.getEmail().toLowerCase().trim();
+        log.debug("Login attempt for email: {}, current schema: {}, tenantId header: {}",
+                email, currentSchema, tenantIdHeader);
+
         // Find user by email
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> {
                     log.error("User not found with email: {} in schema: {}", request.getEmail(), currentSchema);
                     return new BadCredentialsException("Invalid email or password");
                 });
-        
-        log.debug("User found: id={}, email={}, tenantId={}, enabled={}, deleted={}", 
+
+        log.debug("User found: id={}, email={}, tenantId={}, enabled={}, deleted={}",
                 user.getId(), user.getEmail(), user.getTenant().getId(), user.getEnabled(), user.getDeleted());
-        
+
         // Validate password
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new BadCredentialsException("Invalid email or password");
         }
-        
+
         // Check if user is enabled
         if (!user.getEnabled()) {
             throw new BadCredentialsException("User account is disabled");
         }
-        
+
         // Extract roles to check if user is Super Admin
         List<String> roles = user.getRoles().stream()
                 .map(Role::getName)
                 .collect(Collectors.toList());
         boolean isSuperAdmin = roles.contains("ROLE_SUPER_ADMIN");
-        
+
         // Get tenant and schema name
         Tenant tenant = user.getTenant();
+
+        // Check if tenant is active
+        if (tenant.getStatus() != com.terrarosa.terra_crm.core.tenancy.entity.TenantStatus.ACTIVE) {
+            log.warn("Login attempt for user {} failed because tenant {} is not ACTIVE (status: {})",
+                    user.getEmail(), tenant.getName(), tenant.getStatus());
+            throw new BadCredentialsException("Tenant is suspended or inactive. Please contact support.");
+        }
+
         String userTenantId = tenant.getId().toString();
         String schemaName = tenant.getSchemaName();
-        
+
         // Super Admin special handling
         if (isSuperAdmin) {
             // Super Admin uses SYSTEM tenant and public schema
             // X-Tenant-ID header should be SYSTEM tenant's ID
             Tenant systemTenant = tenantService.getSystemTenant();
             String systemTenantId = systemTenant.getId().toString();
-            
+
             if (tenantIdHeader == null || tenantIdHeader.isBlank()) {
                 // If no header provided, use SYSTEM tenant ID
                 tenantIdHeader = systemTenantId;
             } else if (!systemTenantId.equals(tenantIdHeader)) {
-                log.error("Super Admin tenant mismatch: Expected SYSTEM tenantId={}, Header tenantId={}", 
+                log.error("Super Admin tenant mismatch: Expected SYSTEM tenantId={}, Header tenantId={}",
                         systemTenantId, tenantIdHeader);
                 throw new BadCredentialsException("Super Admin must use SYSTEM tenant ID");
             }
-            
+
             // Override schema name to public for Super Admin
             schemaName = "public";
             log.debug("Super Admin login: tenantId={}, schemaName=public", systemTenantId);
         } else {
-            // Normal tenant user handling
-            // CRITICAL: Validate tenant ID from header matches user's tenant
-            if (tenantIdHeader == null || tenantIdHeader.isBlank()) {
-                throw new IllegalArgumentException("X-Tenant-ID header is required");
+            // Normal tenant user handling (lenient)
+            if (tenantIdHeader != null && !tenantIdHeader.isBlank()) {
+                if (!userTenantId.equals(tenantIdHeader)) {
+                    log.warn(
+                            "Tenant mismatch in header: Header tenantId={}, User actual tenantId={}. Using user's actual tenant.",
+                            tenantIdHeader, userTenantId);
+                    tenantIdHeader = userTenantId;
+                }
+            } else {
+                // If no header, use the user's own tenant
+                log.info("No X-Tenant-ID header provided, using user's tenant ID: {}", userTenantId);
+                tenantIdHeader = userTenantId;
             }
-            
-            if (!userTenantId.equals(tenantIdHeader)) {
-                log.error("Tenant mismatch: User tenantId={}, Header tenantId={}", userTenantId, tenantIdHeader);
-                throw new BadCredentialsException("User does not belong to the specified tenant");
-            }
+
+            log.debug("User login: email={}, tenantId={}, schemaName={}", request.getEmail(), tenantIdHeader,
+                    schemaName);
         }
-        
+
         // Fetch user permissions
         // CRITICAL: Super Admin also needs permissions for @PreAuthorize checks
         // Super Admin has all permissions assigned via SuperAdminInitializer
         List<String> permissions = permissionService.getUserPermissions(user.getId());
         log.debug("User {} has {} permissions: {}", user.getEmail(), permissions.size(), permissions);
-        
+
         if (permissions.isEmpty()) {
-            log.warn("User {} has no permissions assigned. This may indicate a problem with permission assignment.", user.getEmail());
+            log.warn("User {} has no permissions assigned. This may indicate a problem with permission assignment.",
+                    user.getEmail());
         }
-        
+
         // Generate access token (15 minutes)
         String accessToken = jwtService.generateAccessToken(
                 user.getEmail(),
                 userTenantId,
                 schemaName,
                 roles,
-                permissions
-        );
-        
+                permissions);
+
         log.debug("Generated access token for user {} with {} permissions", user.getEmail(), permissions.size());
-        
+
         // Generate refresh token (7 days) with token rotation
         String tokenId = UUID.randomUUID().toString();
         String refreshTokenString = jwtService.generateRefreshToken(user.getEmail(), tokenId);
-        
+
         // Save refresh token to database
         LocalDateTime expiresAt = LocalDateTime.now().plusDays(7);
         RefreshToken refreshToken = RefreshToken.builder()
@@ -154,10 +172,10 @@ public class AuthService {
                 .expiresAt(expiresAt)
                 .revoked(false)
                 .build();
-        
+
         refreshTokenRepository.save(refreshToken);
         log.debug("Created refresh token for user {} with tokenId {}", user.getEmail(), tokenId);
-        
+
         // Build user DTO
         UserDto userDto = UserDto.builder()
                 .id(user.getId())
@@ -166,8 +184,9 @@ public class AuthService {
                 .lastName(user.getLastName())
                 .tenantId(user.getTenant().getId())
                 .roles(roles)
+                .permissions(permissions)
                 .build();
-        
+
         return LoginResponse.builder()
                 .token(accessToken) // Access token in JSON body
                 .user(userDto)
@@ -175,13 +194,14 @@ public class AuthService {
                 .refreshToken(refreshTokenString) // Refresh token (will be sent as cookie by controller)
                 .build();
     }
-    
+
     /**
      * Create authentication response (access token and optionally refresh token).
      * Helper method to avoid code duplication (DRY principle).
      * 
-     * @param user User entity
-     * @param includeRefreshToken If true, generates and saves new refresh token (token rotation)
+     * @param user                User entity
+     * @param includeRefreshToken If true, generates and saves new refresh token
+     *                            (token rotation)
      * @return RefreshTokenResponse with access token and optionally refresh token
      */
     private RefreshTokenResponse createAuthResponse(User user, boolean includeRefreshToken) {
@@ -190,37 +210,36 @@ public class AuthService {
                 .map(Role::getName)
                 .collect(Collectors.toList());
         boolean isSuperAdmin = roles.contains("ROLE_SUPER_ADMIN");
-        
+
         // Get tenant and schema
         Tenant tenant = user.getTenant();
         String userTenantId = tenant.getId().toString();
         String schemaName = tenant.getSchemaName();
-        
+
         if (isSuperAdmin) {
             schemaName = "public";
         }
-        
+
         // Fetch permissions
         List<String> permissions = isSuperAdmin ? List.of() : permissionService.getUserPermissions(user.getId());
-        
+
         // Generate access token
         String accessToken = jwtService.generateAccessToken(
                 user.getEmail(),
                 userTenantId,
                 schemaName,
                 roles,
-                permissions
-        );
-        
+                permissions);
+
         RefreshTokenResponse.RefreshTokenResponseBuilder responseBuilder = RefreshTokenResponse.builder()
                 .accessToken(accessToken)
                 .expiresIn(900000L); // 15 minutes
-        
+
         if (includeRefreshToken) {
             // Generate new refresh token (token rotation)
             String newTokenId = UUID.randomUUID().toString();
             String newRefreshTokenString = jwtService.generateRefreshToken(user.getEmail(), newTokenId);
-            
+
             // Save new refresh token to database
             LocalDateTime expiresAt = LocalDateTime.now().plusDays(7);
             RefreshToken newRefreshToken = RefreshToken.builder()
@@ -229,7 +248,7 @@ public class AuthService {
                     .expiresAt(expiresAt)
                     .revoked(false)
                     .build();
-            
+
             refreshTokenRepository.save(newRefreshToken);
             responseBuilder.refreshToken(newRefreshTokenString);
             log.info("Generated new access and refresh tokens for user {} (token rotation)", user.getEmail());
@@ -237,17 +256,20 @@ public class AuthService {
             // Grace period: No refresh token rotation
             responseBuilder.refreshToken(null);
         }
-        
+
         return responseBuilder.build();
     }
-    
+
     /**
      * Refresh access token using refresh token from cookie.
-     * Implements token rotation: old refresh token is invalidated, new one is created.
-     * Includes grace period (30 seconds) for revoked tokens to handle race conditions.
+     * Implements token rotation: old refresh token is invalidated, new one is
+     * created.
+     * Includes grace period (30 seconds) for revoked tokens to handle race
+     * conditions.
      * 
      * @param refreshTokenString Refresh token from cookie
-     * @return RefreshTokenResponse containing new access token and refresh token (or null if grace period)
+     * @return RefreshTokenResponse containing new access token and refresh token
+     *         (or null if grace period)
      */
     @Transactional
     public RefreshTokenResponse refreshToken(String refreshTokenString) {
@@ -256,21 +278,22 @@ public class AuthService {
             log.warn("Invalid refresh token format or expired");
             throw new BadCredentialsException("Invalid or expired refresh token");
         }
-        
+
         // Find refresh token in database
         RefreshToken refreshToken = refreshTokenRepository.findByToken(refreshTokenString)
                 .orElseThrow(() -> {
                     log.warn("Refresh token not found in database");
                     return new BadCredentialsException("Invalid refresh token");
                 });
-        
+
         // Check if token is expired
         if (refreshToken.isExpired()) {
             log.warn("Refresh token is expired for user {}", refreshToken.getUser().getEmail());
             throw new BadCredentialsException("Refresh token is expired");
         }
-        
-        // Check if token is revoked - implement grace period (MANUEL KONTROL, isValid() kullanma)
+
+        // Check if token is revoked - implement grace period (MANUEL KONTROL, isValid()
+        // kullanma)
         if (refreshToken.getRevoked()) {
             LocalDateTime revokedAt = refreshToken.getRevokedAt();
             if (revokedAt == null) {
@@ -278,99 +301,118 @@ public class AuthService {
                 log.warn("Revoked token without revokedAt timestamp. Token ID: {}", refreshToken.getId());
                 throw new BadCredentialsException("Refresh token is invalid");
             }
-            
+
             // Calculate time since revocation
             long secondsSinceRevocation = java.time.Duration.between(revokedAt, LocalDateTime.now()).getSeconds();
-            
+
             if (secondsSinceRevocation < 30) {
                 // Grace period: Accept request but don't rotate token
                 log.warn("Revoked token accepted within grace period. Token ID: {}", refreshToken.getId());
-                
+
                 // Use helper method with includeRefreshToken = false
                 User user = refreshToken.getUser();
                 return createAuthResponse(user, false);
             } else {
                 // Reuse attack: Token revoked more than 30 seconds ago
-                log.error("Potential token reuse attack detected. Token ID: {}, revokedAt: {}, secondsSinceRevocation: {}", 
+                log.error(
+                        "Potential token reuse attack detected. Token ID: {}, revokedAt: {}, secondsSinceRevocation: {}",
                         refreshToken.getId(), revokedAt, secondsSinceRevocation);
                 throw new BadCredentialsException("Refresh token has been revoked");
             }
         }
-        
+
         // Normal flow: Token is valid, perform rotation
         // CRITICAL: Token Rotation - Revoke old token
         refreshToken.revoke();
         refreshTokenRepository.save(refreshToken);
         log.debug("Revoked old refresh token for user {}", refreshToken.getUser().getEmail());
-        
+
         // Use helper method with includeRefreshToken = true
         User user = refreshToken.getUser();
         return createAuthResponse(user, true);
     }
-    
+
     /**
      * Register a new user.
      * Supports two scenarios:
      * 1. Register to existing tenant: Provide tenantId
-     * 2. Create new tenant and register first user: Provide tenantName (tenantId must be null)
+     * 2. Create new tenant and register first user: Provide tenantName (tenantId
+     * must be null)
      */
     @Transactional
     public UserDto register(RegisterRequest request) {
+        // Normalize email
+        String email = request.getEmail().toLowerCase().trim();
+
         // Check if user already exists
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            throw new IllegalArgumentException("User with email " + request.getEmail() + " already exists");
+        if (userRepository.findByEmail(email).isPresent()) {
+            throw new IllegalArgumentException("User with email " + email + " already exists");
         }
-        
+
         // Resolve tenant: either use existing or create new
         Tenant tenant;
         if (request.getTenantId() != null) {
             // Scenario 1: Register to existing tenant
             tenant = tenantRepository.findById(request.getTenantId())
-                    .orElseThrow(() -> new IllegalArgumentException("Tenant not found with id: " + request.getTenantId()));
+                    .orElseThrow(
+                            () -> new IllegalArgumentException("Tenant not found with id: " + request.getTenantId()));
             log.info("Registering user {} to existing tenant: {}", request.getEmail(), tenant.getName());
         } else if (request.getTenantName() != null && !request.getTenantName().isBlank()) {
             // Scenario 2: Create new tenant and register first user
-            log.info("Creating new tenant '{}' and registering first user: {}", request.getTenantName(), request.getEmail());
+            log.info("Creating new tenant '{}' and registering first user: {}", request.getTenantName(),
+                    email);
             tenant = tenantService.createTenant(request.getTenantName());
-            log.info("Created new tenant: id={}, name={}, schemaName={}", tenant.getId(), tenant.getName(), tenant.getSchemaName());
+            log.info("Created new tenant: id={}, name={}, schemaName={}", tenant.getId(), tenant.getName(),
+                    tenant.getSchemaName());
         } else {
-            throw new IllegalArgumentException("Either tenantId (for existing tenant) or tenantName (for new tenant) must be provided");
+            throw new IllegalArgumentException(
+                    "Either tenantId (for existing tenant) or tenantName (for new tenant) must be provided");
         }
-        
+
+        // Domain enforcement
+        if (tenant.getDomain() != null && !email.endsWith("@" + tenant.getDomain())) {
+            throw new IllegalArgumentException("Email must end with @" + tenant.getDomain());
+        }
+
+        // Quota enforcement (only for non-first users or if we want to be strict)
+        long userCount = userRepository.countByTenantId(tenant.getId());
+        quotaService.validateQuota(tenant.getId(), "users", userCount);
+
         // Encode password
         String encodedPassword = passwordEncoder.encode(request.getPassword());
-        
+
         // Create user
         User user = User.builder()
-                .email(request.getEmail())
+                .email(email)
                 .password(encodedPassword)
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .tenant(tenant)
                 .enabled(true)
                 .build();
-        
+
         // Assign default role (ROLE_AGENT) if no roles specified
         Role defaultRole = roleRepository.findByName("ROLE_AGENT")
                 .orElseThrow(() -> new IllegalStateException("Default role ROLE_AGENT not found. Run migrations."));
         user.getRoles().add(defaultRole);
-        
+
         User savedUser = userRepository.save(user);
-        
+
         // CRITICAL: Check if this is the first user for the tenant
         // If first user, assign all permissions from tenant's module pool
-        long userCount = userRepository.countByTenantId(tenant.getId());
+        userCount = userRepository.countByTenantId(tenant.getId());
         if (userCount == 1) {
             // This is the first user - assign all tenant permissions
             log.info("First user registered for tenant {}. Assigning all permissions.", tenant.getName());
             permissionService.assignAllTenantPermissionsToUser(savedUser);
         }
-        
+
         // Build and return user DTO
         List<String> roles = savedUser.getRoles().stream()
                 .map(Role::getName)
                 .collect(Collectors.toList());
-        
+        List<String> permissions = permissionService.getUserPermissions(savedUser.getId());
+
         return UserDto.builder()
                 .id(savedUser.getId())
                 .email(savedUser.getEmail())
@@ -378,26 +420,30 @@ public class AuthService {
                 .lastName(savedUser.getLastName())
                 .tenantId(savedUser.getTenant().getId())
                 .roles(roles)
+                .permissions(permissions)
                 .build();
     }
-    
+
     /**
      * Discover tenant(s) associated with an email address.
      * 
-     * SECURITY NOTE: This method always returns a success response, even if no tenants are found.
-     * This prevents user enumeration attacks where attackers could determine which emails exist in the system.
+     * SECURITY NOTE: This method always returns a success response, even if no
+     * tenants are found.
+     * This prevents user enumeration attacks where attackers could determine which
+     * emails exist in the system.
      * 
      * @param request TenantDiscoveryRequest containing email
-     * @return TenantDiscoveryResponse with list of tenants (empty list if none found, but still success)
+     * @return TenantDiscoveryResponse with list of tenants (empty list if none
+     *         found, but still success)
      */
     @Transactional(readOnly = true)
     public TenantDiscoveryResponse discoverTenants(TenantDiscoveryRequest request) {
         String email = request.getEmail().toLowerCase().trim();
         log.debug("Tenant discovery requested for email: {}", email);
-        
+
         // Find all users with this email (excluding deleted and disabled)
         List<User> users = userRepository.findAllByEmailAndNotDeleted(email);
-        
+
         if (users.isEmpty()) {
             // SECURITY: Return empty list but still success to prevent user enumeration
             log.debug("No tenants found for email: {} (returning empty list to prevent enumeration)", email);
@@ -405,7 +451,7 @@ public class AuthService {
                     .tenants(new ArrayList<>())
                     .build();
         }
-        
+
         // Extract unique tenant information
         List<TenantInfo> tenantInfos = users.stream()
                 .map(user -> {
@@ -418,9 +464,9 @@ public class AuthService {
                 })
                 .distinct() // Remove duplicates if user has multiple accounts in same tenant
                 .collect(Collectors.toList());
-        
+
         log.debug("Found {} tenant(s) for email: {}", tenantInfos.size(), email);
-        
+
         return TenantDiscoveryResponse.builder()
                 .tenants(tenantInfos)
                 .build();
