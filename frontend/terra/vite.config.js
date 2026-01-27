@@ -1,16 +1,22 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
+import fs from 'fs'  // Sertifikaları okumak için
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
   server: {
+    port: 5173,
+    https: {
+      key: fs.readFileSync('./localhost-key.pem'),  // mkcert ile oluşturulan key
+      cert: fs.readFileSync('./localhost.pem'),     // mkcert ile oluşturulan cert
+    },
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'https://localhost:8443',  // HTTP -> HTTPS (backend port)
         changeOrigin: true,
-        secure: false,
+        secure: false,  // Self-signed sertifika için false (mkcert kullanıyoruz ama yine de)
       }
     }
   },

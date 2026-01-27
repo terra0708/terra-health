@@ -39,12 +39,26 @@ spring:
     default-schema: public
 
 server:
-  port: 8080
+  port: 8443  # HTTPS için standart port (8080 yerine)
+  ssl:
+    enabled: true
+    key-store: classpath:ssl/keystore.p12
+    key-store-password: ${SSL_KEYSTORE_PASSWORD:changeit}
+    key-store-type: PKCS12
+    key-alias: localhost
 
 jwt:
   secret: ${JWT_SECRET:LnjfynBNtf0wU7Qa87kxGhihPAHcFOuOhy2vyO19eUA=} # BASE64 encoded, minimum 32 bytes (256 bits) for HS256
   expiration: 900000 # 15 minutes in milliseconds (access token)
   refresh-expiration: 604800000 # 7 days in milliseconds (refresh token)
+
+app:
+  cookie:
+    secure: ${COOKIE_SECURE:true}  # KRİTİK: Her iki ortamda da true (HTTPS zorunlu)
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://localhost:5173,https://localhost:3000}
+  csrf:
+    cookie-name: XSRF-TOKEN
 
 schema-pool:
   min-ready-count: 3  # Minimum READY şema sayısı (pool replenishment threshold)

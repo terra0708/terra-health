@@ -3,6 +3,7 @@ package com.terrarosa.terra_crm.core.security.config;
 import com.terrarosa.terra_crm.core.security.filter.JwtAuthenticationFilter;
 import com.terrarosa.terra_crm.core.maintenance.filter.MaintenanceModeFilter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -17,12 +18,12 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
-import java.util.List;
 
 /**
  * Security configuration with JWT authentication.
@@ -37,10 +38,19 @@ public class SecurityConfig {
     private final MaintenanceModeFilter maintenanceModeFilter;
     private final PermissionEvaluator permissionEvaluator;
     
+    @Value("${app.cors.allowed-origins:https://localhost:5173,https://localhost:3000}")
+    private String corsAllowedOrigins;
+    
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable())
+            .csrf(csrf -> csrf
+                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                .ignoringRequestMatchers(
+                    "/api/v1/auth/**",           // Auth endpoint'leri CSRF'den muaf
+                    "/api/v1/super-admin/**"    // Super Admin endpoint'leri CSRF'den muaf (JWT + Role-based auth yeterli)
+                )
+            )
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
@@ -67,11 +77,13 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:5173")); // Common frontend ports
+        // CORS origins'i application.yaml'dan oku
+        configuration.setAllowedOrigins(Arrays.asList(corsAllowedOrigins.split(",")));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
-        configuration.setExposedHeaders(Arrays.asList("X-Tenant-ID"));
-        configuration.setAllowCredentials(true);
+        // CSRF token'ı expose et (frontend'in okuyabilmesi için)
+        configuration.setExposedHeaders(Arrays.asList("X-Tenant-ID", "X-XSRF-TOKEN"));
+        configuration.setAllowCredentials(true); // Cookie gönderimi için zorunlu
         
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

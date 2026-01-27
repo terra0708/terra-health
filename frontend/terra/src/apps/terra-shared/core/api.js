@@ -5,7 +5,9 @@ const apiClient = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
-    withCredentials: true, // HTTP-Only Cookie'ler için
+    withCredentials: true, // Cookie'ler için gerekli
+    xsrfCookieName: 'XSRF-TOKEN',  // Axios otomatik cookie'den okuyacak
+    xsrfHeaderName: 'X-XSRF-TOKEN', // Axios otomatik header'a ekleyecek
 });
 
 // State Management (Queuing)
@@ -54,14 +56,11 @@ const normalizeError = (error) => {
     return normalizedError;
 };
 
-// Request Interceptor: Add Auth Token and Tenant ID
+// Request Interceptor: Add Tenant ID (Authorization header kaldırıldı - cookie'den otomatik gönderiliyor)
 apiClient.interceptors.request.use(
     (config) => {
-        // Authorization header ekle
-        const token = localStorage.getItem('token');
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
+        // Authorization header ekleme mantığı tamamen kaldırıldı
+        // Token artık HttpOnly cookie'de ve otomatik gönderiliyor
         
         // Tenant ID'yi al (önce localStorage, sonra auth store)
         let tenantId = localStorage.getItem('tenantId');
@@ -85,6 +84,15 @@ apiClient.interceptors.request.use(
         // null, undefined, empty string kontrolü yap
         if (tenantId && tenantId !== 'null' && tenantId !== 'undefined') {
             config.headers['X-Tenant-ID'] = tenantId;
+            // Debug log (production'da kaldırılabilir)
+            if (import.meta.env.DEV) {
+                console.debug('✅ X-Tenant-ID header added:', tenantId);
+            }
+        } else {
+            // Debug log (production'da kaldırılabilir)
+            if (import.meta.env.DEV) {
+                console.warn('⚠️ X-Tenant-ID header NOT added. tenantId:', tenantId);
+            }
         }
         
         return config;
@@ -122,7 +130,6 @@ apiClient.interceptors.response.use(
                 // Sonsuz döngüyü önle - Logout yap
                 isRefreshing = false;
                 failedQueue = [];
-                localStorage.removeItem('token');
                 localStorage.removeItem('tenantId');
                 // Auth store'u da temizle (eğer varsa)
                 window.location.href = '/login';
@@ -134,13 +141,9 @@ apiClient.interceptors.response.use(
                 // Başka bir istek zaten refresh atıyor, kuyruğa ekle
                 return new Promise((resolve, reject) => {
                     failedQueue.push({ resolve, reject });
-                }).then(token => {
-                    // KRİTİK: Header'ı config bazında güncelle (originalRequest üzerinde)
-                    originalRequest.headers.Authorization = `Bearer ${token}`;
-                    // Config'i de güncelle (axios'un internal yapısı için)
-                    if (originalRequest.headers) {
-                        originalRequest.headers.Authorization = `Bearer ${token}`;
-                    }
+                }).then(() => {
+                    // Token artık cookie'de, header'a ekleme gerekmez
+                    // Cookie otomatik gönderilecek
                     return apiClient(originalRequest);
                 }).catch(err => {
                     return Promise.reject(err);
@@ -161,30 +164,23 @@ apiClient.interceptors.response.use(
                     {},
                     {
                         withCredentials: true,
-                        baseURL: baseURL
+                        baseURL: baseURL,
+                        xsrfCookieName: 'XSRF-TOKEN',
+                        xsrfHeaderName: 'X-XSRF-TOKEN'
                     }
                 );
                 
-                const newToken = response.data?.data?.accessToken || response.data?.accessToken;
-                if (newToken) {
-                    localStorage.setItem('token', newToken);
-                    processQueue(null, newToken);
-                    // KRİTİK: Header'ı config bazında güncelle
-                    originalRequest.headers.Authorization = `Bearer ${newToken}`;
-                    // Config'i de güncelle (axios'un internal yapısı için)
-                    if (originalRequest.headers) {
-                        originalRequest.headers.Authorization = `Bearer ${newToken}`;
-                    }
-                    return apiClient(originalRequest);
-                } else {
-                    throw new Error('No token in refresh response');
-                }
+                // Token artık cookie'de, localStorage'a yazma işlemi kaldırıldı
+                // Cookie otomatik gönderilecek, header'a ekleme gerekmez
+                processQueue(null, null); // Token cookie'de, null geçiyoruz
+                
+                // Orijinal isteği tekrar dene (cookie otomatik gönderilecek)
+                return apiClient(originalRequest);
             } catch (refreshError) {
                 // Refresh başarısız - Logout
                 processQueue(refreshError, null);
                 isRefreshing = false;
                 failedQueue = [];
-                localStorage.removeItem('token');
                 localStorage.removeItem('tenantId');
                 window.location.href = '/login';
                 return Promise.reject(refreshError);

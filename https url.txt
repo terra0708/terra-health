@@ -1,0 +1,87 @@
+"Acımasız akıl hocan" olarak söylüyorum: Bu döküman senin "güvenlik anayasan" olacak. Geliştirme ortamında HTTPS kullanmak, sadece bir lüks değil; hedeflediğimiz Cookie-tabanlı kimlik doğrulama mimarisinin çalışması için bir ön koşuldur.
+
+Aşağıda, hem Spring Boot (Java 25) hem de React (Vite) için adım adım HTTPS kurulum rehberi yer alıyor.
+
+🛡️ Adım 1: Yerel Sertifikaların Oluşturulması (mkcert)
+Tarayıcının "Güvenli Değil" uyarısı vermemesi için mkcert kullanacağız. Bu araç, bilgisayarını yerel bir sertifika otoritesi yapar.
+
+mkcert Yükle:
+
+Windows (Choco): choco install mkcert
+
+Mac (Homebrew): brew install mkcert
+
+Kurulumu Yap: mkcert -install (Bu komutu bir kez çalıştırman yeterli).
+
+Sertifikaları Üret: Projenin ana dizininde (veya bir certs/ klasöründe) şu komutu çalıştır:
+
+Bash
+mkcert localhost 127.0.0.1 ::1
+Sonuçta iki dosya oluşacak: localhost.pem (sertifika) ve localhost-key.pem (özel anahtar).
+
+☕ Adım 2: Spring Boot (Backend) Yapılandırması
+Spring Boot, .pem dosyalarını doğrudan okumak yerine genellikle bir Keystore dosyası (.p12) bekler.
+
+2.1. Keystore Oluşturma
+Terminalde şu komutla .pem dosyalarını Spring'in anlayacağı formatta birleştir:
+
+Bash
+openssl pkcs12 -export -in localhost.pem -inkey localhost-key.pem -out keystore.p12 -name localhost -CAfile $(mkcert -CAROOT)/rootCA.pem -caname rootCA
+Şifre: İstendiğinde basit bir şifre belirle (örn: password).
+
+2.2. application.yaml Güncellemesi
+keystore.p12 dosyasını src/main/resources altına kopyala ve ayarları yap:
+
+YAML
+server:
+  port: 8443
+  ssl:
+    enabled: true
+    key-store: classpath:keystore.p12
+    key-store-password: password # Belirlediğin şifre
+    key-store-type: PKCS12
+    key-alias: localhost
+
+app:
+  cookie:
+    secure: true # Artık dev ortamında da true!
+⚛️ Adım 3: React / Vite (Frontend) Yapılandırması
+Vite tarafında sertifikaları vite.config.js dosyasına tanıtman yeterlidir.
+
+3.1. vite.config.js Güncellemesi
+JavaScript
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import fs from 'fs';
+
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 5173,
+    https: {
+      key: fs.readFileSync('./localhost-key.pem'),
+      cert: fs.readFileSync('./localhost.pem'),
+    },
+    proxy: {
+      '/api': {
+        target: 'https://localhost:8443', // Backend HTTPS portu
+        changeOrigin: true,
+        secure: false, // Self-signed sertifika için dev ortamında false kalabilir
+      }
+    }
+  }
+});
+3.2. .env.development Güncellemesi
+API URL'ini HTTPS protokolüne çek:
+
+Kod snippet'i
+VITE_API_URL=https://localhost:8443/api
+⚠️ Kritik Uyarılar
+[!CAUTION] .gitignore Kontrolü: Ürettiğin .pem, -key.pem ve keystore.p12 dosyalarını sakın GitHub'a push'lama! .gitignore dosyana şu satırları ekle:
+
+Plaintext
+*.pem
+*.p12
+Tarayıcı Yenileme: Ayarları yaptıktan sonra tarayıcıyı tamamen kapatıp açman gerekebilir.
+
+Cookie Kontrolü: Artık tarayıcının Application -> Cookies sekmesinde accessToken ve refreshToken çerezlerinin yanında "Secure" işaretinin (tik) olduğunu göreceksin.

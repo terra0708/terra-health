@@ -111,6 +111,16 @@ public class SuperAdminService {
          */
         @Transactional
         public TenantAdminCreationResult createTenantWithAdminAndModules(CreateTenantRequest request) {
+                // CRITICAL: Normalize domain to ensure consistency
+                // Remove leading/trailing whitespace, convert to lowercase, remove spaces
+                String normalizedDomain = request.getDomain() != null 
+                        ? request.getDomain().toLowerCase().trim().replaceAll("\\s+", "")
+                        : null;
+                
+                if (normalizedDomain == null || normalizedDomain.isBlank()) {
+                        throw new IllegalArgumentException("Domain is required and cannot be blank");
+                }
+                
                 // CRITICAL: Normalize email to ensure consistency
                 String adminEmail = request.getAdminEmail().toLowerCase().trim();
 
@@ -120,9 +130,9 @@ public class SuperAdminService {
                         throw new IllegalArgumentException("Email already exists: " + adminEmail);
                 }
 
-                // Domain check
-                if (!adminEmail.endsWith("@" + request.getDomain())) {
-                        throw new IllegalArgumentException("Admin email must end with @" + request.getDomain());
+                // Domain check - use normalized domain
+                if (!adminEmail.endsWith("@" + normalizedDomain)) {
+                        throw new IllegalArgumentException("Admin email must end with @" + normalizedDomain);
                 }
 
                 log.info("Creating tenant '{}' with admin user '{}' and {} modules",
@@ -131,7 +141,7 @@ public class SuperAdminService {
                 // Step A: Create tenant (this includes schema creation via Flyway, outside
                 // transaction)
                 Tenant tenant = tenantService.createTenant(request.getTenantName());
-                tenant.setDomain(request.getDomain());
+                tenant.setDomain(normalizedDomain);
                 if (request.getMaxUsers() != null) {
                         tenant.setMaxUsers(request.getMaxUsers());
                 }
@@ -281,8 +291,14 @@ public class SuperAdminService {
 
                 if (name != null)
                         tenant.setName(name);
-                if (domain != null)
-                        tenant.setDomain(domain);
+                if (domain != null) {
+                        // CRITICAL: Normalize domain to ensure consistency
+                        String normalizedDomain = domain.toLowerCase().trim().replaceAll("\\s+", "");
+                        if (normalizedDomain.isBlank()) {
+                                throw new IllegalArgumentException("Domain cannot be blank");
+                        }
+                        tenant.setDomain(normalizedDomain);
+                }
                 if (maxUsers != null)
                         tenant.setMaxUsers(maxUsers);
 

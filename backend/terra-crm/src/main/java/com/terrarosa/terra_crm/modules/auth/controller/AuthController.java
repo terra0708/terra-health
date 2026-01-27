@@ -53,19 +53,22 @@ public class AuthController {
         
         LoginResponse response = authService.login(request, tenantId);
         
+        // Create access token cookie
+        ResponseCookie accessTokenCookie = cookieUtil.createAccessTokenCookie(response.getToken());
+        
         // Create refresh token cookie
         ResponseCookie refreshTokenCookie = cookieUtil.createRefreshTokenCookie(response.getRefreshToken());
         
-        // Remove refreshToken from response body (it's in cookie)
-        LoginResponse responseWithoutRefreshToken = LoginResponse.builder()
-                .token(response.getToken())
+        // Remove both tokens from response body (they're in cookies)
+        LoginResponse responseWithoutTokens = LoginResponse.builder()
                 .user(response.getUser())
                 .expiresIn(response.getExpiresIn())
                 .build();
         
         return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, accessTokenCookie.toString())
                 .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString())
-                .body(ApiResponse.success(responseWithoutRefreshToken, "Login successful"));
+                .body(ApiResponse.success(responseWithoutTokens, "Login successful"));
     }
     
     /**
@@ -92,13 +95,16 @@ public class AuthController {
         try {
             RefreshTokenResponse response = authService.refreshToken(refreshToken);
             
-            // Remove refreshToken from response body (it's in cookie)
-            RefreshTokenResponse responseWithoutRefreshToken = RefreshTokenResponse.builder()
-                    .accessToken(response.getAccessToken())
+            // Create access token cookie
+            ResponseCookie accessTokenCookie = cookieUtil.createAccessTokenCookie(response.getAccessToken());
+            
+            // Remove both tokens from response body (they're in cookies)
+            RefreshTokenResponse responseWithoutTokens = RefreshTokenResponse.builder()
                     .expiresIn(response.getExpiresIn())
                     .build();
             
-            ResponseEntity.BodyBuilder responseBuilder = ResponseEntity.ok();
+            ResponseEntity.BodyBuilder responseBuilder = ResponseEntity.ok()
+                    .header(HttpHeaders.SET_COOKIE, accessTokenCookie.toString());
             
             // Only update cookie if new refresh token is provided (token rotation occurred)
             if (response.getRefreshToken() != null && !response.getRefreshToken().isBlank()) {
@@ -112,17 +118,54 @@ public class AuthController {
             }
             
             return responseBuilder
-                    .body(ApiResponse.success(responseWithoutRefreshToken, "Token refreshed successfully"));
+                    .body(ApiResponse.success(responseWithoutTokens, "Token refreshed successfully"));
         } catch (Exception e) {
             log.error("Failed to refresh token: {}", e.getMessage());
             
-            // Clear invalid refresh token cookie
-            ResponseCookie clearCookie = cookieUtil.clearRefreshTokenCookie();
+            // Clear invalid cookies
+            ResponseCookie clearAccessCookie = cookieUtil.clearAccessTokenCookie();
+            ResponseCookie clearRefreshCookie = cookieUtil.clearRefreshTokenCookie();
             
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .header(HttpHeaders.SET_COOKIE, clearCookie.toString())
+                    .header(HttpHeaders.SET_COOKIE, clearAccessCookie.toString())
+                    .header(HttpHeaders.SET_COOKIE, clearRefreshCookie.toString())
                     .body(ApiResponse.error("UNAUTHORIZED", "Invalid or expired refresh token"));
         }
+    }
+    
+    /**
+     * Logout endpoint.
+     * Public endpoint - no authentication required.
+     * 
+     * Reads refresh token from HttpOnly cookie, revokes it in database,
+     * and clears both access and refresh token cookies.
+     * 
+     * CRITICAL: This endpoint must be public (no authentication) because
+     * if the access token is expired, user should still be able to logout.
+     */
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<Void>> logout(
+            @CookieValue(name = "refreshToken", required = false) String refreshToken) {
+        
+        // Revoke refresh token if present
+        if (refreshToken != null && !refreshToken.isBlank()) {
+            try {
+                authService.revokeRefreshToken(refreshToken);
+                log.debug("Revoked refresh token during logout");
+            } catch (Exception e) {
+                log.warn("Failed to revoke refresh token during logout: {}", e.getMessage());
+                // Continue with cookie cleanup even if revoke fails
+            }
+        }
+        
+        // Clear both cookies
+        ResponseCookie clearAccessCookie = cookieUtil.clearAccessTokenCookie();
+        ResponseCookie clearRefreshCookie = cookieUtil.clearRefreshTokenCookie();
+        
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, clearAccessCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, clearRefreshCookie.toString())
+                .body(ApiResponse.success(null, "Logout successful"));
     }
     
     /**

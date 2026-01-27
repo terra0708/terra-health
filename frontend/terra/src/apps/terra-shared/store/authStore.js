@@ -34,12 +34,12 @@ const useAuthStore = create(
                         { headers: { 'X-Tenant-ID': tenantId } }
                     );
 
-                    // KRİTİK: Token Dağıtımı - Sıralama ÖNEMLİ
-                    // 1. ÖNCE localStorage'a yaz (api.js interceptor buradan okuyor)
-                    localStorage.setItem('token', response.token);
+                    // KRİTİK: Token artık cookie'de, localStorage'a yazma işlemi kaldırıldı
+                    // Access token ve refresh token HttpOnly cookie'lerde otomatik gönderilecek
+                    // Sadece tenantId localStorage'da kalıyor (X-Tenant-ID header için gerekli)
                     localStorage.setItem('tenantId', response.user.tenantId.toString());
 
-                    // 2. SONRA store'a yaz (persist middleware otomatik localStorage'a yazar)
+                    // Store'a yaz (persist middleware otomatik localStorage'a yazar)
                     set({
                         user: response.user,
                         isAuthenticated: true,
@@ -54,23 +54,27 @@ const useAuthStore = create(
                 }
             },
 
-            logout: () => {
-                // KRİTİK: Token Dağıtımı (Temizleme - Senkronizasyon)
-                // 1. ÖNCE localStorage'dan sil
-                localStorage.removeItem('token');
-                localStorage.removeItem('tenantId');
-
-                // 2. SONRA store'u sıfırla
-                set({
-                    user: null,
-                    isAuthenticated: false,
-                    error: null,
-                    loading: false,
-                    discoveredTenantId: null
-                });
-
-                // Hard redirect - güvenli ve temiz
-                window.location.href = '/login';
+            logout: async () => {
+                try {
+                    // Backend logout endpoint'ini çağır (cookie'ler otomatik gönderilir)
+                    await apiClient.post('/v1/auth/logout');
+                } catch (error) {
+                    // Hata olsa bile devam et - cookie'ler backend'den temizlenmiş olabilir
+                    // Kullanıcı uçaktayken veya interneti koptuğunda "çıkış yapamama" gibi bir saçmalık yaşamamalı
+                    console.error('Logout request failed, but continuing with local cleanup:', error);
+                } finally {
+                    // HER HALÜKARDA temizle - Local cleanup her zaman çalışmalı
+                    // Network hatası, timeout, uçak modu - hiçbir şey logout'u engellememeli
+                    localStorage.removeItem('tenantId');
+                    set({
+                        user: null,
+                        isAuthenticated: false,
+                        error: null,
+                        loading: false,
+                        discoveredTenantId: null
+                    });
+                    window.location.href = '/login';
+                }
             },
 
             refreshUser: (userData) => {

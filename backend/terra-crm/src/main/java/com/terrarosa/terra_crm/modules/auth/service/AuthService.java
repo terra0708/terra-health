@@ -471,4 +471,24 @@ public class AuthService {
                 .tenants(tenantInfos)
                 .build();
     }
+    
+    /**
+     * Revoke a refresh token by token string.
+     * Used during logout to invalidate the refresh token.
+     * 
+     * @param refreshTokenString Refresh token string to revoke
+     */
+    @Transactional
+    public void revokeRefreshToken(String refreshTokenString) {
+        RefreshToken refreshToken = refreshTokenRepository.findByToken(refreshTokenString)
+                .orElse(null);
+        
+        if (refreshToken != null && !refreshToken.getRevoked()) {
+            refreshToken.revoke();
+            refreshTokenRepository.save(refreshToken);
+            log.debug("Revoked refresh token for user {}", refreshToken.getUser().getEmail());
+        } else {
+            log.warn("Refresh token not found or already revoked: {}", refreshTokenString);
+        }
+    }
 }
