@@ -2,7 +2,6 @@ package com.terrarosa.terra_crm.core.config;
 
 import com.terrarosa.terra_crm.core.tenancy.service.TenantService;
 import com.terrarosa.terra_crm.modules.auth.entity.Permission;
-import com.terrarosa.terra_crm.modules.auth.entity.Role;
 import com.terrarosa.terra_crm.modules.auth.entity.SuperAdmin;
 import com.terrarosa.terra_crm.modules.auth.entity.User;
 import com.terrarosa.terra_crm.modules.auth.entity.UserPermission;
@@ -75,6 +74,9 @@ public class SuperAdminInitializer implements CommandLineRunner {
                 // Check if user is already a Super Admin
                 if (superAdminRepository.existsByUserId(user.getId())) {
                     log.info("Super Admin user already exists: {}", DEFAULT_SUPER_ADMIN_EMAIL);
+                    // CRITICAL: Ensure Super Admin has only Super Admin specific permissions
+                    // This will clean up any extra permissions that were assigned before
+                    assignSuperAdminPermissions(user);
                     return;
                 } else {
                     // User exists but is not Super Admin - grant privileges
@@ -83,6 +85,8 @@ public class SuperAdminInitializer implements CommandLineRunner {
                             .user(user)
                             .build());
                     log.info("Granted Super Admin privileges to existing user: {}", DEFAULT_SUPER_ADMIN_EMAIL);
+                    // Assign Super Admin specific permissions
+                    assignSuperAdminPermissions(user);
                     return;
                 }
             }
@@ -116,8 +120,8 @@ public class SuperAdminInitializer implements CommandLineRunner {
             superAdminRepository.save(superAdmin);
             log.info("Initial Super Admin created successfully: {}", DEFAULT_SUPER_ADMIN_EMAIL);
             
-            // CRITICAL: Assign all permissions to Super Admin
-            assignAllPermissionsToSuperAdmin(savedUser);
+            // CRITICAL: Assign only Super Admin specific permissions
+            assignSuperAdminPermissions(savedUser);
             
             log.warn("IMPORTANT: Change the default Super Admin password in production!");
             
@@ -129,38 +133,62 @@ public class SuperAdminInitializer implements CommandLineRunner {
     }
     
     /**
-     * Assign all available permissions to Super Admin user.
-     * This bypasses tenant module validation since Super Admin has system-wide access.
+     * Assign only Super Admin specific permissions to Super Admin user.
+     * Super Admin should only have:
+     * - Dashboard permissions (MODULE_DASHBOARD, DASHBOARD_VIEW)
+     * - Super Admin module permissions (MODULE_SUPERADMIN, SUPERADMIN_*)
+     * 
+     * NOTE: PermissionEvaluator has Super Admin bypass, so Super Admin can access
+     * any endpoint regardless of permissions. But for consistency and proper
+     * JWT token generation, we assign only Super Admin specific permissions.
      * 
      * @param superAdminUser The Super Admin user to assign permissions to
      */
     @Transactional
-    private void assignAllPermissionsToSuperAdmin(User superAdminUser) {
+    private void assignSuperAdminPermissions(User superAdminUser) {
         try {
             UUID userId = superAdminUser.getId();
             
-            // Get all permissions from database
-            List<Permission> allPermissions = permissionRepository.findAll();
+            // Define Super Admin specific permission names
+            List<String> superAdminPermissionNames = List.of(
+                // Dashboard permissions
+                "MODULE_DASHBOARD",
+                "DASHBOARD_VIEW",
+                // Super Admin module permissions
+                "MODULE_SUPERADMIN",
+                "SUPERADMIN_TENANTS_VIEW",
+                "SUPERADMIN_TENANTS_MANAGE",
+                "SUPERADMIN_USER_SEARCH_VIEW",
+                "SUPERADMIN_SCHEMAPOOL_VIEW",
+                "SUPERADMIN_SCHEMAPOOL_MANAGE",
+                "SUPERADMIN_AUDIT_VIEW"
+            );
             
-            if (allPermissions.isEmpty()) {
-                log.warn("No permissions found in database. Super Admin will have no permissions.");
-                return;
-            }
-            
-            log.info("Found {} permissions. Assigning all to Super Admin user: {}", 
-                allPermissions.size(), superAdminUser.getEmail());
+            log.info("Assigning Super Admin specific permissions to user: {}", superAdminUser.getEmail());
             
             int assignedCount = 0;
             int skippedCount = 0;
+            int notFoundCount = 0;
             
-            for (Permission permission : allPermissions) {
+            for (String permissionName : superAdminPermissionNames) {
+                // Find permission by name
+                var permissionOpt = permissionRepository.findByName(permissionName);
+                
+                if (permissionOpt.isEmpty()) {
+                    log.warn("Permission not found: {}. Skipping...", permissionName);
+                    notFoundCount++;
+                    continue;
+                }
+                
+                Permission permission = permissionOpt.get();
+                
                 // Check if already assigned
                 if (userPermissionRepository.findByUserIdAndPermissionId(userId, permission.getId()).isPresent()) {
                     skippedCount++;
                     continue;
                 }
                 
-                // Create UserPermission (bypass tenant validation for Super Admin)
+                // Create UserPermission
                 UserPermission userPermission = UserPermission.builder()
                         .user(superAdminUser)
                         .permission(permission)
@@ -168,10 +196,11 @@ public class SuperAdminInitializer implements CommandLineRunner {
                 
                 userPermissionRepository.save(userPermission);
                 assignedCount++;
+                log.debug("Assigned permission: {}", permissionName);
             }
             
-            log.info("Permission assignment completed for Super Admin: {} assigned, {} already existed, {} total permissions", 
-                assignedCount, skippedCount, allPermissions.size());
+            log.info("Super Admin permission assignment completed: {} assigned, {} already existed, {} not found, {} total expected", 
+                assignedCount, skippedCount, notFoundCount, superAdminPermissionNames.size());
             
             // Verify permissions were assigned
             List<UserPermission> userPermissions = userPermissionRepository.findByUserId(userId);
@@ -184,7 +213,7 @@ public class SuperAdminInitializer implements CommandLineRunner {
             }
             
         } catch (Exception e) {
-            log.error("Failed to assign permissions to Super Admin user: {}", e.getMessage(), e);
+            log.error("Failed to assign Super Admin permissions: {}", e.getMessage(), e);
             // Don't throw - allow application to start even if permission assignment fails
             // Permissions can be assigned manually later
         }

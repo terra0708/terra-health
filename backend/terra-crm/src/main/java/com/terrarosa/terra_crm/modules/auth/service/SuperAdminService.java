@@ -354,6 +354,24 @@ public class SuperAdminService {
         }
 
         /**
+         * Set modules for a tenant (replaces all existing modules).
+         * This clears all existing modules and assigns the new ones.
+         * 
+         * @param tenantId The tenant ID
+         * @param moduleNames List of module names to assign
+         */
+        @AuditLog(action = "MODULES_SET", resourceType = "TENANT")
+        @Transactional
+        public void setModulesForTenant(UUID tenantId, List<String> moduleNames) {
+                Tenant tenant = tenantRepository.findById(tenantId)
+                                .orElseThrow(() -> new IllegalArgumentException(
+                                                "Tenant not found with id: " + tenantId));
+
+                permissionService.setModulesForTenant(tenant, moduleNames);
+                log.info("Set {} modules for tenant: {}", moduleNames.size(), tenant.getName());
+        }
+
+        /**
          * Set quota limits for a tenant.
          */
         @AuditLog(action = "QUOTAS_UPDATED", resourceType = "TENANT")

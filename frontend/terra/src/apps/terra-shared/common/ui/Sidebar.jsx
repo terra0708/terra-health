@@ -346,22 +346,23 @@ const Sidebar = () => {
         { key: 'notifications', icon: 'notifications', label: t('menu.notifications'), path: '/notifications', requiredPermission: ['NOTIFICATIONS_VIEW', 'MODULE_NOTIFICATIONS'] },
     ];
 
-    // Super Admin menu items (these usually don't need individual PBAC as ROLE_SUPER_ADMIN is enough)
+    // Super Admin menu items with granular permissions
     const superAdminMenuItems = [
-        { key: 'super_dashboard', icon: 'dashboard', label: t('menu.super_admin.dashboard', 'Dashboard'), path: '/super-admin/dashboard' },
-        { key: 'tenants', icon: 'tenants', label: t('menu.super_admin.tenants', 'Tenants'), path: '/super-admin/tenants' },
-        { key: 'user_search', icon: 'user_search', label: t('menu.super_admin.user_search', 'User Search'), path: '/super-admin/users/search' },
-        { key: 'schema_pool', icon: 'schema_pool', label: t('menu.super_admin.schema_pool', 'Schema Pool'), path: '/super-admin/schema-pool' },
-        { key: 'audit_logs', icon: 'audit_logs', label: t('menu.super_admin.audit_logs', 'System Logs'), path: '/super-admin/audit-logs' },
+        { key: 'super_dashboard', icon: 'dashboard', label: t('menu.super_admin.dashboard', 'Dashboard'), path: '/super-admin/dashboard', requiredPermission: ['MODULE_SUPERADMIN'] },
+        { key: 'tenants', icon: 'tenants', label: t('menu.super_admin.tenants', 'Tenants'), path: '/super-admin/tenants', requiredPermission: ['SUPERADMIN_TENANTS_VIEW', 'MODULE_SUPERADMIN'] },
+        { key: 'user_search', icon: 'user_search', label: t('menu.super_admin.user_search', 'User Search'), path: '/super-admin/users/search', requiredPermission: ['SUPERADMIN_USER_SEARCH_VIEW', 'MODULE_SUPERADMIN'] },
+        { key: 'schema_pool', icon: 'schema_pool', label: t('menu.super_admin.schema_pool', 'Schema Pool'), path: '/super-admin/schema-pool', requiredPermission: ['SUPERADMIN_SCHEMAPOOL_VIEW', 'MODULE_SUPERADMIN'] },
+        { key: 'audit_logs', icon: 'audit_logs', label: t('menu.super_admin.audit_logs', 'System Logs'), path: '/super-admin/audit-logs', requiredPermission: ['SUPERADMIN_AUDIT_VIEW', 'MODULE_SUPERADMIN'] },
     ];
 
     // Filter menu items based on permissions
+    // CRITICAL: Super Admin bypass is now handled in authStore.hasPermission()
     const menuItems = (isSuperAdmin ? superAdminMenuItems : normalUserMenuItems).filter(item => {
-        if (isSuperAdmin) return true;
         if (!item.requiredPermission) return true;
         return hasPermission(item.requiredPermission);
     });
 
+    // CRITICAL: Filter sub-items FIRST, then check if dropdown should be visible
     const marketingDropdown = {
         key: 'marketing',
         icon: 'marketing',
@@ -370,7 +371,7 @@ const Sidebar = () => {
             { key: 'marketing_dashboard', icon: 'dashboard', label: t('ads.dashboard'), path: '/marketing/dashboard', requiredPermission: ['MARKETING_DASHBOARD_VIEW', 'MODULE_MARKETING'] },
             { key: 'marketing_campaigns', icon: 'statistics', label: t('ads.campaigns'), path: '/marketing/campaigns', requiredPermission: ['MARKETING_CAMPAIGNS_VIEW', 'MODULE_MARKETING'] },
             { key: 'marketing_attribution', icon: 'customer_panel', label: t('ads.attribution'), path: '/marketing/attribution', requiredPermission: ['MARKETING_ATTRIBUTION_VIEW', 'MODULE_MARKETING'] },
-        ].filter(item => isSuperAdmin || hasPermission(item.requiredPermission))
+        ].filter(item => hasPermission(item.requiredPermission))
     };
 
     const settingsDropdown = {
@@ -383,7 +384,7 @@ const Sidebar = () => {
             { key: 'reminder_settings', icon: 'settings', label: t('settings.reminder_settings', 'Hatırlatıcı Ayarları'), path: '/settings/reminders', requiredPermission: ['SETTINGS_SYSTEM_UPDATE', 'MODULE_SETTINGS'] },
             { key: 'system_settings', icon: 'system_settings', label: t('menu.system_settings'), path: '/settings', requiredPermission: ['SETTINGS_SYSTEM_UPDATE', 'MODULE_SETTINGS'] },
             { key: 'customer_panel', icon: 'customer_panel', label: t('menu.customer_panel'), path: '/settings/customer-panel', requiredPermission: ['SETTINGS_CUSTOMER_PANEL_MANAGE', 'MODULE_SETTINGS'] },
-        ].filter(item => isSuperAdmin || hasPermission(item.requiredPermission))
+        ].filter(item => hasPermission(item.requiredPermission))
     };
 
     const sidebarHeader = (
@@ -460,9 +461,11 @@ const Sidebar = () => {
                     />
                 ))}
 
-                {/* Only show marketing dropdown if it has visible items */}
+                {/* CRITICAL: Super Admin should ONLY see Super Admin menu items */}
+                {/* Do NOT show Marketing or Settings dropdowns for Super Admin */}
                 {!isSuperAdmin && (
                     <>
+                        {/* Marketing dropdown - only show if sub-items are visible */}
                         {marketingDropdown.subItems.length > 0 && (
                             <DropdownNavItem
                                 key={marketingDropdown.key}
@@ -474,20 +477,20 @@ const Sidebar = () => {
                                 onClick={isMobile ? toggleSidebar : undefined}
                             />
                         )}
-                    </>
-                )}
 
-                {/* Settings dropdown - ALWAYS visible, but sub-items are permission-filtered */}
-                {!isSuperAdmin && (
-                    <DropdownNavItem
-                        key={settingsDropdown.key}
-                        icon={settingsDropdown.icon}
-                        text={settingsDropdown.label}
-                        open={isMobile ? true : sidebarOpen}
-                        subItems={settingsDropdown.subItems}
-                        currentPath={location.pathname}
-                        onClick={isMobile ? toggleSidebar : undefined}
-                    />
+                        {/* Settings dropdown - only show if sub-items are visible */}
+                        {settingsDropdown.subItems.length > 0 && (
+                            <DropdownNavItem
+                                key={settingsDropdown.key}
+                                icon={settingsDropdown.icon}
+                                text={settingsDropdown.label}
+                                open={isMobile ? true : sidebarOpen}
+                                subItems={settingsDropdown.subItems}
+                                currentPath={location.pathname}
+                                onClick={isMobile ? toggleSidebar : undefined}
+                            />
+                        )}
+                    </>
                 )}
             </List>
 

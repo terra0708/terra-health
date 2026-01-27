@@ -164,13 +164,26 @@ public class SuperAdminController {
         /**
          * Toggle a module (feature flag) for a tenant.
          */
-        @PutMapping("/tenants/{id}/modules")
+        @PutMapping("/tenants/{id}/modules/toggle")
         public ResponseEntity<ApiResponse<Void>> toggleModule(
                         @PathVariable UUID id,
                         @Valid @RequestBody ToggleModuleRequest request) {
 
                 superAdminService.toggleModuleForTenant(id, request.getModuleName(), request.getEnabled());
                 return ResponseEntity.ok(ApiResponse.success(null, "Module toggled successfully"));
+        }
+
+        /**
+         * Set modules for a tenant (replaces all existing modules).
+         * This endpoint allows updating tenant modules in bulk.
+         */
+        @PutMapping("/tenants/{id}/modules")
+        public ResponseEntity<ApiResponse<Void>> setTenantModules(
+                        @PathVariable UUID id,
+                        @Valid @RequestBody SetTenantModulesRequest request) {
+
+                superAdminService.setModulesForTenant(id, request.getModuleNames());
+                return ResponseEntity.ok(ApiResponse.success(null, "Tenant modules updated successfully"));
         }
 
         /**

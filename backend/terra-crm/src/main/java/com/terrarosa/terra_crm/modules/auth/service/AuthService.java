@@ -225,7 +225,9 @@ public class AuthService {
         }
 
         // Fetch permissions
-        List<String> permissions = isSuperAdmin ? List.of() : permissionService.getUserPermissions(user.getId());
+        // CRITICAL FIX: Super Admin's permissions are already assigned in database
+        // Do not return empty list - getUserPermissions() will return all permissions for Super Admin
+        List<String> permissions = permissionService.getUserPermissions(user.getId());
 
         // Generate access token
         String accessToken = jwtService.generateAccessToken(
@@ -594,6 +596,11 @@ public class AuthService {
             // Continue with JWT data only - user might have been deleted but token still valid
         }
         
+        // Remove duplicate permissions using LinkedHashSet to preserve order
+        List<String> uniquePermissions = permissions != null 
+            ? new java.util.ArrayList<>(new java.util.LinkedHashSet<>(permissions))
+            : List.of();
+        
         // Build response from JWT claims (primary source) + minimal DB data
         return CurrentUserResponse.builder()
                 .id(userId)
@@ -602,7 +609,7 @@ public class AuthService {
                 .lastName(lastName)
                 .tenantId(tenantId)
                 .roles(roles != null ? roles : List.of())
-                .permissions(permissions != null ? permissions : List.of())
+                .permissions(uniquePermissions)
                 .isImpersonation(isImpersonation)
                 .impersonatedEmail(impersonatedEmail)
                 .originalUserId(originalUserId)

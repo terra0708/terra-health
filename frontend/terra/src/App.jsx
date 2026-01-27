@@ -202,11 +202,11 @@ function App() {
           </Route>
           <Route path="super-admin">
             <Route index element={<Navigate to="/super-admin/dashboard" replace />} />
-            <Route path="dashboard" element={<ProtectedRoute requiredRole="ROLE_SUPER_ADMIN"><LazyRoute moduleName="SuperAdmin"><SuperAdminDashboard /></LazyRoute></ProtectedRoute>} />
-            <Route path="tenants" element={<ProtectedRoute requiredRole="ROLE_SUPER_ADMIN"><LazyRoute moduleName="SuperAdmin"><TenantsPage /></LazyRoute></ProtectedRoute>} />
-            <Route path="users/search" element={<ProtectedRoute requiredRole="ROLE_SUPER_ADMIN"><LazyRoute moduleName="SuperAdmin"><UserSearchPage /></LazyRoute></ProtectedRoute>} />
-            <Route path="schema-pool" element={<ProtectedRoute requiredRole="ROLE_SUPER_ADMIN"><LazyRoute moduleName="SchemaPool"><SchemaPoolDashboard /></LazyRoute></ProtectedRoute>} />
-            <Route path="audit-logs" element={<ProtectedRoute requiredRole="ROLE_SUPER_ADMIN"><LazyRoute moduleName="SuperAdmin"><AuditLogsPage /></LazyRoute></ProtectedRoute>} />
+            <Route path="dashboard" element={<ProtectedRoute requiredPermission={['MODULE_SUPERADMIN']}><LazyRoute moduleName="SuperAdmin"><SuperAdminDashboard /></LazyRoute></ProtectedRoute>} />
+            <Route path="tenants" element={<ProtectedRoute requiredPermission={['SUPERADMIN_TENANTS_VIEW', 'MODULE_SUPERADMIN']}><LazyRoute moduleName="SuperAdmin"><TenantsPage /></LazyRoute></ProtectedRoute>} />
+            <Route path="users/search" element={<ProtectedRoute requiredPermission={['SUPERADMIN_USER_SEARCH_VIEW', 'MODULE_SUPERADMIN']}><LazyRoute moduleName="SuperAdmin"><UserSearchPage /></LazyRoute></ProtectedRoute>} />
+            <Route path="schema-pool" element={<ProtectedRoute requiredPermission={['SUPERADMIN_SCHEMAPOOL_VIEW', 'MODULE_SUPERADMIN']}><LazyRoute moduleName="SchemaPool"><SchemaPoolDashboard /></LazyRoute></ProtectedRoute>} />
+            <Route path="audit-logs" element={<ProtectedRoute requiredPermission={['SUPERADMIN_AUDIT_VIEW', 'MODULE_SUPERADMIN']}><LazyRoute moduleName="SuperAdmin"><AuditLogsPage /></LazyRoute></ProtectedRoute>} />
           </Route>
         </Route>
 

@@ -56,6 +56,14 @@ public class PermissionEvaluator implements org.springframework.security.access.
             return false;
         }
 
+        // CRITICAL: Super Admin bypass - Super Admin has access to all permissions
+        boolean isSuperAdmin = authentication.getAuthorities().stream()
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_SUPER_ADMIN"));
+        if (isSuperAdmin) {
+            log.debug("Super Admin bypass: granting permission {}", permissionName);
+            return true;
+        }
+
         // Try to get permissions from authentication details (JWT token)
         // The JwtAuthenticationFilter should set permissions in the authentication
         Object details = authentication.getDetails();

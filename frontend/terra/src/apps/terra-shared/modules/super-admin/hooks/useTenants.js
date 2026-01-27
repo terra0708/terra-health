@@ -85,14 +85,14 @@ export const useDeleteTenant = () => {
 };
 
 /**
- * Hook for toggling a module for a tenant.
+ * Hook for toggling a module for a tenant (single module toggle).
  */
 export const useToggleModule = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
         mutationFn: async ({ tenantId, moduleName, enabled }) => {
-            const response = await apiClient.put(`/v1/super-admin/tenants/${tenantId}/modules`, {
+            const response = await apiClient.put(`/v1/super-admin/tenants/${tenantId}/modules/toggle`, {
                 moduleName,
                 enabled,
             });
@@ -101,6 +101,28 @@ export const useToggleModule = () => {
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: ['super-admin', 'tenants'] });
             queryClient.invalidateQueries({ queryKey: ['super-admin', 'tenants', variables.tenantId] });
+            queryClient.invalidateQueries({ queryKey: ['super-admin', 'tenants', variables.tenantId, 'modules'] });
+        },
+    });
+};
+
+/**
+ * Hook for setting modules for a tenant (replaces all existing modules).
+ */
+export const useSetTenantModules = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({ tenantId, moduleNames }) => {
+            const response = await apiClient.put(`/v1/super-admin/tenants/${tenantId}/modules`, {
+                moduleNames,
+            });
+            return response;
+        },
+        onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({ queryKey: ['super-admin', 'tenants'] });
+            queryClient.invalidateQueries({ queryKey: ['super-admin', 'tenants', variables.tenantId] });
+            queryClient.invalidateQueries({ queryKey: ['super-admin', 'tenants', variables.tenantId, 'modules'] });
         },
     });
 };
