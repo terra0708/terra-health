@@ -57,8 +57,24 @@ public class PermissionEvaluator implements org.springframework.security.access.
         }
 
         // CRITICAL: Super Admin bypass - Super Admin has access to all permissions
+        // Check both authorities and roles for Super Admin (defense in depth)
         boolean isSuperAdmin = authentication.getAuthorities().stream()
-                .anyMatch(auth -> auth.getAuthority().equals("ROLE_SUPER_ADMIN"));
+                .anyMatch(auth -> {
+                    String authority = auth.getAuthority();
+                    return "ROLE_SUPER_ADMIN".equals(authority) || "ROLE_SUPER_ADMIN".equalsIgnoreCase(authority);
+                });
+        
+        // Also check if user has ROLE_SUPER_ADMIN in principal (if UserDetails is available)
+        if (!isSuperAdmin && authentication.getPrincipal() instanceof org.springframework.security.core.userdetails.UserDetails) {
+            org.springframework.security.core.userdetails.UserDetails userDetails = 
+                (org.springframework.security.core.userdetails.UserDetails) authentication.getPrincipal();
+            isSuperAdmin = userDetails.getAuthorities().stream()
+                    .anyMatch(auth -> {
+                        String authority = auth.getAuthority();
+                        return "ROLE_SUPER_ADMIN".equals(authority) || "ROLE_SUPER_ADMIN".equalsIgnoreCase(authority);
+                    });
+        }
+        
         if (isSuperAdmin) {
             log.debug("Super Admin bypass: granting permission {}", permissionName);
             return true;

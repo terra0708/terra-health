@@ -11,6 +11,7 @@ import {
     useTenantAdmins, useCreateTenantAdmin, useUpdateTenantAdmin,
     useRemoveTenantAdmin, useResetTenantAdminPassword
 } from '@shared/modules/super-admin';
+import useAuthStore from '@shared/store/authStore';
 
 /**
  * Admins Tab - Full CRUD for Tenant Admins
@@ -22,6 +23,8 @@ const AdminsTab = ({ tenant }) => {
     const updateAdmin = useUpdateTenantAdmin();
     const removeAdmin = useRemoveTenantAdmin();
     const resetPassword = useResetTenantAdminPassword();
+    const fetchCurrentUser = useAuthStore((state) => state.fetchCurrentUser);
+    const currentUser = useAuthStore((state) => state.user);
 
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
     const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -46,10 +49,16 @@ const AdminsTab = ({ tenant }) => {
 
     const handleCreateAdmin = async () => {
         try {
-            await createAdmin.mutateAsync({
+            const result = await createAdmin.mutateAsync({
                 tenantId: tenant.id,
                 ...createFormData
             });
+            
+            // CRITICAL: If created admin is the current user, refresh permissions
+            if (currentUser && result.email === currentUser.email) {
+                await fetchCurrentUser();
+            }
+            
             setCreateFormData({ firstName: '', lastName: '', email: '', password: '' });
             setCreateDialogOpen(false);
         } catch (error) {
@@ -64,6 +73,12 @@ const AdminsTab = ({ tenant }) => {
                 userId: selectedAdmin.id,
                 ...editFormData
             });
+            
+            // CRITICAL: If updated admin is the current user, refresh permissions
+            if (currentUser && selectedAdmin.email === currentUser.email) {
+                await fetchCurrentUser();
+            }
+            
             setEditDialogOpen(false);
             setSelectedAdmin(null);
         } catch (error) {

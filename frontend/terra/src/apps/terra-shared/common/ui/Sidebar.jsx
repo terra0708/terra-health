@@ -359,7 +359,20 @@ const Sidebar = () => {
     // CRITICAL: Super Admin bypass is now handled in authStore.hasPermission()
     const menuItems = (isSuperAdmin ? superAdminMenuItems : normalUserMenuItems).filter(item => {
         if (!item.requiredPermission) return true;
-        return hasPermission(item.requiredPermission);
+        const hasPerm = hasPermission(item.requiredPermission);
+        
+        // DEBUG: Log permission checks for troubleshooting
+        if (process.env.NODE_ENV === 'development') {
+            const matchedPermissions = item.requiredPermission?.filter(p => user?.permissions?.includes(p)) || [];
+            console.debug(`[Sidebar] Menu item "${item.key}": hasPermission(${JSON.stringify(item.requiredPermission)}) = ${hasPerm}`, {
+                userPermissions: user?.permissions,
+                requiredPermission: item.requiredPermission,
+                matchedPermissions: matchedPermissions,
+                userPermissionsCount: user?.permissions?.length || 0
+            });
+        }
+        
+        return hasPerm;
     });
 
     // CRITICAL: Filter sub-items FIRST, then check if dropdown should be visible

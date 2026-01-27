@@ -9,6 +9,7 @@ import com.terrarosa.terra_crm.modules.auth.entity.User;
 import com.terrarosa.terra_crm.modules.auth.entity.UserPermission;
 import com.terrarosa.terra_crm.modules.auth.repository.PermissionBundleRepository;
 import com.terrarosa.terra_crm.modules.auth.repository.PermissionRepository;
+import com.terrarosa.terra_crm.modules.auth.repository.RefreshTokenRepository;
 import com.terrarosa.terra_crm.modules.auth.repository.TenantModuleRepository;
 import com.terrarosa.terra_crm.modules.auth.repository.UserPermissionRepository;
 import com.terrarosa.terra_crm.modules.auth.repository.UserRepository;
@@ -38,6 +39,7 @@ public class PermissionService {
     private final UserRepository userRepository;
     private final TenantRepository tenantRepository;
     private final PermissionBundleRepository permissionBundleRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     /**
      * Get all permissions for a user.
@@ -177,13 +179,23 @@ public class PermissionService {
 
     /**
      * Get all modules available to a tenant.
+     * 
+     * CRITICAL: This method reads from database. If called within the same transaction
+     * where modules were just modified, ensure flush() is called before this method.
      */
     @Transactional(readOnly = true)
     public List<Permission> getTenantModules(UUID tenantId) {
-        return tenantModuleRepository.findByTenantId(tenantId).stream()
+        // CRITICAL: Flush any pending changes to ensure we read the latest module state
+        // This is especially important when called right after setModulesForTenant
+        tenantModuleRepository.flush();
+        
+        List<Permission> modules = tenantModuleRepository.findByTenantId(tenantId).stream()
                 .map(TenantModule::getPermission)
                 .filter(p -> p.getType() == Permission.PermissionType.MODULE)
                 .collect(Collectors.toList());
+        
+        log.debug("Retrieved {} modules for tenant {}", modules.size(), tenantId);
+        return modules;
     }
 
     /**
@@ -338,6 +350,8 @@ public class PermissionService {
      * Clear all modules and assign new ones for a tenant.
      * Use this when you want to explicitly define the module set (e.g., in
      * SuperAdmin creation flow).
+     * 
+     * CRITICAL: When modules are removed, cascade removal of permissions from all users.
      */
     @Transactional
     public void setModulesForTenant(Tenant tenant, List<String> moduleNames) {
@@ -345,15 +359,152 @@ public class PermissionService {
             throw new IllegalStateException("Tenant must be persisted before setting modules");
         }
 
+        UUID tenantId = tenant.getId();
         log.info("Setting modules for tenant {}: {}", tenant.getName(), moduleNames);
 
-        // 1. Clear existing modules
-        tenantModuleRepository.deleteAllByTenantId(tenant.getId());
+        // 1. Get current modules before clearing
+        // CRITICAL: Flush first to ensure we read the latest state
+        tenantModuleRepository.flush();
+        List<Permission> currentModules = tenantModuleRepository.findByTenantId(tenantId).stream()
+                .map(TenantModule::getPermission)
+                .filter(p -> p.getType() == Permission.PermissionType.MODULE)
+                .collect(Collectors.toList());
+        Set<String> currentModuleNames = currentModules.stream()
+                .map(Permission::getName)
+                .collect(Collectors.toSet());
+        
+        log.debug("Current modules for tenant {}: {}", tenant.getName(), currentModuleNames);
+        
+        // 2. Determine which modules are being removed and which are being added
+        Set<String> newModuleNames = new java.util.HashSet<>(moduleNames);
+        Set<String> removedModuleNames = currentModuleNames.stream()
+                .filter(moduleName -> !newModuleNames.contains(moduleName))
+                .collect(Collectors.toSet());
+        Set<String> addedModuleNames = newModuleNames.stream()
+                .filter(moduleName -> !currentModuleNames.contains(moduleName))
+                .collect(Collectors.toSet());
+        
+        log.debug("Module changes for tenant {}: removed={}, added={}", 
+                tenant.getName(), removedModuleNames, addedModuleNames);
+
+        // 3. CRITICAL: Remove permissions from all users for removed modules
+        if (!removedModuleNames.isEmpty()) {
+            log.info("Removing permissions for {} removed modules from all tenant users: {}", 
+                    removedModuleNames.size(), removedModuleNames);
+            
+            // Get all users for this tenant
+            List<User> tenantUsers = userRepository.findByTenantId(tenantId);
+            
+            for (String removedModuleName : removedModuleNames) {
+                Permission removedModule = permissionRepository.findByName(removedModuleName)
+                        .orElse(null);
+                
+                if (removedModule == null) {
+                    log.warn("Removed module {} not found in permissions table", removedModuleName);
+                    continue;
+                }
+                
+                // Get all permissions for this module (MODULE + all ACTION permissions)
+                List<Permission> modulePermissions = getModulePermissions(removedModuleName);
+                Set<UUID> permissionIdsToRemove = modulePermissions.stream()
+                        .map(Permission::getId)
+                        .collect(Collectors.toSet());
+                permissionIdsToRemove.add(removedModule.getId()); // Include the module itself
+                
+                // Remove permissions from all tenant users
+                for (User user : tenantUsers) {
+                    int removedCount = 0;
+                    for (UUID permissionId : permissionIdsToRemove) {
+                        if (userPermissionRepository.findByUserIdAndPermissionId(user.getId(), permissionId).isPresent()) {
+                            userPermissionRepository.deleteByUserIdAndPermissionId(user.getId(), permissionId);
+                            removedCount++;
+                        }
+                    }
+                    if (removedCount > 0) {
+                        log.info("Removed {} permissions from user {} due to module {} removal", 
+                                removedCount, user.getEmail(), removedModuleName);
+                        
+                        // CRITICAL: Invalidate all refresh tokens for this user to force re-login with updated permissions
+                        refreshTokenRepository.revokeAllUserTokens(user.getId(), java.time.LocalDateTime.now());
+                        log.info("Revoked all refresh tokens for user {} to force re-login with updated permissions", user.getEmail());
+                    }
+                }
+            }
+            
+            // Flush to ensure permissions are removed before clearing modules
+            userPermissionRepository.flush();
+        }
+
+        // 4. Clear existing modules from tenant_modules
+        tenantModuleRepository.deleteAllByTenantId(tenantId);
         // CRITICAL: Flush to ensure deletion is reflected in database before re-adding
         tenantModuleRepository.flush();
 
-        // 2. Assign new modules
+        // 5. Assign new modules
         assignModulesToTenant(tenant, moduleNames);
+        
+        // 6. CRITICAL: Assign permissions from newly added modules to all existing tenant users
+        if (!addedModuleNames.isEmpty()) {
+            log.info("Assigning permissions for {} newly added modules to all tenant users: {}", 
+                    addedModuleNames.size(), addedModuleNames);
+            
+            // Get all users for this tenant
+            List<User> tenantUsers = userRepository.findByTenantId(tenantId);
+            
+            for (String addedModuleName : addedModuleNames) {
+                Permission addedModule = permissionRepository.findByName(addedModuleName)
+                        .orElse(null);
+                
+                if (addedModule == null) {
+                    log.warn("Added module {} not found in permissions table", addedModuleName);
+                    continue;
+                }
+                
+                // Get all permissions for this module (MODULE + all ACTION permissions)
+                List<Permission> modulePermissions = getModulePermissions(addedModuleName);
+                Set<UUID> permissionIdsToAdd = modulePermissions.stream()
+                        .map(Permission::getId)
+                        .collect(Collectors.toSet());
+                permissionIdsToAdd.add(addedModule.getId()); // Include the module itself
+                
+                // Assign permissions to all tenant users
+                for (User user : tenantUsers) {
+                    int addedCount = 0;
+                    List<UserPermission> permissionsToSave = new java.util.ArrayList<>();
+                    
+                    for (UUID permissionId : permissionIdsToAdd) {
+                        // Check if already assigned
+                        if (userPermissionRepository.findByUserIdAndPermissionId(user.getId(), permissionId).isEmpty()) {
+                            Permission permission = permissionRepository.findById(permissionId)
+                                    .orElse(null);
+                            if (permission != null) {
+                                permissionsToSave.add(UserPermission.builder()
+                                        .user(user)
+                                        .permission(permission)
+                                        .build());
+                                addedCount++;
+                            }
+                        }
+                    }
+                    
+                    if (!permissionsToSave.isEmpty()) {
+                        userPermissionRepository.saveAll(permissionsToSave);
+                        log.info("Assigned {} permissions from module {} to user {}", 
+                                addedCount, addedModuleName, user.getEmail());
+                        
+                        // CRITICAL: Invalidate all refresh tokens for this user to force re-login with updated permissions
+                        refreshTokenRepository.revokeAllUserTokens(user.getId(), java.time.LocalDateTime.now());
+                        log.info("Revoked all refresh tokens for user {} to force re-login with new permissions", user.getEmail());
+                    }
+                }
+            }
+            
+            // Flush to ensure permissions are assigned
+            userPermissionRepository.flush();
+        }
+        
+        log.info("Successfully updated modules for tenant {}. Removed {} modules, added {} modules", 
+                tenant.getName(), removedModuleNames.size(), addedModuleNames.size());
     }
 
     /**
@@ -401,21 +552,31 @@ public class PermissionService {
     /**
      * Assign all permissions from tenant's module pool to a user.
      * Used for initial admin assignment (first user of a tenant).
+     * 
+     * CRITICAL: This method ONLY assigns permissions from modules that are currently
+     * assigned to the tenant. It does NOT remove existing permissions that don't
+     * belong to tenant modules - use setModulesForTenant for that.
      */
     @Transactional
     public void assignAllTenantPermissionsToUser(User user) {
         UUID tenantId = user.getTenant().getId();
         UUID userId = user.getId();
 
-        log.info("Starting permission assignment for first user {} of tenant {}", user.getEmail(), tenantId);
+        log.info("Starting permission assignment for user {} of tenant {}", user.getEmail(), tenantId);
 
         // CRITICAL: Ensure user is fully persisted before assigning permissions
         if (userId == null) {
             throw new IllegalStateException("User must be persisted before assigning permissions");
         }
 
+        // CRITICAL: Flush to ensure tenant modules are persisted before reading
+        tenantModuleRepository.flush();
+        
         // Get all modules for the tenant
-        List<Permission> tenantModules = getTenantModules(tenantId);
+        List<Permission> tenantModules = tenantModuleRepository.findByTenantId(tenantId).stream()
+                .map(TenantModule::getPermission)
+                .filter(p -> p.getType() == Permission.PermissionType.MODULE)
+                .collect(Collectors.toList());
 
         if (tenantModules.isEmpty()) {
             log.error("No modules found for tenant {}. Cannot assign permissions to user {}. " +
@@ -424,8 +585,59 @@ public class PermissionService {
             return;
         }
 
-        log.info("Found {} modules for tenant {}. Assigning all permissions to user {}",
-                tenantModules.size(), tenantId, user.getEmail());
+        // CRITICAL: Log module names for debugging
+        List<String> moduleNames = tenantModules.stream()
+                .map(Permission::getName)
+                .collect(Collectors.toList());
+        log.info("Found {} modules for tenant {}. Assigning all permissions to user {} from modules: {}",
+                tenantModules.size(), tenantId, user.getEmail(), moduleNames);
+
+        // CRITICAL: Get all valid permission IDs that belong to tenant modules
+        // This includes MODULE permissions and all ACTION permissions for each module
+        Set<UUID> validPermissionIds = new java.util.HashSet<>();
+        Set<String> validPermissionNames = new java.util.HashSet<>();
+        for (Permission module : tenantModules) {
+            validPermissionIds.add(module.getId()); // Add MODULE permission
+            validPermissionNames.add(module.getName());
+            
+            // Add all ACTION permissions for this module
+            try {
+                List<Permission> modulePermissions = getModulePermissions(module.getName());
+                for (Permission actionPermission : modulePermissions) {
+                    validPermissionIds.add(actionPermission.getId());
+                    validPermissionNames.add(actionPermission.getName());
+                }
+                log.debug("Module {} has {} action permissions", module.getName(), modulePermissions.size());
+            } catch (Exception e) {
+                log.warn("Failed to get permissions for module {}: {}", module.getName(), e.getMessage());
+            }
+        }
+        
+        log.info("Valid permission IDs for tenant modules: {} ({} permissions)", 
+                validPermissionIds.size(), validPermissionNames);
+        
+        // CRITICAL: Remove ALL existing permissions first, then assign only tenant module permissions
+        // This ensures user ONLY has permissions from currently assigned modules (clean slate approach)
+        List<UserPermission> existingPermissions = userPermissionRepository.findByUserId(userId);
+        int removedCount = 0;
+        Set<String> removedPermissionNames = new java.util.HashSet<>();
+        for (UserPermission existingPerm : existingPermissions) {
+            UUID permissionId = existingPerm.getPermission().getId();
+            String permissionName = existingPerm.getPermission().getName();
+            if (!validPermissionIds.contains(permissionId)) {
+                // This permission doesn't belong to any tenant module - remove it
+                userPermissionRepository.deleteByUserIdAndPermissionId(userId, permissionId);
+                removedCount++;
+                removedPermissionNames.add(permissionName);
+                log.debug("Removed invalid permission {} from user {} (not in tenant modules)", 
+                        permissionName, user.getEmail());
+            }
+        }
+        if (removedCount > 0) {
+            log.info("Removed {} invalid permissions from user {} (not in tenant modules): {}", 
+                    removedCount, user.getEmail(), removedPermissionNames);
+            userPermissionRepository.flush();
+        }
 
         int totalPermissionsAssigned = 0;
         List<UserPermission> permissionsToSave = new java.util.ArrayList<>();
@@ -487,8 +699,16 @@ public class PermissionService {
 
         // Verify permissions were saved
         List<String> savedPermissions = getUserPermissions(userId);
+        
+        // CRITICAL: Log all assigned permissions for debugging
+        List<String> modulePermissionNames = savedPermissions.stream()
+                .filter(p -> p.startsWith("MODULE_"))
+                .collect(Collectors.toList());
         log.info("Assigned {} permissions to first user {} of tenant {}. Verified {} permissions in database.",
                 totalPermissionsAssigned, user.getEmail(), user.getTenant().getName(), savedPermissions.size());
+        log.info("User {} has {} MODULE permissions: {}", user.getEmail(), modulePermissionNames.size(), modulePermissionNames);
+        log.info("User {} has {} total permissions. MODULE permissions: {}", 
+                user.getEmail(), savedPermissions.size(), modulePermissionNames);
 
         if (savedPermissions.isEmpty()) {
             log.error("CRITICAL: No permissions found in database after assignment for user {}. " +

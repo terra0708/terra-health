@@ -12,6 +12,7 @@ import com.terrarosa.terra_crm.modules.auth.dto.TenantDto;
 import com.terrarosa.terra_crm.modules.auth.entity.Role;
 import com.terrarosa.terra_crm.modules.auth.entity.SuperAdmin;
 import com.terrarosa.terra_crm.modules.auth.entity.User;
+import com.terrarosa.terra_crm.modules.auth.repository.RefreshTokenRepository;
 import com.terrarosa.terra_crm.modules.auth.repository.RoleRepository;
 import com.terrarosa.terra_crm.modules.auth.repository.SuperAdminRepository;
 import com.terrarosa.terra_crm.modules.auth.repository.UserRepository;
@@ -46,6 +47,7 @@ public class SuperAdminService {
         private final RoleRepository roleRepository;
         private final PasswordEncoder passwordEncoder;
         private final JwtService jwtService;
+        private final RefreshTokenRepository refreshTokenRepository;
 
         /**
          * Check if a user is a super admin.
@@ -152,9 +154,13 @@ public class SuperAdminService {
 
                 // Step B: Assign modules to tenant (overrides default core modules)
                 // CRITICAL: setModulesForTenant clears any default modules added by
-                // createTenant
+                // createTenant and removes permissions from users for removed modules
                 permissionService.setModulesForTenant(tenant, request.getModuleNames());
                 log.info("Set {} modules for tenant {}", request.getModuleNames().size(), tenant.getName());
+                
+                // CRITICAL: Ensure tenant modules are flushed and visible before assigning permissions
+                // This prevents assignAllTenantPermissionsToUser from reading stale module data
+                // Note: setModulesForTenant already flushes, but we ensure it here for clarity
 
                 // Step C: Create admin user in public.users table
                 String encodedPassword = passwordEncoder.encode(request.getAdminPassword());
@@ -179,6 +185,11 @@ public class SuperAdminService {
                 // Step E: Assign all ACTION permissions from selected modules to admin user
                 permissionService.assignAllTenantPermissionsToUser(savedAdminUser);
                 log.info("Assigned all module permissions to admin user {}", savedAdminUser.getEmail());
+
+                // CRITICAL: Invalidate all refresh tokens for this user to force re-login with new permissions
+                // This ensures JWT token will contain updated permissions
+                refreshTokenRepository.revokeAllUserTokens(savedAdminUser.getId(), java.time.LocalDateTime.now());
+                log.info("Revoked all refresh tokens for admin user {} to force re-login with new permissions", savedAdminUser.getEmail());
 
                 // Build response DTOs
                 TenantDto tenantDto = TenantDto.builder()
@@ -357,6 +368,8 @@ public class SuperAdminService {
          * Set modules for a tenant (replaces all existing modules).
          * This clears all existing modules and assigns the new ones.
          * 
+         * CRITICAL: System Tenant can only have MODULE_SUPERADMIN module.
+         * 
          * @param tenantId The tenant ID
          * @param moduleNames List of module names to assign
          */
@@ -366,6 +379,20 @@ public class SuperAdminService {
                 Tenant tenant = tenantRepository.findById(tenantId)
                                 .orElseThrow(() -> new IllegalArgumentException(
                                                 "Tenant not found with id: " + tenantId));
+
+                // CRITICAL: System Tenant validation - Defense in Depth
+                boolean isSystemTenant = "public".equals(tenant.getSchemaName()) && "SYSTEM".equals(tenant.getName());
+                if (isSystemTenant) {
+                        // System Tenant can only have MODULE_SUPERADMIN
+                        if (moduleNames.size() > 1 || (moduleNames.size() == 1 && !moduleNames.contains("MODULE_SUPERADMIN"))) {
+                                throw new IllegalArgumentException(
+                                                "System Tenant can only have MODULE_SUPERADMIN module. Attempted to assign: " + moduleNames);
+                        }
+                        // If empty list, allow it (will clear modules, but SuperAdminInitializer will restore MODULE_SUPERADMIN)
+                        if (moduleNames.isEmpty()) {
+                                log.warn("Clearing all modules from System Tenant. SuperAdminInitializer will restore MODULE_SUPERADMIN on next startup.");
+                        }
+                }
 
                 permissionService.setModulesForTenant(tenant, moduleNames);
                 log.info("Set {} modules for tenant: {}", moduleNames.size(), tenant.getName());
@@ -492,6 +519,9 @@ public class SuperAdminService {
          * Get all available modules (MODULE-level permissions) from the permissions
          * table.
          * Returns a list of maps with 'name' and 'description' keys.
+         * 
+         * NOTE: For System Tenant, only MODULE_SUPERADMIN should be returned.
+         * This is handled at frontend level, but backend can also filter if tenantId is provided.
          */
         @Transactional(readOnly = true)
         public List<Map<String, String>> getAllAvailableModules() {
@@ -505,6 +535,35 @@ public class SuperAdminService {
                                                 permission.getDescription() != null ? permission.getDescription()
                                                                 : permission.getName()))
                                 .collect(Collectors.toList());
+        }
+        
+        /**
+         * Get available modules for a specific tenant.
+         * System Tenant will only return MODULE_SUPERADMIN.
+         * 
+         * @param tenantId The tenant ID
+         * @return List of available modules for the tenant
+         */
+        @Transactional(readOnly = true)
+        public List<Map<String, String>> getAvailableModulesForTenant(UUID tenantId) {
+                Tenant tenant = tenantRepository.findById(tenantId)
+                                .orElseThrow(() -> new IllegalArgumentException("Tenant not found with id: " + tenantId));
+                
+                // CRITICAL: System Tenant can only have MODULE_SUPERADMIN
+                boolean isSystemTenant = "public".equals(tenant.getSchemaName()) && "SYSTEM".equals(tenant.getName());
+                if (isSystemTenant) {
+                        return permissionService.getAllModuleLevelPermissions().stream()
+                                        .filter(permission -> permission.getName().equals("MODULE_SUPERADMIN"))
+                                        .map(permission -> Map.of(
+                                                        "name", permission.getName(),
+                                                        "description",
+                                                        permission.getDescription() != null ? permission.getDescription()
+                                                                        : permission.getName()))
+                                        .collect(Collectors.toList());
+                }
+                
+                // For other tenants, return all modules except MODULE_HEALTH
+                return getAllAvailableModules();
         }
 
         /**
@@ -648,6 +707,11 @@ public class SuperAdminService {
 
                 // Assign all tenant permissions to the new admin (if they have ROLE_ADMIN)
                 permissionService.assignAllTenantPermissionsToUser(savedUser);
+
+                // CRITICAL: Invalidate all refresh tokens for this user to force re-login with new permissions
+                // This ensures JWT token will contain updated permissions
+                refreshTokenRepository.revokeAllUserTokens(savedUser.getId(), java.time.LocalDateTime.now());
+                log.info("Revoked all refresh tokens for user {} to force re-login with new permissions", savedUser.getEmail());
 
                 return Map.of(
                                 "id", savedUser.getId(),

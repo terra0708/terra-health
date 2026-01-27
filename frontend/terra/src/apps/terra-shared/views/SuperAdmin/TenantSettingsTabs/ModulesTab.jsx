@@ -22,6 +22,17 @@ const ModulesTab = ({ tenant }) => {
     const [selectedModules, setSelectedModules] = useState([]);
     const [hasChanges, setHasChanges] = useState(false);
 
+    // CRITICAL: System Tenant should only show MODULE_SUPERADMIN
+    const isSystemTenant = tenant?.schemaName === 'public' || tenant?.name === 'SYSTEM';
+    
+    // Filter available modules for System Tenant
+    const filteredModules = isSystemTenant 
+        ? availableModules.filter(module => {
+            const moduleName = typeof module === 'string' ? module : (module.name || module);
+            return moduleName === 'MODULE_SUPERADMIN';
+        })
+        : availableModules;
+
     // Initialize selected modules when data loads
     useEffect(() => {
         if (modules && modules.length > 0) {
@@ -136,9 +147,9 @@ const ModulesTab = ({ tenant }) => {
             )}
 
             {/* Module Cards Grid */}
-            {availableModules && availableModules.length > 0 ? (
+            {filteredModules && filteredModules.length > 0 ? (
                 <Grid container spacing={2}>
-                    {availableModules.map((module) => {
+                    {filteredModules.map((module) => {
                         const moduleName = typeof module === 'string' ? module : (module.name || module);
                         const moduleDescription = typeof module === 'object' && module.description 
                             ? module.description 
@@ -243,7 +254,7 @@ const ModulesTab = ({ tenant }) => {
                     <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 2 }}>
                         {t('super_admin.tenants.selected_summary', 'Selected Modules')} 
                         <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                            ({selectedModules.length} / {availableModules.length})
+                            ({selectedModules.length} / {filteredModules.length})
                         </Typography>
                     </Typography>
                     <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>

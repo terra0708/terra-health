@@ -33,6 +33,13 @@ public interface UserRepository extends SoftDeleteRepository<User, UUID> {
     long countByTenantId(UUID tenantId);
 
     /**
+     * Find all users by tenant ID (excluding deleted).
+     * Used for cascade permission removal when modules are removed from tenant.
+     */
+    @Query("SELECT u FROM User u WHERE u.tenant.id = :tenantId AND u.deleted = false")
+    List<User> findByTenantId(@Param("tenantId") UUID tenantId);
+
+    /**
      * Check if a user with the given email exists (excluding deleted).
      * Used for restore validation to prevent email conflicts.
      */
