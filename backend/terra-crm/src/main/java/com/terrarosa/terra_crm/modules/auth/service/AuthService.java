@@ -12,6 +12,7 @@ import com.terrarosa.terra_crm.modules.auth.dto.TenantDiscoveryRequest;
 import com.terrarosa.terra_crm.modules.auth.dto.TenantDiscoveryResponse;
 import com.terrarosa.terra_crm.modules.auth.dto.TenantInfo;
 import com.terrarosa.terra_crm.modules.auth.dto.UserDto;
+import com.terrarosa.terra_crm.modules.auth.dto.CurrentUserResponse;
 import com.terrarosa.terra_crm.modules.auth.entity.RefreshToken;
 import com.terrarosa.terra_crm.modules.auth.entity.Role;
 import com.terrarosa.terra_crm.modules.auth.entity.User;
@@ -21,8 +22,11 @@ import com.terrarosa.terra_crm.modules.auth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import com.terrarosa.terra_crm.core.quota.service.QuotaService;
+import com.terrarosa.terra_crm.core.security.config.PermissionEvaluator;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -490,5 +494,119 @@ public class AuthService {
         } else {
             log.warn("Refresh token not found or already revoked: {}", refreshTokenString);
         }
+    }
+    
+    /**
+     * Get current authenticated user information from JWT token.
+     * 
+     * PERFORMANCE OPTIMIZATION: Reads user data primarily from JWT claims (no DB query).
+     * Only queries database for firstName, lastName, and id if not available in JWT.
+     * 
+     * CRITICAL: This method extracts token from SecurityContext which is set by
+     * JwtAuthenticationFilter. Token is already validated at filter level.
+     * 
+     * @return CurrentUserResponse with user information and impersonation status
+     * @throws BadCredentialsException if user is not authenticated or token is invalid
+     */
+    @Transactional(readOnly = true)
+    public CurrentUserResponse getCurrentUser() {
+        // Get authentication from SecurityContext (set by JwtAuthenticationFilter)
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        
+        if (authentication == null || !authentication.isAuthenticated()) {
+            log.warn("getCurrentUser called but user is not authenticated");
+            throw new BadCredentialsException("User is not authenticated");
+        }
+        
+        // Extract token from authentication details
+        String token = null;
+        if (authentication.getDetails() instanceof PermissionEvaluator.JwtAuthenticationDetails) {
+            PermissionEvaluator.JwtAuthenticationDetails jwtDetails = 
+                    (PermissionEvaluator.JwtAuthenticationDetails) authentication.getDetails();
+            token = jwtDetails.getToken();
+        }
+        
+        if (token == null || token.isBlank()) {
+            log.error("Token not found in authentication details");
+            throw new BadCredentialsException("Invalid authentication token");
+        }
+        
+        // Extract user information from JWT claims (NO DATABASE QUERY)
+        String email = jwtService.extractEmail(token);
+        String tenantIdStr = jwtService.extractTenantId(token);
+        List<String> roles = jwtService.extractRoles(token);
+        List<String> permissions = jwtService.extractPermissions(token); // Already expanded from compressed format
+        
+        if (email == null || email.isBlank()) {
+            log.error("Email not found in JWT token");
+            throw new BadCredentialsException("Invalid JWT token: missing email");
+        }
+        
+        UUID tenantId = null;
+        if (tenantIdStr != null && !tenantIdStr.isBlank()) {
+            try {
+                tenantId = UUID.fromString(tenantIdStr);
+            } catch (IllegalArgumentException e) {
+                log.error("Invalid tenantId format in JWT: {}", tenantIdStr);
+                throw new BadCredentialsException("Invalid tenant ID format");
+            }
+        }
+        
+        // Check if this is an impersonation token
+        boolean isImpersonation = jwtService.isImpersonationToken(token);
+        String impersonatedEmail = null;
+        String originalUserId = null;
+        String originalEmail = null;
+        
+        if (isImpersonation) {
+            // Extract impersonation information from token
+            impersonatedEmail = jwtService.extractImpersonatedUserId(token);
+            originalUserId = jwtService.extractOriginalUserId(token);
+            
+            // Optional: Load original user email from database (for display purposes)
+            if (originalUserId != null && !originalUserId.isBlank()) {
+                try {
+                    UUID originalUserUuid = UUID.fromString(originalUserId);
+                    User originalUser = userRepository.findById(originalUserUuid).orElse(null);
+                    if (originalUser != null) {
+                        originalEmail = originalUser.getEmail();
+                    }
+                } catch (IllegalArgumentException e) {
+                    log.warn("Invalid originalUserId format in impersonation token: {}", originalUserId);
+                }
+            }
+        }
+        
+        // MINIMAL DATABASE QUERY: Only fetch firstName, lastName, and id if needed
+        // These are not in JWT claims, so we need to query database
+        User user = userRepository.findByEmail(email).orElse(null);
+        
+        UUID userId = null;
+        String firstName = null;
+        String lastName = null;
+        
+        if (user != null) {
+            userId = user.getId();
+            firstName = user.getFirstName();
+            lastName = user.getLastName();
+        } else {
+            log.warn("User not found in database for email: {}", email);
+            // Continue with JWT data only - user might have been deleted but token still valid
+        }
+        
+        // Build response from JWT claims (primary source) + minimal DB data
+        return CurrentUserResponse.builder()
+                .id(userId)
+                .email(email)
+                .firstName(firstName)
+                .lastName(lastName)
+                .tenantId(tenantId)
+                .roles(roles != null ? roles : List.of())
+                .permissions(permissions != null ? permissions : List.of())
+                .isImpersonation(isImpersonation)
+                .impersonatedEmail(impersonatedEmail)
+                .originalUserId(originalUserId)
+                .originalEmail(originalEmail)
+                .build();
     }
 }

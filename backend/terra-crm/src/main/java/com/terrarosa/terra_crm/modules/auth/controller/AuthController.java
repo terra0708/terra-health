@@ -8,6 +8,7 @@ import com.terrarosa.terra_crm.modules.auth.dto.RefreshTokenResponse;
 import com.terrarosa.terra_crm.modules.auth.dto.RegisterRequest;
 import com.terrarosa.terra_crm.modules.auth.dto.TenantDiscoveryRequest;
 import com.terrarosa.terra_crm.modules.auth.dto.TenantDiscoveryResponse;
+import com.terrarosa.terra_crm.modules.auth.dto.CurrentUserResponse;
 import com.terrarosa.terra_crm.modules.auth.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -193,6 +194,24 @@ public class AuthController {
         // Even if tenants list is empty, return success with empty list
         return ResponseEntity.ok()
                 .body(ApiResponse.success(response, "Tenant discovery completed"));
+    }
+    
+    /**
+     * Get current authenticated user information.
+     * Authenticated endpoint - requires valid JWT token in HttpOnly cookie.
+     * 
+     * Returns:
+     * - User information (id, email, firstName, lastName, tenantId, roles, permissions)
+     * - Impersonation status (if impersonation is active)
+     * 
+     * PERFORMANCE: Reads data primarily from JWT claims (minimal database queries).
+     * 
+     * @return CurrentUserResponse with user information and impersonation status
+     */
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<CurrentUserResponse>> getCurrentUser() {
+        CurrentUserResponse response = authService.getCurrentUser();
+        return ResponseEntity.ok(ApiResponse.success(response, "Current user retrieved"));
     }
     
     /**

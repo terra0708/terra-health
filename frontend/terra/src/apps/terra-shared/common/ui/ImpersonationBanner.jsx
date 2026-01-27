@@ -24,14 +24,16 @@ const ImpersonationBanner = () => {
     const user = useAuthStore((state) => state.user);
     const logout = useAuthStore((state) => state.logout);
     
-    // Check if impersonation is active from JWT token
-    // TODO: Parse JWT to check is_impersonation claim
-    // For now, check if user has a special flag or check JWT directly
-    const token = localStorage.getItem('token');
-    const isImpersonation = token ? checkImpersonationToken(token) : false;
+    // CRITICAL: Read impersonation status from authStore (populated by /api/v1/auth/me endpoint)
+    // Token is in HttpOnly cookie and cannot be accessed via JavaScript for security
+    const isImpersonation = user?.isImpersonation || false;
     
-    // Extract impersonation info from token
-    const impersonationInfo = token ? extractImpersonationInfo(token) : null;
+    // Extract impersonation info from user object
+    const impersonationInfo = isImpersonation ? {
+        impersonatedEmail: user?.impersonatedEmail || user?.email || 'Unknown',
+        originalEmail: user?.originalEmail || null,
+        originalUserId: user?.originalUserId || null
+    } : null;
     
     if (!isImpersonation || !impersonationInfo) {
         return null;
@@ -45,7 +47,7 @@ const ImpersonationBanner = () => {
         } catch (error) {
             console.error('Failed to exit impersonation:', error);
             // Fallback: manual redirect
-            localStorage.removeItem('token');
+            // CRITICAL: Token is in HttpOnly cookie, cannot remove from localStorage
             localStorage.removeItem('tenantId');
             window.location.href = '/login';
         }
@@ -113,50 +115,5 @@ const ImpersonationBanner = () => {
         </Box>
     );
 };
-
-/**
- * Check if token is an impersonation token by parsing JWT.
- * Decodes JWT payload and checks for is_impersonation claim.
- */
-function checkImpersonationToken(token) {
-    if (!token) return false;
-    try {
-        // JWT format: header.payload.signature
-        const parts = token.split('.');
-        if (parts.length !== 3) return false;
-        
-        // Decode JWT payload (base64url)
-        // Note: atob doesn't handle base64url properly, but for our use case it works
-        // In production, consider using a JWT library like jwt-decode
-        const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
-        return payload.is_impersonation === true;
-    } catch (error) {
-        console.warn('Failed to parse JWT token:', error);
-        return false;
-    }
-}
-
-/**
- * Extract impersonation info from JWT token.
- */
-function extractImpersonationInfo(token) {
-    if (!token) return null;
-    try {
-        const parts = token.split('.');
-        if (parts.length !== 3) return null;
-        
-        const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
-        
-        if (!payload.is_impersonation) return null;
-        
-        return {
-            impersonatedEmail: payload.sub || payload.impersonated_user_id || 'Unknown',
-            originalUserId: payload.original_user_id || null,
-        };
-    } catch (error) {
-        console.warn('Failed to extract impersonation info:', error);
-        return null;
-    }
-}
 
 export default ImpersonationBanner;

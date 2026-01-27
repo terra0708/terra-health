@@ -1,7 +1,7 @@
 import { Suspense, lazy, useState, useEffect } from 'react';
 import { Navigate, Routes, Route } from 'react-router-dom';
 import LoginPage from '@shared/views/Login/LoginPage';
-import useAuthStore from '@shared/modules/auth/hooks/useAuthStore';
+import useAuthStore from '@shared/store/authStore';
 import MainLayout from '@shared/app/MainLayout';
 import * as Views from './views/Placeholders.jsx';
 import { ErrorBoundary, LoadingSpinner, PageSkeleton } from '@common/ui';
@@ -119,6 +119,52 @@ const AccessDenied = () => (
 );
 
 function App() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const loading = useAuthStore((state) => state.loading);
+  const hasHydrated = useAuthStore((state) => state._hasHydrated);
+  const fetchCurrentUser = useAuthStore((state) => state.fetchCurrentUser);
+  const [isInitializing, setIsInitializing] = useState(true);
+
+  // CRITICAL: Initialize user on app load to prevent flicker
+  // Fetch current user if persisted state indicates user was authenticated
+  useEffect(() => {
+    // Wait for Zustand hydration to complete
+    if (!hasHydrated) {
+      return;
+    }
+
+    // If user was previously authenticated (from persisted state), fetch current user
+    if (isAuthenticated) {
+      fetchCurrentUser()
+        .then(() => {
+          setIsInitializing(false);
+        })
+        .catch((error) => {
+          // If 401/403, user is no longer authenticated - clear state
+          // fetchCurrentUser already handles state clearing, just mark as initialized
+          setIsInitializing(false);
+        });
+    } else {
+      // Not authenticated, no need to fetch
+      setIsInitializing(false);
+    }
+  }, [hasHydrated, isAuthenticated, fetchCurrentUser]);
+
+  // Show loading spinner during initialization to prevent flicker
+  if (!hasHydrated || isInitializing || loading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        backgroundColor: '#f5f5f5'
+      }}>
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
   return (
     <ErrorBoundary level="app">
       <Routes>

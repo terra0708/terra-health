@@ -129,6 +129,54 @@ const useAuthStore = create(
                 const user = get().user;
                 if (!user) return false;
                 return user.roles?.includes(role);
+            },
+
+            // Fetch current user from backend (/api/v1/auth/me)
+            // CRITICAL: This method reads user info from backend without accessing HttpOnly cookies
+            // Used on app initialization and when user context needs to be refreshed
+            fetchCurrentUser: async () => {
+                set({ loading: true, error: null });
+                try {
+                    const response = await apiClient.get('/v1/auth/me');
+                    
+                    // KRİTİK: Tenant ID senkronizasyonu
+                    // Response'daki tenantId ile localStorage'daki tenantId'yi eşitle
+                    if (response.tenantId) {
+                        const currentTenantId = localStorage.getItem('tenantId');
+                        const newTenantId = response.tenantId.toString();
+                        if (currentTenantId !== newTenantId) {
+                            localStorage.setItem('tenantId', newTenantId);
+                            if (import.meta.env.DEV) {
+                                console.debug('✅ Tenant ID synchronized:', newTenantId);
+                            }
+                        }
+                    }
+                    
+                    // Update auth store with user data
+                    set({
+                        user: response,
+                        isAuthenticated: true,
+                        loading: false,
+                        error: null
+                    });
+                    
+                    return response;
+                } catch (error) {
+                    // If 401, user is not authenticated - clear state gracefully
+                    if (error.status === 401 || error.status === 403) {
+                        set({
+                            user: null,
+                            isAuthenticated: false,
+                            loading: false,
+                            error: null
+                        });
+                        localStorage.removeItem('tenantId');
+                        // Don't redirect here - let App.jsx handle it to prevent flicker
+                    } else {
+                        set({ error, loading: false });
+                    }
+                    throw error;
+                }
             }
         }),
         {

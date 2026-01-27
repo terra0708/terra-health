@@ -21,6 +21,41 @@ const Header = ({ onLogout }) => {
     const primaryHex = theme.palette.primary.main;
     const secondaryHex = theme.palette.secondary.main;
 
+    // Build user full name from firstName and lastName
+    const userFullName = user?.firstName && user?.lastName
+        ? `${user.firstName} ${user.lastName}`
+        : user?.firstName || user?.lastName || user?.email || t('common.user_placeholder');
+
+    // Get display role from roles array
+    // Priority: ROLE_SUPER_ADMIN > ROLE_TENANT_ADMIN > ROLE_AGENT > first role
+    const getDisplayRole = () => {
+        if (!user?.roles || user.roles.length === 0) {
+            return t('common.admin');
+        }
+
+        // Role priority mapping
+        if (user.roles.includes('ROLE_SUPER_ADMIN')) {
+            return t('common.admin'); // "Yönetici"
+        }
+        if (user.roles.includes('ROLE_TENANT_ADMIN')) {
+            return t('common.admin'); // "Yönetici"
+        }
+        if (user.roles.includes('ROLE_AGENT')) {
+            return t('users.roles.staff') || 'Personel';
+        }
+
+        // Return first role, removing ROLE_ prefix and formatting
+        const firstRole = user.roles[0];
+        if (firstRole.startsWith('ROLE_')) {
+            // Try to get translation, fallback to formatted role name
+            const roleKey = firstRole.replace('ROLE_', '').toLowerCase();
+            return t(`users.roles.${roleKey}`, firstRole.replace('ROLE_', '').replace('_', ' '));
+        }
+        return firstRole;
+    };
+
+    const displayRole = getDisplayRole();
+
     return (
         <AppBar
             position="sticky"
@@ -69,10 +104,10 @@ const Header = ({ onLogout }) => {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 } }}>
                         <Box sx={{ display: { xs: 'none', lg: 'block' }, textAlign: 'right' }}>
                             <Typography variant="subtitle2" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
-                                {user?.name || t('common.user_placeholder')}
+                                {userFullName}
                             </Typography>
                             <Typography variant="caption" color="primary.main" sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: 10 }}>
-                                {user?.role || t('common.admin')}
+                                {displayRole}
                             </Typography>
                         </Box>
 
