@@ -39,9 +39,26 @@ const useAuthStore = create(
                     // Sadece tenantId localStorage'da kalıyor (X-Tenant-ID header için gerekli)
                     localStorage.setItem('tenantId', response.user.tenantId.toString());
 
+                    // CRITICAL: Fetch granular ACTION permissions after login
+                    // Login response contains only MODULE permissions (JWT optimization)
+                    // ACTION permissions must be fetched separately
+                    let granularPermissions = [];
+                    try {
+                        granularPermissions = await get().fetchGranularPermissions();
+                    } catch (permError) {
+                        // Don't fail login if granular permissions fetch fails
+                        console.warn('Failed to fetch granular permissions after login:', permError);
+                    }
+
+                    // Combine MODULE permissions (from login response) + ACTION permissions (from API)
+                    const allPermissions = [
+                        ...(response.user.permissions || []), // MODULE_* yetkileri
+                        ...granularPermissions // ACTION yetkileri
+                    ];
+
                     // Store'a yaz (persist middleware otomatik localStorage'a yazar)
                     set({
-                        user: response.user,
+                        user: { ...response.user, permissions: allPermissions },
                         isAuthenticated: true,
                         loading: false,
                         error: null,
@@ -131,19 +148,41 @@ const useAuthStore = create(
                 return user.roles?.includes(role);
             },
 
+            // Fetch granular ACTION permissions from backend
+            // Backend returns List<String> (permission names) for performance
+            fetchGranularPermissions: async () => {
+                try {
+                    const response = await apiClient.get('/v1/tenant-admin/permissions');
+                    // Backend returns List<String> directly, no need to map
+                    return Array.isArray(response) ? response : [];
+                } catch (error) {
+                    console.error('Failed to fetch granular permissions:', error);
+                    // Fallback: Return empty array (don't break the app)
+                    return [];
+                }
+            },
+
             // Fetch current user from backend (/api/v1/auth/me)
             // CRITICAL: This method reads user info from backend without accessing HttpOnly cookies
             // Used on app initialization and when user context needs to be refreshed
+            // CRITICAL: Race Condition Prevention - Uses Promise.all to fetch MODULE and ACTION permissions in parallel
             fetchCurrentUser: async () => {
                 set({ loading: true, error: null });
                 try {
-                    const response = await apiClient.get('/v1/auth/me');
+                    // CRITICAL: Race Condition Önleme - Promise.all ile paralel çek
+                    // Bu iki çağrı aynı anda başlar ve ikisi de bitene kadar bekler
+                    // Sistemin mantığı: P_toplam = P_jwt_modül ∪ P_api_aksiyon
+                    // Kullanıcı arayüzü ancak bu birleşim tamamlandığında render edilmelidir
+                    const [userResponse, granularPermissions] = await Promise.all([
+                        apiClient.get('/v1/auth/me'), // JWT'den MODULE yetkileri
+                        get().fetchGranularPermissions() // Backend'den ACTION yetkileri
+                    ]);
                     
                     // KRİTİK: Tenant ID senkronizasyonu
                     // Response'daki tenantId ile localStorage'daki tenantId'yi eşitle
-                    if (response.tenantId) {
+                    if (userResponse.tenantId) {
                         const currentTenantId = localStorage.getItem('tenantId');
-                        const newTenantId = response.tenantId.toString();
+                        const newTenantId = userResponse.tenantId.toString();
                         if (currentTenantId !== newTenantId) {
                             localStorage.setItem('tenantId', newTenantId);
                             if (import.meta.env.DEV) {
@@ -152,15 +191,21 @@ const useAuthStore = create(
                         }
                     }
                     
-                    // Update auth store with user data
+                    // MODULE yetkileri (JWT'den) + ACTION yetkileri (backend'den) birleştir
+                    const allPermissions = [
+                        ...(userResponse.permissions || []), // MODULE_* yetkileri
+                        ...granularPermissions // ACTION yetkileri (List<String>)
+                    ];
+                    
+                    // Update auth store with user data (combined permissions)
                     set({
-                        user: response,
+                        user: { ...userResponse, permissions: allPermissions },
                         isAuthenticated: true,
                         loading: false,
                         error: null
                     });
                     
-                    return response;
+                    return { ...userResponse, permissions: allPermissions };
                 } catch (error) {
                     // If 401, user is not authenticated - clear state gracefully
                     if (error.status === 401 || error.status === 403) {

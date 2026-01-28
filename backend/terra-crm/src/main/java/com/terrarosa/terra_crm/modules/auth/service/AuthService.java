@@ -143,26 +143,31 @@ public class AuthService {
                     schemaName);
         }
 
-        // Fetch user permissions
+        // Fetch all user permissions
         // CRITICAL: Super Admin also needs permissions for @PreAuthorize checks
         // Super Admin has all permissions assigned via SuperAdminInitializer
-        List<String> permissions = permissionService.getUserPermissions(user.getId());
-        log.debug("User {} has {} permissions: {}", user.getEmail(), permissions.size(), permissions);
+        List<String> allPermissions = permissionService.getUserPermissions(user.getId());
+        log.debug("User {} has {} total permissions: {}", user.getEmail(), allPermissions.size(), allPermissions);
 
-        if (permissions.isEmpty()) {
+        if (allPermissions.isEmpty()) {
             log.warn("User {} has no permissions assigned. This may indicate a problem with permission assignment.",
                     user.getEmail());
         }
 
-        // Generate access token (15 minutes)
+        // CRITICAL: JWT Optimization - Only include MODULE_* permissions in JWT
+        // ACTION permissions will be fetched separately from /api/v1/tenant-admin/permissions endpoint
+        List<String> jwtPermissions = filterModulePermissions(allPermissions);
+        log.debug("User {} has {} MODULE permissions for JWT: {}", user.getEmail(), jwtPermissions.size(), jwtPermissions);
+
+        // Generate access token (15 minutes) - only MODULE permissions in JWT
         String accessToken = jwtService.generateAccessToken(
                 user.getEmail(),
                 userTenantId,
                 schemaName,
                 roles,
-                permissions);
+                jwtPermissions);
 
-        log.debug("Generated access token for user {} with {} permissions", user.getEmail(), permissions.size());
+        log.debug("Generated access token for user {} with {} MODULE permissions", user.getEmail(), jwtPermissions.size());
 
         // Generate refresh token (7 days) with token rotation
         String tokenId = UUID.randomUUID().toString();
@@ -181,6 +186,8 @@ public class AuthService {
         log.debug("Created refresh token for user {} with tokenId {}", user.getEmail(), tokenId);
 
         // Build user DTO
+        // CRITICAL: UserDto.permissions contains only MODULE permissions (same as JWT)
+        // ACTION permissions will be fetched separately from frontend
         UserDto userDto = UserDto.builder()
                 .id(user.getId())
                 .email(user.getEmail())
@@ -188,7 +195,7 @@ public class AuthService {
                 .lastName(user.getLastName())
                 .tenantId(user.getTenant().getId())
                 .roles(roles)
-                .permissions(permissions)
+                .permissions(jwtPermissions) // Only MODULE permissions
                 .build();
 
         return LoginResponse.builder()
@@ -224,18 +231,22 @@ public class AuthService {
             schemaName = "public";
         }
 
-        // Fetch permissions
+        // Fetch all user permissions
         // CRITICAL FIX: Super Admin's permissions are already assigned in database
         // Do not return empty list - getUserPermissions() will return all permissions for Super Admin
-        List<String> permissions = permissionService.getUserPermissions(user.getId());
+        List<String> allPermissions = permissionService.getUserPermissions(user.getId());
 
-        // Generate access token
+        // CRITICAL: JWT Optimization - Only include MODULE_* permissions in JWT
+        // ACTION permissions will be fetched separately from /api/v1/tenant-admin/permissions endpoint
+        List<String> jwtPermissions = filterModulePermissions(allPermissions);
+
+        // Generate access token - only MODULE permissions in JWT
         String accessToken = jwtService.generateAccessToken(
                 user.getEmail(),
                 userTenantId,
                 schemaName,
                 roles,
-                permissions);
+                jwtPermissions);
 
         RefreshTokenResponse.RefreshTokenResponseBuilder responseBuilder = RefreshTokenResponse.builder()
                 .accessToken(accessToken)
@@ -264,6 +275,20 @@ public class AuthService {
         }
 
         return responseBuilder.build();
+    }
+
+    /**
+     * Filter permissions to include only MODULE-level permissions for JWT.
+     * ACTION-level permissions are excluded from JWT to reduce token size.
+     * They will be fetched separately from /api/v1/tenant-admin/permissions endpoint.
+     * 
+     * @param allPermissions All user permissions (MODULE + ACTION)
+     * @return Filtered list containing only MODULE_* permissions
+     */
+    private List<String> filterModulePermissions(List<String> allPermissions) {
+        return allPermissions.stream()
+                .filter(permission -> permission.startsWith("MODULE_"))
+                .collect(Collectors.toList());
     }
 
     /**

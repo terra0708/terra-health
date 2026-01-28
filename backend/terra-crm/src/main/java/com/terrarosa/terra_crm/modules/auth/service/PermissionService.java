@@ -233,6 +233,47 @@ public class PermissionService {
     }
 
     /**
+     * Get all ACTION-level permissions available for a tenant based on their assigned modules.
+     * This method returns only ACTION permissions that belong to modules assigned to the tenant.
+     * MODULE-level permissions are excluded.
+     * 
+     * CRITICAL: This ensures tenant admin can only see and assign permissions from their active modules.
+     * 
+     * @param tenantId Tenant ID
+     * @return List of ACTION-level permissions available to the tenant
+     */
+    @Transactional(readOnly = true)
+    public List<Permission> getTenantAvailablePermissions(UUID tenantId) {
+        // Get all modules assigned to the tenant
+        List<Permission> tenantModules = getTenantModules(tenantId);
+        
+        if (tenantModules.isEmpty()) {
+            log.debug("No modules found for tenant {}. Returning empty permission list.", tenantId);
+            return List.of();
+        }
+        
+        // Collect all ACTION permissions from tenant's modules
+        Set<Permission> availablePermissions = new java.util.HashSet<>();
+        
+        for (Permission module : tenantModules) {
+            try {
+                // Get all ACTION permissions for this module
+                List<Permission> modulePermissions = getModulePermissions(module.getName());
+                availablePermissions.addAll(modulePermissions);
+                log.debug("Module {} has {} action permissions", module.getName(), modulePermissions.size());
+            } catch (Exception e) {
+                log.warn("Failed to get permissions for module {}: {}", module.getName(), e.getMessage());
+            }
+        }
+        
+        List<Permission> result = new java.util.ArrayList<>(availablePermissions);
+        log.info("Retrieved {} available ACTION permissions for tenant {} from {} modules", 
+                result.size(), tenantId, tenantModules.size());
+        
+        return result;
+    }
+
+    /**
      * Assign a module to a tenant.
      */
     @Transactional
@@ -795,8 +836,11 @@ public class PermissionService {
 
     /**
      * Remove a bundle from a user.
-     * Removes the bundle association but does NOT remove individual permissions
-     * (they may have been assigned separately).
+     * CRITICAL: Removes bundle association AND removes all permissions from that bundle
+     * from user_permissions table (cascade cleanup).
+     * 
+     * This ensures that when a bundle is removed from a user, the user loses
+     * all permissions that were granted through that bundle.
      */
     @Transactional
     public void removeBundleFromUser(UUID userId, UUID bundleId) {
@@ -806,10 +850,96 @@ public class PermissionService {
         PermissionBundle bundle = permissionBundleRepository.findById(bundleId)
                 .orElseThrow(() -> new IllegalArgumentException("Bundle not found with id: " + bundleId));
 
+        // CRITICAL: Remove all permissions from bundle from user_permissions table
+        Set<UUID> bundlePermissionIds = bundle.getPermissions().stream()
+                .map(Permission::getId)
+                .collect(Collectors.toSet());
+        
+        int removedCount = 0;
+        for (UUID permissionId : bundlePermissionIds) {
+            if (userPermissionRepository.findByUserIdAndPermissionId(userId, permissionId).isPresent()) {
+                userPermissionRepository.deleteByUserIdAndPermissionId(userId, permissionId);
+                removedCount++;
+            }
+        }
+        
+        // Remove bundle association from user_bundles
         user.getBundles().remove(bundle);
         userRepository.save(user);
 
-        log.info("Removed bundle '{}' from user {}", bundle.getName(), user.getEmail());
+        log.info("Removed bundle '{}' from user {}. Removed {} permissions from user_permissions table",
+                bundle.getName(), user.getEmail(), removedCount);
+    }
+
+    /**
+     * Delete a bundle with cascade cleanup.
+     * CRITICAL: When a bundle is deleted, all permissions from that bundle are removed
+     * from all users who had the bundle assigned.
+     * 
+     * Steps:
+     * 1. Find all users who have this bundle assigned
+     * 2. For each user, remove all bundle permissions from user_permissions table
+     * 3. Remove bundle-user associations (user_bundles table - JPA Many-to-Many handles this)
+     * 4. Bundle-permission associations are removed automatically (DB cascade)
+     * 5. Soft delete the bundle
+     * 
+     * @param bundleId Bundle ID to delete
+     */
+    @Transactional
+    public void deleteBundle(UUID bundleId) {
+        PermissionBundle bundle = permissionBundleRepository.findById(bundleId)
+                .orElseThrow(() -> new IllegalArgumentException("Bundle not found with id: " + bundleId));
+
+        UUID tenantId = bundle.getTenant().getId();
+        String bundleName = bundle.getName();
+        
+        // Get all users who have this bundle assigned
+        List<User> usersWithBundle = bundle.getUsers().stream()
+                .collect(Collectors.toList());
+        
+        log.info("Deleting bundle '{}' (id: {}). Found {} users with this bundle assigned.",
+                bundleName, bundleId, usersWithBundle.size());
+        
+        // Get all permission IDs from bundle
+        Set<UUID> bundlePermissionIds = bundle.getPermissions().stream()
+                .map(Permission::getId)
+                .collect(Collectors.toSet());
+        
+        // For each user, remove bundle permissions from user_permissions table
+        int totalPermissionsRemoved = 0;
+        for (User user : usersWithBundle) {
+            int userPermissionsRemoved = 0;
+            for (UUID permissionId : bundlePermissionIds) {
+                if (userPermissionRepository.findByUserIdAndPermissionId(user.getId(), permissionId).isPresent()) {
+                    userPermissionRepository.deleteByUserIdAndPermissionId(user.getId(), permissionId);
+                    userPermissionsRemoved++;
+                    totalPermissionsRemoved++;
+                }
+            }
+            
+            if (userPermissionsRemoved > 0) {
+                log.info("Removed {} permissions from user {} (email: {}) due to bundle deletion",
+                        userPermissionsRemoved, user.getId(), user.getEmail());
+            }
+        }
+        
+        // Remove bundle-user associations (JPA Many-to-Many will handle user_bundles table)
+        // We need to clear the relationship from both sides
+        for (User user : usersWithBundle) {
+            user.getBundles().remove(bundle);
+        }
+        userRepository.saveAll(usersWithBundle);
+        
+        // Bundle-permission associations will be removed automatically by DB cascade
+        // (bundle_permissions table has ON DELETE CASCADE)
+        
+        // Soft delete the bundle
+        bundle.setDeleted(true);
+        bundle.setDeletedAt(java.time.LocalDateTime.now());
+        permissionBundleRepository.save(bundle);
+        
+        log.info("Successfully deleted bundle '{}' (id: {}). Removed {} permissions from {} users.",
+                bundleName, bundleId, totalPermissionsRemoved, usersWithBundle.size());
     }
 
     /**

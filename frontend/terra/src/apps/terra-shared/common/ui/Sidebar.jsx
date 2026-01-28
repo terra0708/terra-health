@@ -376,27 +376,31 @@ const Sidebar = () => {
     });
 
     // CRITICAL: Filter sub-items FIRST, then check if dropdown should be visible
+    // Marketing dropdown - MODULE_MARKETING kontrolü + Empty State
+    const hasMarketingModule = hasPermission(['MODULE_MARKETING']);
     const marketingDropdown = {
         key: 'marketing',
         icon: 'marketing',
         label: t('ads.title'),
         subItems: [
-            { key: 'marketing_dashboard', icon: 'dashboard', label: t('ads.dashboard'), path: '/marketing/dashboard', requiredPermission: ['MARKETING_DASHBOARD_VIEW', 'MODULE_MARKETING'] },
-            { key: 'marketing_campaigns', icon: 'statistics', label: t('ads.campaigns'), path: '/marketing/campaigns', requiredPermission: ['MARKETING_CAMPAIGNS_VIEW', 'MODULE_MARKETING'] },
-            { key: 'marketing_attribution', icon: 'customer_panel', label: t('ads.attribution'), path: '/marketing/attribution', requiredPermission: ['MARKETING_ATTRIBUTION_VIEW', 'MODULE_MARKETING'] },
+            { key: 'marketing_dashboard', icon: 'dashboard', label: t('ads.dashboard'), path: '/marketing/dashboard', requiredPermission: ['MARKETING_DASHBOARD'] },
+            { key: 'marketing_campaigns', icon: 'statistics', label: t('ads.campaigns'), path: '/marketing/campaigns', requiredPermission: ['MARKETING_CAMPAIGNS'] },
+            { key: 'marketing_attribution', icon: 'customer_panel', label: t('ads.attribution'), path: '/marketing/attribution', requiredPermission: ['MARKETING_ATTRIBUTION'] },
         ].filter(item => hasPermission(item.requiredPermission))
     };
 
+    // Settings dropdown - MODULE_SETTINGS kontrolü + Empty State
+    const hasSettingsModule = hasPermission(['MODULE_SETTINGS']);
     const settingsDropdown = {
         key: 'settings',
         icon: 'settings',
         label: t('menu.settings'),
         subItems: [
-            { key: 'users', icon: 'users', label: t('menu.users'), path: '/settings/users', requiredPermission: ['SETTINGS_USERS_VIEW', 'MODULE_SETTINGS'] },
-            { key: 'permissions', icon: 'permissions', label: t('menu.permissions'), path: '/settings/permissions', requiredPermission: ['SETTINGS_ROLES_VIEW', 'MODULE_SETTINGS'] },
-            { key: 'reminder_settings', icon: 'settings', label: t('settings.reminder_settings', 'Hatırlatıcı Ayarları'), path: '/settings/reminders', requiredPermission: ['SETTINGS_SYSTEM_UPDATE', 'MODULE_SETTINGS'] },
-            { key: 'system_settings', icon: 'system_settings', label: t('menu.system_settings'), path: '/settings', requiredPermission: ['SETTINGS_SYSTEM_UPDATE', 'MODULE_SETTINGS'] },
-            { key: 'customer_panel', icon: 'customer_panel', label: t('menu.customer_panel'), path: '/settings/customer-panel', requiredPermission: ['SETTINGS_CUSTOMER_PANEL_MANAGE', 'MODULE_SETTINGS'] },
+            { key: 'users', icon: 'users', label: t('menu.users'), path: '/settings/users', requiredPermission: ['SETTINGS_USERS'] },
+            { key: 'permissions', icon: 'permissions', label: t('menu.permissions'), path: '/settings/permissions', requiredPermission: ['SETTINGS_PERMISSIONS'] },
+            { key: 'reminder_settings', icon: 'settings', label: t('settings.reminder_settings', 'Hatırlatıcı Ayarları'), path: '/settings/reminders', requiredPermission: ['SETTINGS_REMINDERS'] },
+            { key: 'system_settings', icon: 'system_settings', label: t('menu.system_settings'), path: '/settings', requiredPermission: ['SETTINGS_SYSTEM'] },
+            { key: 'customer_panel', icon: 'customer_panel', label: t('menu.customer_panel'), path: '/settings/customer-panel', requiredPermission: ['SETTINGS_CUSTOMER_PANEL'] },
         ].filter(item => hasPermission(item.requiredPermission))
     };
 
@@ -478,8 +482,9 @@ const Sidebar = () => {
                 {/* Do NOT show Marketing or Settings dropdowns for Super Admin */}
                 {!isSuperAdmin && (
                     <>
-                        {/* Marketing dropdown - only show if sub-items are visible */}
-                        {marketingDropdown.subItems.length > 0 && (
+                        {/* Marketing dropdown - CRITICAL: MODULE kontrolü + Empty State */}
+                        {/* Dropdown sadece MODULE yetkisi VAR VE alt öğelerden en az biri görünürse gösterilir */}
+                        {hasMarketingModule && marketingDropdown.subItems.length > 0 && (
                             <DropdownNavItem
                                 key={marketingDropdown.key}
                                 icon={marketingDropdown.icon}
@@ -491,8 +496,9 @@ const Sidebar = () => {
                             />
                         )}
 
-                        {/* Settings dropdown - only show if sub-items are visible */}
-                        {settingsDropdown.subItems.length > 0 && (
+                        {/* Settings dropdown - CRITICAL: MODULE kontrolü + Empty State */}
+                        {/* Dropdown sadece MODULE yetkisi VAR VE alt öğelerden en az biri görünürse gösterilir */}
+                        {hasSettingsModule && settingsDropdown.subItems.length > 0 && (
                             <DropdownNavItem
                                 key={settingsDropdown.key}
                                 icon={settingsDropdown.icon}

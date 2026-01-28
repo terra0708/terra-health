@@ -80,18 +80,24 @@ apiClient.interceptors.request.use(
         }
         
         // KRİTİK: X-Tenant-ID header'ı sadece truthy değer varsa ekle
-        // Login öncesi isteklerde tenantId olmayabilir, bu normaldir
+        // Login/discovery endpoint'leri tenant-bağımsızdır, tenantId olmaması normaldir
         // null, undefined, empty string kontrolü yap
+        
+        // Tenant-bağımsız endpoint'ler (login, discovery, auth endpoints)
+        const tenantIndependentPaths = ['/auth/', '/discovery/', '/v1/auth/', '/v1/discovery/'];
+        const isTenantIndependent = tenantIndependentPaths.some(path => config.url?.includes(path));
+        
         if (tenantId && tenantId !== 'null' && tenantId !== 'undefined') {
             config.headers['X-Tenant-ID'] = tenantId;
             // Debug log (production'da kaldırılabilir)
             if (import.meta.env.DEV) {
                 console.debug('✅ X-Tenant-ID header added:', tenantId);
             }
-        } else {
-            // Debug log (production'da kaldırılabilir)
+        } else if (!isTenantIndependent) {
+            // Sadece tenant-bağımlı endpoint'ler için uyarı ver
+            // Login/discovery endpoint'leri için uyarı verme (normal durum)
             if (import.meta.env.DEV) {
-                console.warn('⚠️ X-Tenant-ID header NOT added. tenantId:', tenantId);
+                console.warn('⚠️ X-Tenant-ID header NOT added. tenantId:', tenantId, 'URL:', config.url);
             }
         }
         
@@ -173,6 +179,43 @@ apiClient.interceptors.response.use(
                 // Token artık cookie'de, localStorage'a yazma işlemi kaldırıldı
                 // Cookie otomatik gönderilecek, header'a ekleme gerekmez
                 processQueue(null, null); // Token cookie'de, null geçiyoruz
+                
+                // CRITICAL: Refresh başarılı olduğunda granüler yetkileri güncelle
+                // Auth store'u import et (circular dependency önlemek için lazy import)
+                // Sessizce arka planda güncelle (kullanıcı fark etmez)
+                import('../store/authStore').then((module) => {
+                    const useAuthStore = module.default || module.useAuthStore;
+                    if (!useAuthStore) {
+                        if (import.meta.env.DEV) {
+                            console.debug('authStore not found in module:', module);
+                        }
+                        return;
+                    }
+                    
+                    const store = useAuthStore.getState();
+                    // Sessizce arka planda güncelle (kullanıcı fark etmez)
+                    store.fetchGranularPermissions().then(granularPermissions => {
+                        // Mevcut MODULE yetkileri ile birleştir
+                        const currentPermissions = store.user?.permissions || [];
+                        const modulePermissions = currentPermissions.filter(p => p && p.startsWith('MODULE_'));
+                        const allPermissions = [...modulePermissions, ...granularPermissions];
+                        
+                        // Store'u güncelle
+                        useAuthStore.setState({ 
+                            user: { ...store.user, permissions: allPermissions } 
+                        });
+                    }).catch(err => {
+                        // Sessizce fail et, kullanıcıyı rahatsız etme
+                        if (import.meta.env.DEV) {
+                            console.debug('Failed to refresh granular permissions:', err);
+                        }
+                    });
+                }).catch(err => {
+                    // Import hatası - sessizce ignore et
+                    if (import.meta.env.DEV) {
+                        console.debug('Failed to import authStore for granular permissions refresh:', err);
+                    }
+                });
                 
                 // Orijinal isteği tekrar dene (cookie otomatik gönderilecek)
                 return apiClient(originalRequest);

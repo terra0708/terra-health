@@ -18,9 +18,14 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Controller for managing permissions, tenant modules, and user permissions.
- * Most endpoints require ROLE_ADMIN.
+ * Controller for managing permissions and tenant modules.
+ * 
+ * CRITICAL: User permission and bundle management endpoints have been moved to TenantAdminController
+ * to enforce tenant isolation. This controller now only handles Super Admin operations.
+ * 
  * Module assignment endpoints require Super Admin privileges.
+ * 
+ * @deprecated User permission and bundle endpoints: Use TenantAdminController instead.
  */
 @Slf4j
 @RestController
@@ -97,34 +102,42 @@ public class PermissionController {
     }
     
     /**
-     * Get permissions for a user.
+     * @deprecated This endpoint has been moved to TenantAdminController for tenant isolation.
+     * Use GET /api/v1/tenant-admin/users/{userId}/permissions instead.
      */
+    @Deprecated
     @GetMapping("/users/{userId}/permissions")
     public ResponseEntity<ApiResponse<List<String>>> getUserPermissions(@PathVariable UUID userId) {
+        log.warn("DEPRECATED: GET /api/v1/permissions/users/{userId}/permissions is deprecated. Use TenantAdminController instead.");
         List<String> permissions = permissionService.getUserPermissions(userId);
         return ResponseEntity.ok(ApiResponse.success(permissions));
     }
     
     /**
-     * Assign a permission to a user.
-     * Validates that the permission is in the tenant's module pool.
+     * @deprecated This endpoint has been moved to TenantAdminController for tenant isolation.
+     * Use POST /api/v1/tenant-admin/users/{userId}/permissions instead.
      */
+    @Deprecated
     @PostMapping("/users/{userId}/permissions")
     public ResponseEntity<ApiResponse<Void>> assignPermissionToUser(
             @PathVariable UUID userId,
             @RequestBody AssignPermissionRequest request) {
+        log.warn("DEPRECATED: POST /api/v1/permissions/users/{userId}/permissions is deprecated. Use TenantAdminController instead.");
         permissionService.assignPermissionToUser(userId, request.getPermissionId());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(null, "Permission assigned successfully"));
     }
     
     /**
-     * Remove a permission from a user.
+     * @deprecated This endpoint has been moved to TenantAdminController for tenant isolation.
+     * Use DELETE /api/v1/tenant-admin/users/{userId}/permissions/{permissionId} instead.
      */
+    @Deprecated
     @DeleteMapping("/users/{userId}/permissions/{permissionId}")
     public ResponseEntity<ApiResponse<Void>> removePermissionFromUser(
             @PathVariable UUID userId,
             @PathVariable UUID permissionId) {
+        log.warn("DEPRECATED: DELETE /api/v1/permissions/users/{userId}/permissions/{permissionId} is deprecated. Use TenantAdminController instead.");
         permissionService.removePermissionFromUser(userId, permissionId);
         return ResponseEntity.ok(ApiResponse.success(null, "Permission removed successfully"));
     }
@@ -139,10 +152,13 @@ public class PermissionController {
     }
     
     /**
-     * Create a permission bundle.
+     * @deprecated This endpoint has been moved to TenantAdminController for tenant isolation.
+     * Use POST /api/v1/tenant-admin/bundles instead.
      */
+    @Deprecated
     @PostMapping("/bundles")
     public ResponseEntity<ApiResponse<PermissionBundle>> createBundle(@RequestBody CreateBundleRequest request) {
+        log.warn("DEPRECATED: POST /api/v1/permissions/bundles is deprecated. Use TenantAdminController instead.");
         PermissionBundle bundle = permissionService.createBundle(
             request.getTenantId(),
             request.getName(),
@@ -154,44 +170,56 @@ public class PermissionController {
     }
     
     /**
-     * Get all bundles for a tenant.
+     * @deprecated This endpoint has been moved to TenantAdminController for tenant isolation.
+     * Use GET /api/v1/tenant-admin/bundles instead.
      */
+    @Deprecated
     @GetMapping("/bundles/tenants/{tenantId}")
     public ResponseEntity<ApiResponse<List<PermissionBundle>>> getTenantBundles(@PathVariable UUID tenantId) {
+        log.warn("DEPRECATED: GET /api/v1/permissions/bundles/tenants/{tenantId} is deprecated. Use TenantAdminController instead.");
         List<PermissionBundle> bundles = permissionService.getTenantBundles(tenantId);
         return ResponseEntity.ok(ApiResponse.success(bundles));
     }
     
     /**
-     * Update a bundle.
+     * @deprecated This endpoint has been moved to TenantAdminController for tenant isolation.
+     * Use PUT /api/v1/tenant-admin/bundles/{bundleId} instead.
      */
+    @Deprecated
     @PutMapping("/bundles/{bundleId}")
     public ResponseEntity<ApiResponse<PermissionBundle>> updateBundle(
             @PathVariable UUID bundleId,
             @RequestBody UpdateBundleRequest request) {
+        log.warn("DEPRECATED: PUT /api/v1/permissions/bundles/{bundleId} is deprecated. Use TenantAdminController instead.");
         PermissionBundle bundle = permissionService.updateBundle(bundleId, request.getPermissionIds());
         return ResponseEntity.ok(ApiResponse.success(bundle, "Bundle updated successfully"));
     }
     
     /**
-     * Assign a bundle to a user.
+     * @deprecated This endpoint has been moved to TenantAdminController for tenant isolation.
+     * Use POST /api/v1/tenant-admin/bundles/{bundleId}/assign/{userId} instead.
      */
+    @Deprecated
     @PostMapping("/bundles/{bundleId}/assign/{userId}")
     public ResponseEntity<ApiResponse<Void>> assignBundleToUser(
             @PathVariable UUID bundleId,
             @PathVariable UUID userId) {
+        log.warn("DEPRECATED: POST /api/v1/permissions/bundles/{bundleId}/assign/{userId} is deprecated. Use TenantAdminController instead.");
         permissionService.assignBundleToUser(userId, bundleId);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(null, "Bundle assigned successfully. Permissions copied to user."));
     }
     
     /**
-     * Remove a bundle from a user.
+     * @deprecated This endpoint has been moved to TenantAdminController for tenant isolation.
+     * Use DELETE /api/v1/tenant-admin/bundles/{bundleId}/users/{userId} instead.
      */
+    @Deprecated
     @DeleteMapping("/bundles/{bundleId}/users/{userId}")
     public ResponseEntity<ApiResponse<Void>> removeBundleFromUser(
             @PathVariable UUID bundleId,
             @PathVariable UUID userId) {
+        log.warn("DEPRECATED: DELETE /api/v1/permissions/bundles/{bundleId}/users/{userId} is deprecated. Use TenantAdminController instead.");
         permissionService.removeBundleFromUser(userId, bundleId);
         return ResponseEntity.ok(ApiResponse.success(null, "Bundle removed successfully"));
     }
