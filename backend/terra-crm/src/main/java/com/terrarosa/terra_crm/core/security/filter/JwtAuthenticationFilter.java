@@ -13,14 +13,16 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -141,14 +143,35 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         // Extract permissions from JWT token
         List<String> permissions = jwtService.extractPermissions(token);
         
+        // Extract roles from JWT token
+        List<String> jwtRoles = jwtService.extractRoles(token);
+        
         if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = userDetailsService.loadUserByUsername(email);
             
-            // Create authentication token
+            // CRITICAL: Merge JWT roles with database roles for @PreAuthorize checks
+            // Spring Security's @PreAuthorize("hasAnyRole('ROLE_ADMIN')") checks authorities
+            // JWT token contains roles, so we need to ensure they're in authorities
+            Collection<org.springframework.security.core.GrantedAuthority> mergedAuthorities = 
+                    new java.util.ArrayList<>(userDetails.getAuthorities());
+            
+            // Add JWT roles as authorities if not already present
+            if (jwtRoles != null) {
+                for (String role : jwtRoles) {
+                    org.springframework.security.core.GrantedAuthority authority = 
+                            new org.springframework.security.core.authority.SimpleGrantedAuthority(role);
+                    if (!mergedAuthorities.contains(authority)) {
+                        mergedAuthorities.add(authority);
+                        log.debug("Added JWT role {} to authorities for user {}", role, email);
+                    }
+                }
+            }
+            
+            // Create authentication token with merged authorities
             UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                     userDetails,
                     null,
-                    userDetails.getAuthorities()
+                    mergedAuthorities
             );
             
             // Set JWT details including permissions for permission evaluator
@@ -158,7 +181,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             
             // Set authentication in security context
             SecurityContextHolder.getContext().setAuthentication(authentication);
-            log.debug("Set authentication for user: {} with {} permissions", email, permissions.size());
+            log.debug("Set authentication for user: {} with {} permissions and {} authorities ({} from JWT)", 
+                    email, permissions.size(), mergedAuthorities.size(), jwtRoles != null ? jwtRoles.size() : 0);
         }
         
         try {

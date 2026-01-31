@@ -5,6 +5,7 @@ import useAuthStore from '@shared/store/authStore';
 import MainLayout from '@shared/app/MainLayout';
 import * as Views from './views/Placeholders.jsx';
 import { ErrorBoundary, LoadingSpinner, PageSkeleton } from '@common/ui';
+import ForbiddenPage from '@shared/common/ui/ForbiddenPage';
 
 // Lazy load pages for code splitting and performance
 const UsersPage = lazy(() => import('@shared/views/Settings/UsersPage'));
@@ -75,7 +76,7 @@ const ProtectedRoute = ({ children, requiredPermission, requiredRole }) => {
         { path: '/appointments', perm: ['APPOINTMENTS_VIEW', 'MODULE_APPOINTMENTS'] },
         { path: '/customers', perm: ['CUSTOMERS_VIEW', 'MODULE_CUSTOMERS'] },
         { path: '/reminders', perm: ['REMINDERS_VIEW', 'MODULE_REMINDERS'] },
-        { path: '/marketing/dashboard', perm: ['MARKETING_DASHBOARD_VIEW', 'MODULE_MARKETING'] },
+        { path: '/marketing/dashboard', perm: ['MARKETING_DASHBOARD', 'MODULE_MARKETING'] },
         { path: '/statistics', perm: ['STATISTICS_VIEW', 'MODULE_STATISTICS'] },
         { path: '/notifications', perm: ['NOTIFICATIONS_VIEW', 'MODULE_NOTIFICATIONS'] },
         { path: '/settings', perm: ['SETTINGS_SYSTEM_UPDATE', 'MODULE_SETTINGS'] }
@@ -87,7 +88,7 @@ const ProtectedRoute = ({ children, requiredPermission, requiredRole }) => {
         return <Navigate to={firstAllowed.path} replace />;
       }
 
-      return <Navigate to="/403" replace />;
+      return <Navigate to="/forbidden" replace />;
     }
 
     return <Navigate to="/" replace />;
@@ -169,6 +170,10 @@ function App() {
     <ErrorBoundary level="app">
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        
+        {/* CRITICAL: Forbidden page must be OUTSIDE ProtectedRoute to avoid infinite redirect loops */}
+        <Route path="/forbidden" element={<ForbiddenPage />} />
+        <Route path="/403" element={<ForbiddenPage />} />
 
         {/* Korumalı Rotalar */}
         <Route
@@ -180,16 +185,15 @@ function App() {
           }
         >
           <Route index element={<ProtectedRoute requiredPermission={['DASHBOARD_VIEW', 'MODULE_DASHBOARD']}><LazyRoute moduleName="Dashboard"><DashboardPage /></LazyRoute></ProtectedRoute>} />
-          <Route path="403" element={<AccessDenied />} />
           <Route path="appointments" element={<ProtectedRoute requiredPermission={['APPOINTMENTS_VIEW', 'MODULE_APPOINTMENTS']}><LazyRoute moduleName="Appointments"><AppointmentsPage /></LazyRoute></ProtectedRoute>} />
           <Route path="customers" element={<ProtectedRoute requiredPermission={['CUSTOMERS_VIEW', 'MODULE_CUSTOMERS']}><LazyRoute moduleName="Customers"><CustomersPage /></LazyRoute></ProtectedRoute>} />
           <Route path="reminders" element={<ProtectedRoute requiredPermission={['REMINDERS_VIEW', 'MODULE_REMINDERS']}><LazyRoute moduleName="Reminders"><RemindersPage /></LazyRoute></ProtectedRoute>} />
           <Route path="marketing">
             <Route index element={<Navigate to="/marketing/dashboard" replace />} />
-            <Route path="dashboard" element={<ProtectedRoute requiredPermission={['MARKETING_DASHBOARD_VIEW', 'MODULE_MARKETING']}><LazyRoute moduleName="Marketing"><MarketingDashboard /></LazyRoute></ProtectedRoute>} />
-            <Route path="campaigns" element={<ProtectedRoute requiredPermission={['MARKETING_CAMPAIGNS_VIEW', 'MODULE_MARKETING']}><LazyRoute moduleName="Marketing"><MarketingCampaigns /></LazyRoute></ProtectedRoute>} />
-            <Route path="campaigns/:id" element={<ProtectedRoute requiredPermission={['MARKETING_CAMPAIGNS_VIEW', 'MODULE_MARKETING']}><LazyRoute moduleName="Marketing"><MarketingCampaignDetail /></LazyRoute></ProtectedRoute>} />
-            <Route path="attribution" element={<ProtectedRoute requiredPermission={['MARKETING_ATTRIBUTION_VIEW', 'MODULE_MARKETING']}><LazyRoute moduleName="Marketing"><MarketingAttribution /></LazyRoute></ProtectedRoute>} />
+            <Route path="dashboard" element={<ProtectedRoute requiredPermission={['MARKETING_DASHBOARD', 'MODULE_MARKETING']}><LazyRoute moduleName="Marketing"><MarketingDashboard /></LazyRoute></ProtectedRoute>} />
+            <Route path="campaigns" element={<ProtectedRoute requiredPermission={['MARKETING_CAMPAIGNS', 'MODULE_MARKETING']}><LazyRoute moduleName="Marketing"><MarketingCampaigns /></LazyRoute></ProtectedRoute>} />
+            <Route path="campaigns/:id" element={<ProtectedRoute requiredPermission={['MARKETING_CAMPAIGNS', 'MODULE_MARKETING']}><LazyRoute moduleName="Marketing"><MarketingCampaignDetail /></LazyRoute></ProtectedRoute>} />
+            <Route path="attribution" element={<ProtectedRoute requiredPermission={['MARKETING_ATTRIBUTION', 'MODULE_MARKETING']}><LazyRoute moduleName="Marketing"><MarketingAttribution /></LazyRoute></ProtectedRoute>} />
           </Route>
           <Route path="statistics" element={<ProtectedRoute requiredPermission={['STATISTICS_VIEW', 'MODULE_STATISTICS']}><LazyRoute moduleName="Statistics"><Views.Statistics /></LazyRoute></ProtectedRoute>} />
           <Route path="notifications" element={<ProtectedRoute requiredPermission={['NOTIFICATIONS_VIEW', 'MODULE_NOTIFICATIONS']}><LazyRoute moduleName="Notifications"><NotificationsPage /></LazyRoute></ProtectedRoute>} />

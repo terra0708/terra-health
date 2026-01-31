@@ -149,12 +149,16 @@ const useAuthStore = create(
             },
 
             // Fetch granular ACTION permissions from backend
-            // Backend returns List<String> (permission names) for performance
+            // Backend returns List<PermissionResponseDTO> with id, name, parentId
+            // Extract permission names for hasPermission checks
             fetchGranularPermissions: async () => {
                 try {
                     const response = await apiClient.get('/v1/tenant-admin/permissions');
-                    // Backend returns List<String> directly, no need to map
-                    return Array.isArray(response) ? response : [];
+                    // Backend returns ApiResponse<List<PermissionResponseDTO>>
+                    const permissions = Array.isArray(response) ? response : (response?.data || []);
+                    // Extract permission names for hasPermission checks
+                    const permissionNames = permissions.map(p => typeof p === 'string' ? p : p.name).filter(Boolean);
+                    return permissionNames;
                 } catch (error) {
                     console.error('Failed to fetch granular permissions:', error);
                     // Fallback: Return empty array (don't break the app)

@@ -2,6 +2,9 @@ package com.terrarosa.terra_crm.modules.auth.service;
 
 import com.terrarosa.terra_crm.core.tenancy.entity.Tenant;
 import com.terrarosa.terra_crm.core.tenancy.repository.TenantRepository;
+import com.terrarosa.terra_crm.modules.auth.dto.BundleDto;
+import com.terrarosa.terra_crm.modules.auth.dto.ModuleDTO;
+import com.terrarosa.terra_crm.modules.auth.dto.PermissionResponseDTO;
 import com.terrarosa.terra_crm.modules.auth.entity.Permission;
 import com.terrarosa.terra_crm.modules.auth.entity.PermissionBundle;
 import com.terrarosa.terra_crm.modules.auth.entity.TenantModule;
@@ -196,6 +199,46 @@ public class PermissionService {
         
         log.debug("Retrieved {} modules for tenant {}", modules.size(), tenantId);
         return modules;
+    }
+
+    /**
+     * Get all MODULE-level permissions (modules) assigned to the current tenant as DTOs.
+     * Includes child ACTION permissions to avoid circular reference issues during JSON serialization.
+     * 
+     * CRITICAL: DTO mapping happens within @Transactional(readOnly = true) context
+     * to prevent LazyInitializationException when accessing module.getChildPermissions().
+     * 
+     * @param tenantId Tenant ID
+     * @return List of ModuleDTO with child permissions always populated
+     */
+    @Transactional(readOnly = true)
+    public List<ModuleDTO> getTenantModulesAsDto(UUID tenantId) {
+        List<Permission> modules = getTenantModules(tenantId);
+        
+        return modules.stream()
+                .map(module -> {
+                    // Eager load child permissions (session açık)
+                    Set<Permission> childPermissions = module.getChildPermissions();
+                    List<PermissionResponseDTO> childDtos = childPermissions.stream()
+                            .map(p -> PermissionResponseDTO.builder()
+                                    .id(p.getId())
+                                    .name(p.getName())
+                                    .description(p.getDescription())
+                                    .type(p.getType())
+                                    .parentPermissionId(module.getId())
+                                    .parentPermissionName(module.getName())
+                                    .build())
+                            .collect(Collectors.toList());
+                    
+                    return ModuleDTO.builder()
+                            .id(module.getId())
+                            .name(module.getName())
+                            .description(module.getDescription())
+                            .type(module.getType())
+                            .childPermissions(childDtos)
+                            .build();
+                })
+                .collect(Collectors.toList());
     }
 
     /**
@@ -978,6 +1021,101 @@ public class PermissionService {
     @Transactional(readOnly = true)
     public List<PermissionBundle> getTenantBundles(UUID tenantId) {
         return permissionBundleRepository.findByTenantId(tenantId);
+    }
+
+    /**
+     * Get all bundles for a tenant as DTOs with eagerly-loaded permissions.
+     * 
+     * CRITICAL: DTO mapping happens within @Transactional(readOnly = true) context
+     * to prevent LazyInitializationException when accessing bundle.getPermissions().
+     * 
+     * @param tenantId Tenant ID
+     * @return List of BundleDto with permissions always populated
+     */
+    @Transactional(readOnly = true)
+    public List<BundleDto> getTenantBundlesAsDto(UUID tenantId) {
+        List<PermissionBundle> bundles = getTenantBundles(tenantId);
+        
+        // CRITICAL: Mapping işlemi @Transactional context'i içinde
+        return bundles.stream()
+                .map(bundle -> {
+                    // Eager load permissions (session açık)
+                    Set<Permission> permissions = bundle.getPermissions();
+                    List<PermissionResponseDTO> permissionDtos = permissions.stream()
+                            .map(p -> PermissionResponseDTO.builder()
+                                    .id(p.getId())
+                                    .name(p.getName())
+                                    .description(p.getDescription())
+                                    .type(p.getType())
+                                    .parentPermissionId(p.getParentPermission() != null ? p.getParentPermission().getId() : null)
+                                    .parentPermissionName(p.getParentPermission() != null ? p.getParentPermission().getName() : null)
+                                    .build())
+                            .collect(Collectors.toList());
+                    
+                    return BundleDto.builder()
+                            .id(bundle.getId())
+                            .name(bundle.getName())
+                            .description(bundle.getDescription())
+                            .tenantId(bundle.getTenant().getId())
+                            .permissions(permissionDtos) // Always populated
+                            .createdAt(bundle.getCreatedAt())
+                            .updatedAt(bundle.getUpdatedAt())
+                            .build();
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get all bundles assigned to a user.
+     * 
+     * @param userId User ID
+     * @return List of PermissionBundle entities
+     */
+    @Transactional(readOnly = true)
+    public List<PermissionBundle> getUserBundles(UUID userId) {
+        return permissionBundleRepository.findByUserId(userId);
+    }
+
+    /**
+     * Get all bundles assigned to a user as DTOs with eagerly-loaded permissions.
+     * 
+     * CRITICAL: DTO mapping happens within @Transactional(readOnly = true) context
+     * to prevent LazyInitializationException when accessing bundle.getPermissions().
+     * 
+     * @param userId User ID
+     * @return List of BundleDto with permissions always populated
+     */
+    @Transactional(readOnly = true)
+    public List<BundleDto> getUserBundlesAsDto(UUID userId) {
+        List<PermissionBundle> bundles = getUserBundles(userId);
+        
+        // Same mapping logic as getTenantBundlesAsDto
+        return bundles.stream()
+                .map(bundle -> {
+                    // Eager load permissions (session açık)
+                    Set<Permission> permissions = bundle.getPermissions();
+                    List<PermissionResponseDTO> permissionDtos = permissions.stream()
+                            .map(p -> PermissionResponseDTO.builder()
+                                    .id(p.getId())
+                                    .name(p.getName())
+                                    .description(p.getDescription())
+                                    .type(p.getType())
+                                    .parentPermissionId(p.getParentPermission() != null ? p.getParentPermission().getId() : null)
+                                    .parentPermissionName(p.getParentPermission() != null ? p.getParentPermission().getName() : null)
+                                    .build())
+                            .collect(Collectors.toList());
+                    
+                    return BundleDto.builder()
+                            .id(bundle.getId())
+                            .name(bundle.getName())
+                            .description(bundle.getDescription())
+                            .tenantId(bundle.getTenant().getId())
+                            .permissions(permissionDtos) // Always populated
+                            .createdAt(bundle.getCreatedAt())
+                            .updatedAt(bundle.getUpdatedAt())
+                            .build();
+                })
+                .collect(Collectors.toList());
     }
 
     /**

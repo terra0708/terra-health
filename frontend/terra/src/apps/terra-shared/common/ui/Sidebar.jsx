@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { styled, useTheme } from '@mui/material/styles';
+import { styled, useTheme, alpha } from '@mui/material/styles';
 import MuiDrawer from '@mui/material/Drawer';
 import { List, ListItem, ListItemButton, ListItemIcon, ListItemText, IconButton, Box, Divider, Typography, useMediaQuery, Collapse } from '@mui/material';
 import { ChevronLeft, ChevronRight, X, ChevronDown } from 'lucide-react';
@@ -464,6 +464,41 @@ const Sidebar = () => {
             )}
 
             <Divider sx={{ opacity: mode => mode === 'light' ? 0.3 : 0.1, mb: 2 }} />
+
+            {/* CRITICAL: Global Empty State - User has no module permissions */}
+            {/* Check if user has absolutely no menu items (no modules assigned) */}
+            {menuItems.length === 0 && 
+             (!isSuperAdmin && marketingDropdown.subItems.length === 0 && settingsDropdown.subItems.length === 0) && (
+                <Box sx={{ px: 2, py: 4, textAlign: 'center' }}>
+                    <Box sx={{
+                        width: 64,
+                        height: 64,
+                        mx: 'auto',
+                        mb: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: '50%',
+                        background: theme => theme.palette.mode === 'light'
+                            ? `linear-gradient(135deg, ${alpha(primaryHex, 0.1)} 0%, ${alpha(secondaryHex, 0.1)} 100%)`
+                            : `linear-gradient(135deg, ${alpha(primaryHex, 0.2)} 0%, ${alpha(secondaryHex, 0.2)} 100%)`,
+                        border: `2px solid ${alpha(primaryHex, 0.2)}`
+                    }}>
+                        <lord-icon
+                            src="https://cdn.lordicon.com/tdrtiskw.json"
+                            trigger="loop"
+                            colors={`primary:${primaryHex},secondary:${secondaryHex}`}
+                            style={{ width: '40px', height: '40px' }}
+                        />
+                    </Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600, mb: 1 }}>
+                        {t('sidebar.no_permissions', 'Yetki Bulunamadı')}
+                    </Typography>
+                    <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.75rem', lineHeight: 1.5 }}>
+                        {t('sidebar.contact_admin', 'Yöneticinizle iletişime geçin')}
+                    </Typography>
+                </Box>
+            )}
 
             <List sx={{ px: 0 }}>
                 {menuItems.map((item) => (

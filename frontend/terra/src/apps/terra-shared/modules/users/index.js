@@ -3,6 +3,7 @@ export * from './components/UserDrawer';
 export * from './components/UserDetailsDialog';
 export * from './components/UserTerminationDialog';
 export * from './components/UserMobileCard';
+export * from './components/UserBundleDrawer';
 export * from './data/mockData';
 export * from './styles';
 export * from './hooks/useUsers';

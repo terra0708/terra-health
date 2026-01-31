@@ -1,6 +1,9 @@
 package com.terrarosa.terra_crm.modules.auth.controller;
 
 import com.terrarosa.terra_crm.core.common.dto.ApiResponse;
+import com.terrarosa.terra_crm.modules.auth.dto.BundleDto;
+import com.terrarosa.terra_crm.modules.auth.dto.ModuleDTO;
+import com.terrarosa.terra_crm.modules.auth.dto.PermissionResponseDTO;
 import com.terrarosa.terra_crm.modules.auth.dto.UserDto;
 import com.terrarosa.terra_crm.modules.auth.entity.Permission;
 import com.terrarosa.terra_crm.modules.auth.entity.PermissionBundle;
@@ -143,13 +146,18 @@ public class TenantAdminController {
 
     /**
      * Get all bundles belonging to the current tenant.
+     * Returns DTOs with eagerly-loaded permissions.
+     * 
+     * CRITICAL: DTO mapping happens in service layer within @Transactional context
+     * to prevent LazyInitializationException.
      */
     @GetMapping("/bundles")
-    public ResponseEntity<ApiResponse<List<PermissionBundle>>> getTenantBundles() {
+    public ResponseEntity<ApiResponse<List<BundleDto>>> getTenantBundles() {
         UUID tenantId = tenantSecurityService.getCurrentUserTenantId();
         
-        List<PermissionBundle> bundles = permissionService.getTenantBundles(tenantId);
-        return ResponseEntity.ok(ApiResponse.success(bundles));
+        // CRITICAL: DTO mapping service'de yapılıyor (@Transactional context'i içinde)
+        List<BundleDto> bundleDtos = permissionService.getTenantBundlesAsDto(tenantId);
+        return ResponseEntity.ok(ApiResponse.success(bundleDtos));
     }
 
     /**
@@ -281,52 +289,87 @@ public class TenantAdminController {
      * Get all available ACTION-level permissions for the current tenant.
      * Returns only permissions from modules assigned to the tenant.
      * 
-     * CRITICAL: Returns List<String> (permission names) instead of List<Permission> for performance.
-     * Frontend can use permissions.includes('SETTINGS_USERS') for fast checks.
+     * CRITICAL: Returns List<PermissionResponseDTO> with UUID, name, parentId for frontend.
+     * Frontend needs UUIDs for bundle creation and parentId for hierarchical grouping.
      * 
      * Super Admin: Returns all ACTION permissions in the system.
      * Tenant Admin: Returns only ACTION permissions from tenant's assigned modules.
      */
     @GetMapping("/permissions")
-    public ResponseEntity<ApiResponse<List<String>>> getTenantAvailablePermissions() {
+    public ResponseEntity<ApiResponse<List<PermissionResponseDTO>>> getTenantAvailablePermissions() {
         // Check if Super Admin
         org.springframework.security.core.Authentication auth = 
             org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
         boolean isSuperAdmin = auth != null && auth.getAuthorities().stream()
             .anyMatch(a -> a.getAuthority().equals("ROLE_SUPER_ADMIN"));
         
-        List<String> permissionNames;
+        List<PermissionResponseDTO> permissions;
         
         if (isSuperAdmin) {
-            // Super Admin: Return all ACTION permission names in system
+            // Super Admin: Return all ACTION permissions in system
             log.debug("Super Admin detected - returning all ACTION permissions");
-            permissionNames = permissionService.getAllPermissions().stream()
+            permissions = permissionService.getAllPermissions().stream()
                 .filter(p -> p.getType() == com.terrarosa.terra_crm.modules.auth.entity.Permission.PermissionType.ACTION)
-                .map(com.terrarosa.terra_crm.modules.auth.entity.Permission::getName)
-                .collect(java.util.stream.Collectors.toList());
+                .map(p -> PermissionResponseDTO.builder()
+                    .id(p.getId())
+                    .name(p.getName())
+                    .description(p.getDescription())
+                    .type(p.getType())
+                    .parentPermissionId(p.getParentPermission() != null ? p.getParentPermission().getId() : null)
+                    .parentPermissionName(p.getParentPermission() != null ? p.getParentPermission().getName() : null)
+                    .build())
+                .collect(Collectors.toList());
         } else {
-            // Tenant Admin: Return only tenant's available permission names
+            // Tenant Admin: Return only tenant's available permissions
             UUID tenantId = tenantSecurityService.getCurrentUserTenantId();
-            List<Permission> permissions = permissionService.getTenantAvailablePermissions(tenantId);
-            permissionNames = permissions.stream()
-                .map(Permission::getName)
-                .collect(java.util.stream.Collectors.toList());
+            List<Permission> permissionEntities = permissionService.getTenantAvailablePermissions(tenantId);
+            permissions = permissionEntities.stream()
+                .map(p -> PermissionResponseDTO.builder()
+                    .id(p.getId())
+                    .name(p.getName())
+                    .description(p.getDescription())
+                    .type(p.getType())
+                    .parentPermissionId(p.getParentPermission() != null ? p.getParentPermission().getId() : null)
+                    .parentPermissionName(p.getParentPermission() != null ? p.getParentPermission().getName() : null)
+                    .build())
+                .collect(Collectors.toList());
         }
         
-        log.debug("Returning {} ACTION permissions for user", permissionNames.size());
-        return ResponseEntity.ok(ApiResponse.success(permissionNames));
+        log.debug("Returning {} ACTION permissions for user", permissions.size());
+        return ResponseEntity.ok(ApiResponse.success(permissions));
     }
 
     /**
      * Get all MODULE-level permissions (modules) assigned to the current tenant.
      * Frontend uses this to know which modules are active.
+     * 
+     * CRITICAL: Returns DTOs to avoid circular reference issues during JSON serialization.
      */
     @GetMapping("/modules")
-    public ResponseEntity<ApiResponse<List<Permission>>> getTenantModules() {
+    public ResponseEntity<ApiResponse<List<ModuleDTO>>> getTenantModules() {
         UUID tenantId = tenantSecurityService.getCurrentUserTenantId();
         
-        List<Permission> modules = permissionService.getTenantModules(tenantId);
+        List<ModuleDTO> modules = permissionService.getTenantModulesAsDto(tenantId);
         return ResponseEntity.ok(ApiResponse.success(modules));
+    }
+
+    /**
+     * Get all bundles assigned to a user.
+     * Validates that the user belongs to the current tenant.
+     * Returns DTOs with eagerly-loaded permissions.
+     * 
+     * CRITICAL: DTO mapping happens in service layer within @Transactional context
+     * to prevent LazyInitializationException.
+     */
+    @GetMapping("/users/{userId}/bundles")
+    public ResponseEntity<ApiResponse<List<BundleDto>>> getUserBundles(@PathVariable UUID userId) {
+        // CRITICAL: Validate user belongs to current tenant
+        tenantSecurityService.validateUserBelongsToTenant(userId);
+        
+        // CRITICAL: DTO mapping service'de yapılıyor (@Transactional context'i içinde)
+        List<BundleDto> bundleDtos = permissionService.getUserBundlesAsDto(userId);
+        
+        return ResponseEntity.ok(ApiResponse.success(bundleDtos));
     }
 
     // ========== Request DTOs ==========

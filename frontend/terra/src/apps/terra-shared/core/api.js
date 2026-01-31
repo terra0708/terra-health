@@ -232,6 +232,45 @@ apiClient.interceptors.response.use(
             }
         }
         
+        // 403 Forbidden Handling - Access Denied
+        // CRITICAL: Redirect to forbidden page when user lacks required permissions
+        // BUT: Allow certain endpoints to handle 403 errors themselves (e.g., bundle creation)
+        if (error.response?.status === 403) {
+            // Check if we're already on forbidden page to avoid redirect loops
+            const currentPath = window.location.pathname;
+            
+            // Endpoints that should handle 403 errors themselves (user actions)
+            // These endpoints will show error messages instead of redirecting
+            const userActionEndpoints = [
+                '/bundles',  // Bundle creation/update/delete
+                '/users/',   // User management actions
+            ];
+            
+            const isUserAction = userActionEndpoints.some(endpoint => 
+                originalRequest?.url?.includes(endpoint)
+            );
+            
+            // Only redirect if:
+            // 1. Not already on forbidden page
+            // 2. Not a user action endpoint (let component handle the error)
+            // 3. Not a POST/PUT/DELETE request (these are usually user actions)
+            const isModifyingRequest = originalRequest?.method && 
+                ['POST', 'PUT', 'PATCH', 'DELETE'].includes(originalRequest.method.toUpperCase());
+            
+            if (currentPath !== '/forbidden' && 
+                currentPath !== '/403' && 
+                !isUserAction && 
+                !isModifyingRequest) {
+                // Redirect to forbidden page for GET requests to protected resources
+                // Using window.location.href instead of navigate() because interceptor
+                // cannot use React hooks (useNavigate)
+                window.location.href = '/forbidden';
+                return Promise.reject(error);
+            }
+            // For user actions and modifying requests, let the component handle the error
+            // This allows showing proper error messages in Snackbar/Alert components
+        }
+        
         // Hata durumlarında backend'den gelen ApiResponse yapısını düzleştir
         // Frontend'de error.message ve error.code ile direkt erişim sağla
         const normalizedError = normalizeError(error);

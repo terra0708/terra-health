@@ -24,7 +24,8 @@ import {
     Pagination,
     Stack,
     Snackbar,
-    Alert
+    Alert,
+    CircularProgress
 } from '@mui/material';
 import {
     Search,
@@ -38,7 +39,8 @@ import {
     Phone,
     Calendar,
     LogOut,
-    Info
+    Info,
+    Shield
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -49,6 +51,7 @@ import {
     StatCard,
     useUsers
 } from '@shared/modules/users';
+import { UserBundleDrawer } from '@shared/modules/users/components/UserBundleDrawer';
 import { ModulePageWrapper } from '@common/ui';
 import { usePerformance } from '@common/hooks';
 
@@ -75,15 +78,23 @@ const UsersPage = () => {
         setPage,
         rowsPerPage,
         setRowsPerPage,
+        loading,
         store // Access to actions: addUser, updateUser, deleteUser
     } = useUsers();
 
     const [detailsOpen, setDetailsOpen] = useState(false);
     const [viewUser, setViewUser] = useState(null);
+    const [bundleDrawerOpen, setBundleDrawerOpen] = useState(false);
+    const [selectedUserForBundles, setSelectedUserForBundles] = useState(null);
 
     const handleViewDetails = (user) => {
         setViewUser(user);
         setDetailsOpen(true);
+    };
+
+    const handleOpenBundleDrawer = (user) => {
+        setSelectedUserForBundles(user);
+        setBundleDrawerOpen(true);
     };
 
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
@@ -127,6 +138,7 @@ const UsersPage = () => {
     const getRoleChip = (role) => {
         const configs = {
             admin: { color: theme.palette.error.main, label: t('users.roles.admin'), icon: <ShieldCheck size={14} /> },
+            super_admin: { color: theme.palette.warning.main, label: t('users.roles.super_admin') || 'Super Admin', icon: <Shield size={14} /> },
             doctor: { color: theme.palette.secondary.main, label: t('users.roles.doctor'), icon: <UserCheck size={14} /> },
             staff: { color: theme.palette.primary.main, label: t('users.roles.staff'), icon: <UsersIcon size={14} /> },
         };
@@ -201,7 +213,11 @@ const UsersPage = () => {
                     />
                 </Box>
 
-                {isMobile ? (
+                {loading && filteredUsers.length === 0 ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+                        <CircularProgress />
+                    </Box>
+                ) : isMobile ? (
                     <Box sx={{ p: 2 }}>
                         {filteredUsers.map(user => (
                             <UserMobileCard
@@ -210,6 +226,7 @@ const UsersPage = () => {
                                 t={t}
                                 theme={theme}
                                 onEdit={(u) => handleOpenDrawer(u)}
+                                onAssignBundles={(u) => handleOpenBundleDrawer(u)}
                                 getRoleChip={getRoleChip}
                             />
                         ))}
@@ -244,19 +261,60 @@ const UsersPage = () => {
                                         <TableRow key={user.id} sx={{ '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.01) } }}>
                                             <TableCell sx={{ py: 2.5, pl: 4 }}>
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                                    <Avatar src={user.avatar} sx={{ width: 48, height: 48, borderRadius: '14px', border: `2px solid ${theme.palette.background.paper}` }} />
-                                                    <Box><Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'text.primary' }}>{user.name}</Typography><Typography variant="caption" sx={{ color: 'text.disabled', fontWeight: 600 }}>{user.email}</Typography></Box>
+                                                    <Avatar sx={{ width: 48, height: 48, borderRadius: '14px', border: `2px solid ${theme.palette.background.paper}`, bgcolor: theme.palette.primary.main }}>
+                                                        {user.firstName?.[0]}{user.lastName?.[0]}
+                                                    </Avatar>
+                                                    <Box>
+                                                        <Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'text.primary' }}>
+                                                            {user.firstName} {user.lastName}
+                                                        </Typography>
+                                                        <Typography variant="caption" sx={{ color: 'text.disabled', fontWeight: 600 }}>
+                                                            {user.email}
+                                                        </Typography>
+                                                    </Box>
                                                 </Box>
                                             </TableCell>
-                                            <TableCell><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Phone size={14} strokeWidth={2.5} color={theme.palette.text.secondary} /><Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>{user.phone}</Typography></Box></TableCell>
-                                            <TableCell>{getRoleChip(user.role)}</TableCell>
-                                            <TableCell><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Calendar size={14} strokeWidth={2.5} color={theme.palette.text.secondary} /><Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>{user.joined}</Typography></Box></TableCell>
-                                            <TableCell><Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: user.left === '-' ? theme.palette.text.disabled : theme.palette.error.main }}><LogOut size={14} strokeWidth={2.5} /><Typography variant="body2" sx={{ fontWeight: 600 }}>{user.left}</Typography></Box></TableCell>
+                                            <TableCell>
+                                                <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                                                    -
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell>
+                                                {user.roles?.map(role => {
+                                                    const roleName = role.replace('ROLE_', '').toLowerCase();
+                                                    return <Box key={role} sx={{ mb: 0.5 }}>{getRoleChip(roleName)}</Box>;
+                                                })}
+                                            </TableCell>
+                                            <TableCell>
+                                                <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                                                    -
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                                                    -
+                                                </Typography>
+                                            </TableCell>
                                             <TableCell align="right" sx={{ pr: 4 }}>
                                                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.2 }}>
-                                                    <Tooltip title={t('common.user_info')}><IconButton onClick={() => handleViewDetails(user)} size="small" sx={{ color: 'info.main', bgcolor: alpha(theme.palette.info.main, 0.04), borderRadius: '12px', width: 38, height: 38 }}><Info size={18} /></IconButton></Tooltip>
-                                                    <Tooltip title={t('common.edit')}><IconButton onClick={(e) => { handleOpenDrawer(user); e.currentTarget.blur(); }} size="small" sx={{ color: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.04), borderRadius: '12px', width: 38, height: 38 }}><Edit3 size={18} /></IconButton></Tooltip>
-                                                    <IconButton onClick={() => handleOpenTermination(user)} size="small" sx={{ color: 'error.main', bgcolor: alpha(theme.palette.error.main, 0.04), borderRadius: '12px', width: 38, height: 38 }}><Trash2 size={18} /></IconButton>
+                                                    <Tooltip title={t('common.user_info')}>
+                                                        <IconButton onClick={() => handleViewDetails(user)} size="small" sx={{ color: 'info.main', bgcolor: alpha(theme.palette.info.main, 0.04), borderRadius: '12px', width: 38, height: 38 }}>
+                                                            <Info size={18} />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                    <Tooltip title={t('users.assign_bundles') || 'Assign Bundles'}>
+                                                        <IconButton onClick={() => handleOpenBundleDrawer(user)} size="small" sx={{ color: 'secondary.main', bgcolor: alpha(theme.palette.secondary.main, 0.04), borderRadius: '12px', width: 38, height: 38 }}>
+                                                            <Shield size={18} />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                    <Tooltip title={t('common.edit')}>
+                                                        <IconButton onClick={(e) => { handleOpenDrawer(user); e.currentTarget.blur(); }} size="small" sx={{ color: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.04), borderRadius: '12px', width: 38, height: 38 }}>
+                                                            <Edit3 size={18} />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                    <IconButton onClick={() => handleOpenTermination(user)} size="small" sx={{ color: 'error.main', bgcolor: alpha(theme.palette.error.main, 0.04), borderRadius: '12px', width: 38, height: 38 }}>
+                                                        <Trash2 size={18} />
+                                                    </IconButton>
                                                 </Box>
                                             </TableCell>
                                         </TableRow>
@@ -285,6 +343,15 @@ const UsersPage = () => {
                 onClose={() => setTerminationOpen(false)}
                 user={terminatingUser}
                 onConfirm={handleTerminateConfirm}
+            />
+            <UserBundleDrawer
+                open={bundleDrawerOpen}
+                onClose={() => {
+                    setBundleDrawerOpen(false);
+                    setSelectedUserForBundles(null);
+                }}
+                userId={selectedUserForBundles?.id}
+                userName={selectedUserForBundles ? `${selectedUserForBundles.firstName} ${selectedUserForBundles.lastName}` : null}
             />
 
             <Snackbar
