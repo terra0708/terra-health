@@ -422,18 +422,25 @@ public class AuthService {
                 .enabled(true)
                 .build();
 
-        // Assign default role (ROLE_AGENT) if no roles specified
-        Role defaultRole = roleRepository.findByName("ROLE_AGENT")
-                .orElseThrow(() -> new IllegalStateException("Default role ROLE_AGENT not found. Run migrations."));
-        user.getRoles().add(defaultRole);
+        // First user of tenant gets ROLE_ADMIN (tenant admin); others get ROLE_AGENT
+        // CRITICAL: TenantAdminController requires ROLE_ADMIN for /api/v1/tenant-admin/* (bundles, users, etc.)
+        userCount = userRepository.countByTenantId(tenant.getId());
+        boolean isFirstUser = (userCount == 0);
+        Role roleToAssign = isFirstUser
+                ? roleRepository.findByName("ROLE_ADMIN")
+                        .orElseThrow(() -> new IllegalStateException("Role ROLE_ADMIN not found. Run migrations."))
+                : roleRepository.findByName("ROLE_AGENT")
+                        .orElseThrow(() -> new IllegalStateException("Default role ROLE_AGENT not found. Run migrations."));
+        user.getRoles().add(roleToAssign);
+        if (isFirstUser) {
+            log.info("First user for tenant {} - assigning ROLE_ADMIN (tenant admin).", tenant.getName());
+        }
 
         User savedUser = userRepository.save(user);
 
-        // CRITICAL: Check if this is the first user for the tenant
-        // If first user, assign all permissions from tenant's module pool
+        // CRITICAL: If first user, assign all permissions from tenant's module pool
         userCount = userRepository.countByTenantId(tenant.getId());
         if (userCount == 1) {
-            // This is the first user - assign all tenant permissions
             log.info("First user registered for tenant {}. Assigning all permissions.", tenant.getName());
             permissionService.assignAllTenantPermissionsToUser(savedUser);
         }

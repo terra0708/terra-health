@@ -24,17 +24,20 @@ import java.util.stream.Collectors;
 
 /**
  * Controller for tenant admin operations.
- * All endpoints require ROLE_ADMIN or ROLE_SUPER_ADMIN role and enforce tenant isolation.
+ * Endpoints use permission-based access control (not role-based) to allow granular control.
  * 
  * CRITICAL: This controller ensures that tenant admins can only access
  * resources (users, bundles, permissions) from their own tenant.
  * Super Admin users have access to all tenant resources.
+ * 
+ * NOTE: We use permission-based @PreAuthorize instead of role-based to allow
+ * any user with appropriate permissions (e.g., SETTINGS_PERMISSIONS_CREATE) to manage bundles,
+ * regardless of their role (ROLE_ADMIN, ROLE_AGENT, etc.).
  */
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/tenant-admin")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
 public class TenantAdminController {
 
     private final PermissionService permissionService;
@@ -47,6 +50,7 @@ public class TenantAdminController {
      * Get all users belonging to the current tenant.
      */
     @GetMapping("/users")
+    @PreAuthorize("hasAnyAuthority('SETTINGS_USERS', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<List<UserDto>>> getTenantUsers() {
         UUID tenantId = tenantSecurityService.getCurrentUserTenantId();
         
@@ -152,6 +156,7 @@ public class TenantAdminController {
      * to prevent LazyInitializationException.
      */
     @GetMapping("/bundles")
+    @PreAuthorize("hasAnyAuthority('SETTINGS_PERMISSIONS_VIEW', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<List<BundleDto>>> getTenantBundles() {
         UUID tenantId = tenantSecurityService.getCurrentUserTenantId();
         
@@ -181,7 +186,21 @@ public class TenantAdminController {
      * CRITICAL: tenantId is automatically set from current user's tenant (not from request body).
      */
     @PostMapping("/bundles")
+    @PreAuthorize("hasAnyAuthority('SETTINGS_PERMISSIONS_CREATE', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<PermissionBundle>> createBundle(@RequestBody CreateBundleRequest request) {
+        // DEBUG: Log authorities at @PreAuthorize evaluation point
+        org.springframework.security.core.Authentication authentication = 
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null) {
+            String authorities = authentication.getAuthorities().stream()
+                    .map(org.springframework.security.core.GrantedAuthority::getAuthority)
+                    .collect(java.util.stream.Collectors.joining(", "));
+            log.debug("createBundle() called by user '{}' with authorities: [{}]", 
+                    authentication.getName(), authorities);
+        } else {
+            log.warn("createBundle() called but no authentication found in SecurityContext");
+        }
+        
         UUID tenantId = tenantSecurityService.getCurrentUserTenantId();
         
         PermissionBundle bundle = permissionService.createBundle(
@@ -200,6 +219,7 @@ public class TenantAdminController {
      * Validates that the bundle belongs to the current tenant.
      */
     @PutMapping("/bundles/{bundleId}")
+    @PreAuthorize("hasAnyAuthority('SETTINGS_PERMISSIONS_UPDATE', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<PermissionBundle>> updateBundle(
             @PathVariable UUID bundleId,
             @RequestBody UpdateBundleRequest request) {
@@ -220,6 +240,7 @@ public class TenantAdminController {
      * CRITICAL: Cascade cleanup - removes bundle permissions from all users.
      */
     @DeleteMapping("/bundles/{bundleId}")
+    @PreAuthorize("hasAnyAuthority('SETTINGS_PERMISSIONS_DELETE', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deleteBundle(@PathVariable UUID bundleId) {
         UUID tenantId = tenantSecurityService.getCurrentUserTenantId();
         
@@ -296,6 +317,7 @@ public class TenantAdminController {
      * Tenant Admin: Returns only ACTION permissions from tenant's assigned modules.
      */
     @GetMapping("/permissions")
+    @PreAuthorize("hasAnyAuthority('SETTINGS_PERMISSIONS_VIEW', 'SETTINGS_PERMISSIONS', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<List<PermissionResponseDTO>>> getTenantAvailablePermissions() {
         // Check if Super Admin
         org.springframework.security.core.Authentication auth = 
@@ -346,6 +368,7 @@ public class TenantAdminController {
      * CRITICAL: Returns DTOs to avoid circular reference issues during JSON serialization.
      */
     @GetMapping("/modules")
+    @PreAuthorize("hasAnyAuthority('SETTINGS_PERMISSIONS_VIEW', 'SETTINGS_PERMISSIONS', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<List<ModuleDTO>>> getTenantModules() {
         UUID tenantId = tenantSecurityService.getCurrentUserTenantId();
         

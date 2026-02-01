@@ -48,7 +48,8 @@ public class SecurityConfig {
                 .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                 .ignoringRequestMatchers(
                     "/api/v1/auth/**",           // Auth endpoint'leri CSRF'den muaf
-                    "/api/v1/super-admin/**"    // Super Admin endpoint'leri CSRF'den muaf (JWT + Role-based auth yeterli)
+                    "/api/v1/super-admin/**",   // Super Admin endpoint'leri CSRF'den muaf (JWT + Role-based auth yeterli)
+                    "/api/v1/tenant-admin/**"   // Tenant Admin endpoint'leri CSRF'den muaf (JWT + Permission-based auth yeterli)
                 )
             )
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
