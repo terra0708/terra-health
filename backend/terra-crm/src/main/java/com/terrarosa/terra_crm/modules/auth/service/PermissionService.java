@@ -1,5 +1,6 @@
 package com.terrarosa.terra_crm.modules.auth.service;
 
+import com.terrarosa.terra_crm.core.audit.annotation.AuditLog;
 import com.terrarosa.terra_crm.core.tenancy.entity.Tenant;
 import com.terrarosa.terra_crm.core.tenancy.repository.TenantRepository;
 import com.terrarosa.terra_crm.modules.auth.dto.BundleDto;
@@ -111,6 +112,7 @@ public class PermissionService {
      * Validates that the permission is in the tenant's module pool before
      * assignment.
      */
+    @AuditLog(action = "USER_PERMISSIONS_UPDATED", resourceType = "USER")
     @Transactional
     public void assignPermissionToUser(UUID userId, UUID permissionId) {
         User user = userRepository.findById(userId)
@@ -804,6 +806,7 @@ public class PermissionService {
      * Create a permission bundle for a tenant.
      * Validates that all permissions are from the tenant's module pool.
      */
+    @AuditLog(action = "BUNDLE_CREATED", resourceType = "BUNDLE")
     @Transactional
     public PermissionBundle createBundle(UUID tenantId, String name, String description, List<UUID> permissionIds) {
         Tenant tenant = tenantRepository.findById(tenantId)
@@ -844,6 +847,7 @@ public class PermissionService {
      * Assign a bundle to a user.
      * Copies all permissions from the bundle to user_permissions table.
      */
+    @AuditLog(action = "BUNDLE_ASSIGNED", resourceType = "USER")
     @Transactional
     public void assignBundleToUser(UUID userId, UUID bundleId) {
         User user = userRepository.findById(userId)
@@ -881,10 +885,11 @@ public class PermissionService {
      * Remove a bundle from a user.
      * CRITICAL: Removes bundle association AND removes all permissions from that bundle
      * from user_permissions table (cascade cleanup).
-     * 
+     *
      * This ensures that when a bundle is removed from a user, the user loses
      * all permissions that were granted through that bundle.
      */
+    @AuditLog(action = "BUNDLE_REMOVED", resourceType = "USER")
     @Transactional
     public void removeBundleFromUser(UUID userId, UUID bundleId) {
         User user = userRepository.findById(userId)
@@ -925,9 +930,10 @@ public class PermissionService {
      * 3. Remove bundle-user associations (user_bundles table - JPA Many-to-Many handles this)
      * 4. Bundle-permission associations are removed automatically (DB cascade)
      * 5. Soft delete the bundle
-     * 
+     *
      * @param bundleId Bundle ID to delete
      */
+    @AuditLog(action = "BUNDLE_DELETED", resourceType = "BUNDLE")
     @Transactional
     public void deleteBundle(UUID bundleId) {
         PermissionBundle bundle = permissionBundleRepository.findById(bundleId)
@@ -989,6 +995,7 @@ public class PermissionService {
      * Update bundle permissions.
      * Validates all new permissions are in tenant's module pool.
      */
+    @AuditLog(action = "BUNDLE_UPDATED", resourceType = "BUNDLE")
     @Transactional
     public PermissionBundle updateBundle(UUID bundleId, List<UUID> permissionIds) {
         PermissionBundle bundle = permissionBundleRepository.findById(bundleId)

@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import axios from 'axios';
 import apiClient from '@shared/core/api';
+import { setTokens, getToken, getRefreshToken, clearTokens } from '@shared/core/tokenStorage';
 
 const useAuthStore = create(
     persist(
@@ -31,12 +33,11 @@ const useAuthStore = create(
                     const response = await apiClient.post(
                         '/v1/auth/login',
                         { email, password },
-                        { headers: { 'X-Tenant-ID': tenantId } }
+                        { headers: { 'X-Tenant-ID': tenantId || finalTenantId } }
                     );
 
-                    // KRİTİK: Token artık cookie'de, localStorage'a yazma işlemi kaldırıldı
-                    // Access token ve refresh token HttpOnly cookie'lerde otomatik gönderilecek
-                    // Sadece tenantId localStorage'da kalıyor (X-Tenant-ID header için gerekli)
+                    // Stateless API: store tokens in sessionStorage (not persisted to localStorage)
+                    setTokens(response.token, response.refreshToken);
                     localStorage.setItem('tenantId', response.user.tenantId.toString());
 
                     // CRITICAL: Fetch granular ACTION permissions after login
@@ -72,16 +73,15 @@ const useAuthStore = create(
             },
 
             logout: async () => {
+                const refreshToken = getRefreshToken();
+                clearTokens();
                 try {
-                    // Backend logout endpoint'ini çağır (cookie'ler otomatik gönderilir)
-                    await apiClient.post('/v1/auth/logout');
+                    if (refreshToken) {
+                        await apiClient.post('/v1/auth/logout', { refreshToken });
+                    }
                 } catch (error) {
-                    // Hata olsa bile devam et - cookie'ler backend'den temizlenmiş olabilir
-                    // Kullanıcı uçaktayken veya interneti koptuğunda "çıkış yapamama" gibi bir saçmalık yaşamamalı
                     console.error('Logout request failed, but continuing with local cleanup:', error);
                 } finally {
-                    // HER HALÜKARDA temizle - Local cleanup her zaman çalışmalı
-                    // Network hatası, timeout, uçak modu - hiçbir şey logout'u engellememeli
                     localStorage.removeItem('tenantId');
                     set({
                         user: null,
@@ -166,13 +166,44 @@ const useAuthStore = create(
                 }
             },
 
+            // Silent refresh: get new access token from refresh token (no user fetch).
+            // Used on app start when we have refreshToken but no/missing access token (e.g. F5 after token deleted).
+            trySilentRefresh: async () => {
+                const refreshToken = getRefreshToken();
+                if (!refreshToken) return false;
+                try {
+                    const baseURL = import.meta.env.VITE_API_URL || '/api';
+                    const res = await axios.post(
+                        `${baseURL}/v1/auth/refresh`,
+                        { refreshToken },
+                        { headers: { 'Content-Type': 'application/json' } }
+                    );
+                    const payload = res.data?.data;
+                    if (payload?.accessToken) {
+                        setTokens(payload.accessToken, payload.refreshToken ?? refreshToken);
+                        return true;
+                    }
+                    return false;
+                } catch {
+                    return false;
+                }
+            },
+
             // Fetch current user from backend (/api/v1/auth/me)
-            // CRITICAL: This method reads user info from backend without accessing HttpOnly cookies
             // Used on app initialization and when user context needs to be refreshed
-            // CRITICAL: Race Condition Prevention - Uses Promise.all to fetch MODULE and ACTION permissions in parallel
             fetchCurrentUser: async () => {
                 set({ loading: true, error: null });
                 try {
+                    // If we have refresh token but no access token (e.g. F5 after token deleted), refresh first
+                    if (!getToken() && getRefreshToken()) {
+                        const refreshed = await get().trySilentRefresh();
+                        if (!refreshed) {
+                            clearTokens();
+                            set({ user: null, isAuthenticated: false, loading: false, error: null });
+                            localStorage.removeItem('tenantId');
+                            throw new Error('Session expired');
+                        }
+                    }
                     // CRITICAL: Race Condition Önleme - Promise.all ile paralel çek
                     // Bu iki çağrı aynı anda başlar ve ikisi de bitene kadar bekler
                     // Sistemin mantığı: P_toplam = P_jwt_modül ∪ P_api_aksiyon
@@ -211,8 +242,8 @@ const useAuthStore = create(
                     
                     return { ...userResponse, permissions: allPermissions };
                 } catch (error) {
-                    // If 401, user is not authenticated - clear state gracefully
                     if (error.status === 401 || error.status === 403) {
+                        clearTokens();
                         set({
                             user: null,
                             isAuthenticated: false,
@@ -220,7 +251,6 @@ const useAuthStore = create(
                             error: null
                         });
                         localStorage.removeItem('tenantId');
-                        // Don't redirect here - let App.jsx handle it to prevent flicker
                     } else {
                         set({ error, loading: false });
                     }

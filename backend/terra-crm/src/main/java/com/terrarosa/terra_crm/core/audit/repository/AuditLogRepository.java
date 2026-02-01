@@ -1,23 +1,20 @@
 package com.terrarosa.terra_crm.core.audit.repository;
 
 import com.terrarosa.terra_crm.core.audit.entity.AuditLog;
-import com.terrarosa.terra_crm.core.common.repository.SoftDeleteRepository;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
 /**
  * Repository for AuditLog entity.
- * Provides methods for querying audit logs with various filters.
+ * Append-only: audit logs are never deleted or updated (immutable for compliance).
  */
 @Repository
-public interface AuditLogRepository extends SoftDeleteRepository<AuditLog, UUID> {
+public interface AuditLogRepository extends JpaRepository<AuditLog, UUID> {
     
     /**
      * Find audit logs by tenant ID.

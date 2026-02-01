@@ -230,28 +230,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     
     /**
      * Extract JWT token from request.
-     * Priority: 1. Cookie (accessToken), 2. Authorization header (DEPRECATED - backward compatibility)
+     * Stateless API: Only Authorization: Bearer header is used (no cookies).
      */
     private String extractTokenFromRequest(HttpServletRequest request) {
-        // 1. Önce cookie'den oku (PRIMARY METHOD)
-        jakarta.servlet.http.Cookie[] cookies = request.getCookies();
-        if (cookies != null) {
-            for (jakarta.servlet.http.Cookie cookie : cookies) {
-                if ("accessToken".equals(cookie.getName())) {
-                    return cookie.getValue();
-                }
-            }
-        }
-        
-        // 2. DEPRECATED: Authorization header'dan oku (backward compatibility)
-        // TODO: Bu fallback mekanizması 2026-03-01 tarihinde kaldırılacak
-        // Migration tamamlandıktan sonra bu blok silinecek
         String bearerToken = request.getHeader(AUTHORIZATION_HEADER);
         if (StringUtils.hasText(bearerToken) && bearerToken.startsWith(BEARER_PREFIX)) {
-            log.warn("DEPRECATED: Token read from Authorization header. Cookie-based auth should be used.");
             return bearerToken.substring(BEARER_PREFIX.length());
         }
-        
         return null;
     }
 }
