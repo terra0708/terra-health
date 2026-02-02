@@ -9,6 +9,7 @@
         "actions": "İşlemler",
         "status": "Durum",
         "name": "İsim",
+        "surname": "Soyisim",
         "email": "E-posta",
         "phone": "Telefon",
         "role": "Rol",
@@ -17,7 +18,7 @@
         "rows_per_page": "Sayfa başına satır:",
         "success_save": "Başarıyla kaydedildi",
         "success_delete": "Başarıyla silindi",
-        "error": "Bir hata oluştu",
+        "error_msg": "Bir hata oluştu",
         "loading": "Yükleniyor...",
         "error": {
             "boundary": {

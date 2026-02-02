@@ -360,7 +360,7 @@ const Sidebar = () => {
     const menuItems = (isSuperAdmin ? superAdminMenuItems : normalUserMenuItems).filter(item => {
         if (!item.requiredPermission) return true;
         const hasPerm = hasPermission(item.requiredPermission);
-        
+
         // DEBUG: Log permission checks for troubleshooting
         if (process.env.NODE_ENV === 'development') {
             const matchedPermissions = item.requiredPermission?.filter(p => user?.permissions?.includes(p)) || [];
@@ -371,7 +371,7 @@ const Sidebar = () => {
                 userPermissionsCount: user?.permissions?.length || 0
             });
         }
-        
+
         return hasPerm;
     });
 
@@ -467,38 +467,38 @@ const Sidebar = () => {
 
             {/* CRITICAL: Global Empty State - User has no module permissions */}
             {/* Check if user has absolutely no menu items (no modules assigned) */}
-            {menuItems.length === 0 && 
-             (!isSuperAdmin && marketingDropdown.subItems.length === 0 && settingsDropdown.subItems.length === 0) && (
-                <Box sx={{ px: 2, py: 4, textAlign: 'center' }}>
-                    <Box sx={{
-                        width: 64,
-                        height: 64,
-                        mx: 'auto',
-                        mb: 2,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        borderRadius: '50%',
-                        background: theme => theme.palette.mode === 'light'
-                            ? `linear-gradient(135deg, ${alpha(primaryHex, 0.1)} 0%, ${alpha(secondaryHex, 0.1)} 100%)`
-                            : `linear-gradient(135deg, ${alpha(primaryHex, 0.2)} 0%, ${alpha(secondaryHex, 0.2)} 100%)`,
-                        border: `2px solid ${alpha(primaryHex, 0.2)}`
-                    }}>
-                        <lord-icon
-                            src="https://cdn.lordicon.com/tdrtiskw.json"
-                            trigger="loop"
-                            colors={`primary:${primaryHex},secondary:${secondaryHex}`}
-                            style={{ width: '40px', height: '40px' }}
-                        />
+            {menuItems.length === 0 &&
+                (!isSuperAdmin && marketingDropdown.subItems.length === 0 && settingsDropdown.subItems.length === 0) && (
+                    <Box sx={{ px: 2, py: 4, textAlign: 'center' }}>
+                        <Box sx={{
+                            width: 64,
+                            height: 64,
+                            mx: 'auto',
+                            mb: 2,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderRadius: '50%',
+                            background: theme => theme.palette.mode === 'light'
+                                ? `linear-gradient(135deg, ${alpha(primaryHex, 0.1)} 0%, ${alpha(secondaryHex, 0.1)} 100%)`
+                                : `linear-gradient(135deg, ${alpha(primaryHex, 0.2)} 0%, ${alpha(secondaryHex, 0.2)} 100%)`,
+                            border: `2px solid ${alpha(primaryHex, 0.2)}`
+                        }}>
+                            <lord-icon
+                                src="https://cdn.lordicon.com/tdrtiskw.json"
+                                trigger="loop"
+                                colors={`primary:${primaryHex},secondary:${secondaryHex}`}
+                                style={{ width: '40px', height: '40px' }}
+                            />
+                        </Box>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600, mb: 1 }}>
+                            {t('sidebar.no_permissions', 'Yetki Bulunamadı')}
+                        </Typography>
+                        <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.75rem', lineHeight: 1.5 }}>
+                            {t('sidebar.contact_admin', 'Yöneticinizle iletişime geçin')}
+                        </Typography>
                     </Box>
-                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600, mb: 1 }}>
-                        {t('sidebar.no_permissions', 'Yetki Bulunamadı')}
-                    </Typography>
-                    <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.75rem', lineHeight: 1.5 }}>
-                        {t('sidebar.contact_admin', 'Yöneticinizle iletişime geçin')}
-                    </Typography>
-                </Box>
-            )}
+                )}
 
             <List sx={{ px: 0 }}>
                 {menuItems.map((item) => (
@@ -513,38 +513,32 @@ const Sidebar = () => {
                     />
                 ))}
 
-                {/* CRITICAL: Super Admin should ONLY see Super Admin menu items */}
-                {/* Do NOT show Marketing or Settings dropdowns for Super Admin */}
-                {!isSuperAdmin && (
-                    <>
-                        {/* Marketing dropdown - CRITICAL: MODULE kontrolü + Empty State */}
-                        {/* Dropdown sadece MODULE yetkisi VAR VE alt öğelerden en az biri görünürse gösterilir */}
-                        {hasMarketingModule && marketingDropdown.subItems.length > 0 && (
-                            <DropdownNavItem
-                                key={marketingDropdown.key}
-                                icon={marketingDropdown.icon}
-                                text={marketingDropdown.label}
-                                open={isMobile ? true : sidebarOpen}
-                                subItems={marketingDropdown.subItems}
-                                currentPath={location.pathname}
-                                onClick={isMobile ? toggleSidebar : undefined}
-                            />
-                        )}
+                {/* Marketing dropdown - CRITICAL: MODULE kontrolü + Empty State */}
+                {/* Dropdown sadece MODULE yetkisi VAR VE alt öğelerden en az biri görünürse gösterilir */}
+                {hasMarketingModule && marketingDropdown.subItems.length > 0 && (
+                    <DropdownNavItem
+                        key={marketingDropdown.key}
+                        icon={marketingDropdown.icon}
+                        text={marketingDropdown.label}
+                        open={isMobile ? true : sidebarOpen}
+                        subItems={marketingDropdown.subItems}
+                        currentPath={location.pathname}
+                        onClick={isMobile ? toggleSidebar : undefined}
+                    />
+                )}
 
-                        {/* Settings dropdown - CRITICAL: MODULE kontrolü + Empty State */}
-                        {/* Dropdown sadece MODULE yetkisi VAR VE alt öğelerden en az biri görünürse gösterilir */}
-                        {hasSettingsModule && settingsDropdown.subItems.length > 0 && (
-                            <DropdownNavItem
-                                key={settingsDropdown.key}
-                                icon={settingsDropdown.icon}
-                                text={settingsDropdown.label}
-                                open={isMobile ? true : sidebarOpen}
-                                subItems={settingsDropdown.subItems}
-                                currentPath={location.pathname}
-                                onClick={isMobile ? toggleSidebar : undefined}
-                            />
-                        )}
-                    </>
+                {/* Settings dropdown - CRITICAL: MODULE kontrolü + Empty State */}
+                {/* Dropdown sadece MODULE yetkisi VAR VE alt öğelerden en az biri görünürse gösterilir */}
+                {hasSettingsModule && settingsDropdown.subItems.length > 0 && (
+                    <DropdownNavItem
+                        key={settingsDropdown.key}
+                        icon={settingsDropdown.icon}
+                        text={settingsDropdown.label}
+                        open={isMobile ? true : sidebarOpen}
+                        subItems={settingsDropdown.subItems}
+                        currentPath={location.pathname}
+                        onClick={isMobile ? toggleSidebar : undefined}
+                    />
                 )}
             </List>
 

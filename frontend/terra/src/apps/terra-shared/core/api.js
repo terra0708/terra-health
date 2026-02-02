@@ -91,8 +91,8 @@ const tryRefreshAndRetry = async (originalRequest) => {
                 useAuthStore.setState({
                     user: { ...store.user, permissions: [...modulePermissions, ...granularPermissions] },
                 });
-            }).catch(() => {});
-        }).catch(() => {});
+            }).catch(() => { });
+        }).catch(() => { });
 
         return apiClient(originalRequest);
     } catch (refreshError) {
@@ -185,8 +185,8 @@ apiClient.interceptors.response.use(
             }
 
             const currentPath = window.location.pathname;
-            const userActionEndpoints = ['/bundles', '/users/'];
-            const isUserAction = userActionEndpoints.some((endpoint) => originalRequest?.url?.includes(endpoint));
+            const userActionEndpoints = ['bundles', 'users', 'permissions', 'modules', 'auth/me', 'profile'];
+            const isUserAction = userActionEndpoints.some((endpoint) => originalRequest?.url?.toLowerCase().includes(endpoint.toLowerCase()));
             const isModifyingRequest = originalRequest?.method &&
                 ['POST', 'PUT', 'PATCH', 'DELETE'].includes(originalRequest.method?.toUpperCase());
 

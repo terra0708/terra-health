@@ -67,20 +67,14 @@ export const useUserStore = create((set, get) => ({
     addUser: async (userData) => {
         set({ loading: true, error: null });
         try {
-            // Split full name into firstName / lastName (best-effort)
-            const fullName = (userData.name || '').trim();
-            const [firstNamePart, ...rest] = fullName.split(' ');
-            const firstName = firstNamePart || userData.firstName || 'User';
-            const lastName = rest.join(' ') || userData.lastName || ' ';
-
             const profile = userData.profile || {};
             const auth = userData.auth || userData;
 
             const payload = {
-                firstName,
-                lastName,
-                email: auth.email || auth.corporate_email,
-                bundleId: auth.bundleId || null,
+                firstName: auth.firstName || userData.firstName || 'User',
+                lastName: auth.lastName || userData.lastName || ' ',
+                email: auth.email || auth.corporate_email || userData.email,
+                bundleId: auth.bundleId || userData.bundleId || null,
                 // Profile fields from nested profile object or flat direct props
                 tcNo: profile.tcNo || userData.tcNo || null,
                 birthDate: profile.birthDate || userData.birthDate || null,

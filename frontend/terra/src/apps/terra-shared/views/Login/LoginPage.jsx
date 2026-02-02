@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { SettingsSwitchers, Button, TextField as CustomTextField } from '@common/ui';
 import { useAuthStore, useAuthDiscovery } from '@shared/modules/auth';
+import { findFirstAllowedPath } from '@shared/core/navigation';
 import { z } from 'zod';
 
 // Login steps
@@ -28,7 +29,7 @@ const passwordSchema = z.object({
 const LoginPage = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
-    
+
     // Auth store hooks
     const login = useAuthStore((state) => state.login);
     const loading = useAuthStore((state) => state.loading);
@@ -36,10 +37,11 @@ const LoginPage = () => {
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
     const setDiscoveredTenantId = useAuthStore((state) => state.setDiscoveredTenantId);
     const clearDiscoveredTenantId = useAuthStore((state) => state.clearDiscoveredTenantId);
-    
+    const hasPermission = useAuthStore((state) => state.hasPermission);
+
     // Discovery hook
     const { discoverTenants, loading: discoveryLoading, error: discoveryError } = useAuthDiscovery();
-    
+
     // Local state
     const [step, setStep] = useState(LOGIN_STEPS.EMAIL);
     const [email, setEmail] = useState('');
@@ -75,26 +77,19 @@ const LoginPage = () => {
 
     // Get user from auth store to check roles
     const user = useAuthStore((state) => state.user);
-    
+
     // Login başarılı olunca error temizle ve navigate et
     useEffect(() => {
-        if (isAuthenticated) {
+        if (isAuthenticated && user) {
             setError(null);
             clearDiscoveredTenantId();
-            
-            // CRITICAL: Super Admin için otomatik yönlendirme
-            // Check if user has ROLE_SUPER_ADMIN role
+
             const isSuperAdmin = user?.roles?.includes('ROLE_SUPER_ADMIN') || false;
-            
-            if (isSuperAdmin) {
-                // Super Admin: Redirect to schema pool dashboard
-                navigate('/super-admin/schema-pool', { replace: true });
-            } else {
-                // Normal user: Redirect to main dashboard
-                navigate('/', { replace: true });
-            }
+            const targetPath = findFirstAllowedPath(hasPermission, isSuperAdmin);
+
+            navigate(targetPath, { replace: true });
         }
-    }, [isAuthenticated, user, navigate, clearDiscoveredTenantId]);
+    }, [isAuthenticated, user, navigate, clearDiscoveredTenantId, hasPermission]);
 
     // Email submit handler
     const handleEmailSubmit = async (data) => {
@@ -103,7 +98,7 @@ const LoginPage = () => {
 
         try {
             const result = await discoverTenants(data.email);
-            
+
             if (!result.tenants || result.tenants.length === 0) {
                 // SECURITY: Don't reveal that email doesn't exist (prevent user enumeration)
                 setError('Unable to proceed. Please check your email or contact support.');
@@ -144,10 +139,10 @@ const LoginPage = () => {
         }
 
         try {
-            await login({ 
-                email: email, 
-                password: data.password, 
-                tenantId: selectedTenantId 
+            await login({
+                email: email,
+                password: data.password,
+                tenantId: selectedTenantId
             });
             // Navigate işlemi useEffect'te yapılıyor (isAuthenticated değiştiğinde)
         } catch (error) {
@@ -206,9 +201,9 @@ const LoginPage = () => {
 
                     {/* Error Alert */}
                     {error && (
-                        <Alert 
-                            severity="error" 
-                            sx={{ mb: 2, width: '100%' }} 
+                        <Alert
+                            severity="error"
+                            sx={{ mb: 2, width: '100%' }}
                             onClose={() => setError(null)}
                         >
                             {error}
@@ -248,7 +243,7 @@ const LoginPage = () => {
                             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                                 {t('auth.multiple_tenants_message', 'Your email is associated with multiple organizations. Please select one to continue.')}
                             </Typography>
-                            
+
                             {discoveredTenants.map((tenant) => (
                                 <Paper
                                     key={tenant.tenantId}
@@ -273,7 +268,7 @@ const LoginPage = () => {
                                     </Typography>
                                 </Paper>
                             ))}
-                            
+
                             <MuiButton
                                 onClick={handleBack}
                                 fullWidth
@@ -294,7 +289,7 @@ const LoginPage = () => {
                                     </Typography>
                                 </Alert>
                             )}
-                            
+
                             <CustomTextField
                                 label={t('auth.password')}
                                 type="password"
@@ -307,7 +302,7 @@ const LoginPage = () => {
                                 disabled={loading}
                                 autoComplete="current-password"
                             />
-                            
+
                             <Box sx={{ display: 'flex', gap: 2, mt: 3 }}>
                                 <MuiButton
                                     onClick={handleBack}

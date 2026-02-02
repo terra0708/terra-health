@@ -40,30 +40,30 @@ const useAuthStore = create(
                     setTokens(response.token, response.refreshToken);
                     localStorage.setItem('tenantId', response.user.tenantId.toString());
 
-                    // CRITICAL: Fetch granular ACTION permissions after login
-                    // Login response contains only MODULE permissions (JWT optimization)
-                    // ACTION permissions must be fetched separately
+                    // CRITICAL: Fetch granular permissions for ADMIN users
+                    // JWT expansion can sometimes collide or be incomplete
                     let granularPermissions = [];
-                    try {
-                        granularPermissions = await get().fetchGranularPermissions();
-                    } catch (permError) {
-                        // Don't fail login if granular permissions fetch fails
-                        console.warn('Failed to fetch granular permissions after login:', permError);
+                    const isAdmin = response.user.roles?.includes('ROLE_ADMIN') || response.user.roles?.includes('ROLE_SUPER_ADMIN');
+                    if (isAdmin) {
+                        try {
+                            granularPermissions = await get().fetchGranularPermissions();
+                        } catch (e) {
+                            console.warn('Failed to fetch granular permissions for admin:', e);
+                        }
                     }
 
-                    // Combine MODULE permissions (from login response) + ACTION permissions (from API)
                     const allPermissions = [
-                        ...(response.user.permissions || []), // MODULE_* yetkileri
-                        ...granularPermissions // ACTION yetkileri
+                        ...(response.user.permissions || []),
+                        ...granularPermissions
                     ];
 
-                    // Store'a yaz (persist middleware otomatik localStorage'a yazar)
+                    // Store'a yaz
                     set({
                         user: { ...response.user, permissions: allPermissions },
                         isAuthenticated: true,
                         loading: false,
                         error: null,
-                        discoveredTenantId: null // Clear after successful login
+                        discoveredTenantId: null
                     });
                 } catch (error) {
                     // api.js'den normalize edilmiş hata gelir
@@ -152,17 +152,22 @@ const useAuthStore = create(
             // Backend returns List<PermissionResponseDTO> with id, name, parentId
             // Extract permission names for hasPermission checks
             fetchGranularPermissions: async () => {
+                const user = get().user;
+                if (!user) return [];
+
+                // Only admins can access tenant-admin endpoints. Normal users already have 
+                // all their permissions in the JWT/User object returned from /me.
+                const isAdmin = user.roles?.includes('ROLE_ADMIN') || user.roles?.includes('ROLE_SUPER_ADMIN');
+                if (!isAdmin) return user.permissions || [];
+
                 try {
                     const response = await apiClient.get('/v1/tenant-admin/permissions');
-                    // Backend returns ApiResponse<List<PermissionResponseDTO>>
                     const permissions = Array.isArray(response) ? response : (response?.data || []);
-                    // Extract permission names for hasPermission checks
                     const permissionNames = permissions.map(p => typeof p === 'string' ? p : p.name).filter(Boolean);
                     return permissionNames;
                 } catch (error) {
                     console.error('Failed to fetch granular permissions:', error);
-                    // Fallback: Return empty array (don't break the app)
-                    return [];
+                    return user.permissions || [];
                 }
             },
 
@@ -208,38 +213,41 @@ const useAuthStore = create(
                     // Bu iki çağrı aynı anda başlar ve ikisi de bitene kadar bekler
                     // Sistemin mantığı: P_toplam = P_jwt_modül ∪ P_api_aksiyon
                     // Kullanıcı arayüzü ancak bu birleşim tamamlandığında render edilmelidir
-                    const [userResponse, granularPermissions] = await Promise.all([
-                        apiClient.get('/v1/auth/me'), // JWT'den MODULE yetkileri
-                        get().fetchGranularPermissions() // Backend'den ACTION yetkileri
-                    ]);
-                    
+                    const userResponse = await apiClient.get('/v1/auth/me');
+
                     // KRİTİK: Tenant ID senkronizasyonu
-                    // Response'daki tenantId ile localStorage'daki tenantId'yi eşitle
                     if (userResponse.tenantId) {
                         const currentTenantId = localStorage.getItem('tenantId');
                         const newTenantId = userResponse.tenantId.toString();
                         if (currentTenantId !== newTenantId) {
                             localStorage.setItem('tenantId', newTenantId);
-                            if (import.meta.env.DEV) {
-                                console.debug('✅ Tenant ID synchronized:', newTenantId);
-                            }
                         }
                     }
-                    
-                    // MODULE yetkileri (JWT'den) + ACTION yetkileri (backend'den) birleştir
+
+                    // CRITICAL: Fetch granular permissions for ADMIN users
+                    let granularPermissions = [];
+                    const isAdmin = userResponse.roles?.includes('ROLE_ADMIN') || userResponse.roles?.includes('ROLE_SUPER_ADMIN');
+                    if (isAdmin) {
+                        try {
+                            granularPermissions = await get().fetchGranularPermissions();
+                        } catch (e) {
+                            console.warn('Failed to fetch granular permissions for admin:', e);
+                        }
+                    }
+
                     const allPermissions = [
-                        ...(userResponse.permissions || []), // MODULE_* yetkileri
-                        ...granularPermissions // ACTION yetkileri (List<String>)
+                        ...(userResponse.permissions || []),
+                        ...granularPermissions
                     ];
-                    
-                    // Update auth store with user data (combined permissions)
+
+                    // Update auth store with user data
                     set({
                         user: { ...userResponse, permissions: allPermissions },
                         isAuthenticated: true,
                         loading: false,
                         error: null
                     });
-                    
+
                     return { ...userResponse, permissions: allPermissions };
                 } catch (error) {
                     if (error.status === 401 || error.status === 403) {

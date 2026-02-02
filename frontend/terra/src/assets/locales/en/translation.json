@@ -8,7 +8,8 @@
         "search": "Search...",
         "actions": "Actions",
         "status": "Status",
-        "name": "Name",
+        "name": "First Name",
+        "surname": "Last Name",
         "email": "Email",
         "phone": "Phone",
         "role": "Role",
@@ -17,7 +18,7 @@
         "rows_per_page": "Rows per page:",
         "success_save": "Successfully saved",
         "success_delete": "Successfully deleted",
-        "error": "An error occurred",
+        "error_msg": "An error occurred",
         "loading": "Loading...",
         "error": {
             "boundary": {

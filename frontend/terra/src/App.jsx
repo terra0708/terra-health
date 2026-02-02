@@ -6,6 +6,7 @@ import MainLayout from '@shared/app/MainLayout';
 import * as Views from './views/Placeholders.jsx';
 import { ErrorBoundary, LoadingSpinner, PageSkeleton } from '@common/ui';
 import ForbiddenPage from '@shared/common/ui/ForbiddenPage';
+import { findFirstAllowedPath } from '@shared/core/navigation';
 
 // Lazy load pages for code splitting and performance
 const UsersPage = lazy(() => import('@shared/views/Settings/UsersPage'));
@@ -71,21 +72,10 @@ const ProtectedRoute = ({ children, requiredPermission, requiredRole }) => {
 
     const currentPath = window.location.pathname;
     if (currentPath === '/' || currentPath === '/dashboard') {
-      // Find the first module this user CAN see
-      const fallbacks = [
-        { path: '/appointments', perm: ['APPOINTMENTS_VIEW', 'MODULE_APPOINTMENTS'] },
-        { path: '/customers', perm: ['CUSTOMERS_VIEW', 'MODULE_CUSTOMERS'] },
-        { path: '/reminders', perm: ['REMINDERS_VIEW', 'MODULE_REMINDERS'] },
-        { path: '/marketing/dashboard', perm: ['MARKETING_DASHBOARD', 'MODULE_MARKETING'] },
-        { path: '/statistics', perm: ['STATISTICS_VIEW', 'MODULE_STATISTICS'] },
-        { path: '/notifications', perm: ['NOTIFICATIONS_VIEW', 'MODULE_NOTIFICATIONS'] },
-        { path: '/settings', perm: ['SETTINGS_SYSTEM_UPDATE', 'MODULE_SETTINGS'] }
-      ];
+      const firstAllowed = findFirstAllowedPath(hasPermission, user?.roles?.includes('ROLE_SUPER_ADMIN'));
 
-      const firstAllowed = fallbacks.find(route => hasPermission(route.perm));
-
-      if (firstAllowed) {
-        return <Navigate to={firstAllowed.path} replace />;
+      if (firstAllowed && firstAllowed !== '/forbidden' && firstAllowed !== '/') {
+        return <Navigate to={firstAllowed} replace />;
       }
 
       return <Navigate to="/forbidden" replace />;
@@ -154,10 +144,10 @@ function App() {
   // Show loading spinner during initialization to prevent flicker
   if (!hasHydrated || isInitializing || loading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
         height: '100vh',
         backgroundColor: '#f5f5f5'
       }}>
@@ -170,7 +160,7 @@ function App() {
     <ErrorBoundary level="app">
       <Routes>
         <Route path="/login" element={<LoginPage />} />
-        
+
         {/* CRITICAL: Forbidden page must be OUTSIDE ProtectedRoute to avoid infinite redirect loops */}
         <Route path="/forbidden" element={<ForbiddenPage />} />
         <Route path="/403" element={<ForbiddenPage />} />

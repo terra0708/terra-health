@@ -69,17 +69,19 @@ export const UserDetailsDialog = ({ open, onClose, user }) => {
 
     if (!user) return null;
 
-    // Backend UserDto'dan gelen veriler için güvenli fallback'ler
-    const fullName = (user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim()) || null;
+    // Prefer profile fields when available; fall back to legacy props on user
+    // Note: user object (from UserDto) has firstName and lastName separately.
+    const firstName = user.firstName || null;
+    const lastName = user.lastName || null;
+
     const corporateEmail = user.corporate_email || user.email || null;
 
-    // Prefer profile fields when available; fall back to legacy props on user
     const mergedTcNo = profile?.tcNo ?? user.tc_no;
     const mergedBirthDate = profile?.birthDate ?? user.birth_date;
     const mergedAddress = profile?.address ?? user.address;
     const mergedEmergencyPerson = profile?.emergencyPerson ?? user.emergency_person;
     const mergedEmergencyPhone = profile?.emergencyPhone ?? user.emergency_phone;
-    const mergedPhone = profile?.phoneNumber ?? user.phone;
+    const mergedPhone = profile?.phoneNumber ?? (user.phone !== user.email ? user.phone : null);
     const mergedPersonalEmail = profile?.personalEmail ?? user.personal_email;
 
     const SectionHeader = ({ icon: Icon, title }) => (
@@ -134,7 +136,10 @@ export const UserDetailsDialog = ({ open, onClose, user }) => {
                 <SectionHeader icon={UserCircle} title={t('users.basic_info')} />
                 <Grid container spacing={2}>
                     <Grid item xs={12} sm={6}>
-                        <DetailItem label={t('common.name')} value={fullName} />
+                        <DetailItem label={t('common.name')} value={firstName} />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                        <DetailItem label={t('common.surname')} value={lastName} />
                     </Grid>
                     <Grid item xs={12} sm={6}>
                         <DetailItem label={t('common.phone')} value={mergedPhone} icon={Phone} />

@@ -42,6 +42,7 @@ export const UserDrawer = ({ open, onClose, onSave, user, t }) => {
 
     const [formData, setFormData] = useState({
         name: '',
+        surname: '',
         personal_email: '',
         corporate_email: '',
         phone: '',
@@ -62,7 +63,8 @@ export const UserDrawer = ({ open, onClose, onSave, user, t }) => {
 
         if (user) {
             setFormData({
-                name: user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+                name: user.firstName || '',
+                surname: user.lastName || '',
                 personal_email: user.personal_email || '',
                 corporate_email: user.corporate_email || user.email || '',
                 phone: user.phone || '',
@@ -78,6 +80,7 @@ export const UserDrawer = ({ open, onClose, onSave, user, t }) => {
         } else {
             setFormData({
                 name: '',
+                surname: '',
                 personal_email: '',
                 corporate_email: '',
                 phone: '',
@@ -131,15 +134,9 @@ export const UserDrawer = ({ open, onClose, onSave, user, t }) => {
     const handleSave = () => {
         if (!onSave) return;
 
-        // Split full name into firstName / lastName (best-effort)
-        const fullName = (formData.name || '').trim();
-        const [firstNamePart, ...rest] = fullName.split(' ');
-        const firstName = firstNamePart || '';
-        const lastName = rest.join(' ');
-
         const authPayload = {
-            firstName,
-            lastName,
+            firstName: formData.name,
+            lastName: formData.surname,
             email: formData.corporate_email,
             bundleId: formData.bundleId || null,
         };
@@ -187,8 +184,11 @@ export const UserDrawer = ({ open, onClose, onSave, user, t }) => {
                 <Box sx={{ flexGrow: 1, p: isMobile ? 3 : 4, overflowY: 'auto' }}>
                     <SectionTitle icon={UserCircle}>{t('users.basic_info')}</SectionTitle>
                     <Grid container spacing={2}>
-                        <Grid item xs={12}>
+                        <Grid item xs={12} sm={6}>
                             <TextField fullWidth label={t('common.name')} name="name" value={formData.name} onChange={handleChange} sx={fieldStyles} InputProps={{ startAdornment: <InputAdornment position="start"><UsersIcon size={18} /></InputAdornment> }} />
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                            <TextField fullWidth label={t('common.surname')} name="surname" value={formData.surname} onChange={handleChange} sx={fieldStyles} InputProps={{ startAdornment: <InputAdornment position="start"><UsersIcon size={18} /></InputAdornment> }} />
                         </Grid>
                         <Grid item xs={12} sm={6}>
                             <TextField fullWidth label={t('common.corporate_email')} name="corporate_email" value={formData.corporate_email} onChange={handleChange} sx={fieldStyles} InputProps={{ startAdornment: <InputAdornment position="start"><Mail size={18} /></InputAdornment> }} />
