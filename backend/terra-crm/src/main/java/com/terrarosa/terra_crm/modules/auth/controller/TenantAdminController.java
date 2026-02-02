@@ -3,13 +3,17 @@ package com.terrarosa.terra_crm.modules.auth.controller;
 import com.terrarosa.terra_crm.core.common.dto.ApiResponse;
 import com.terrarosa.terra_crm.modules.auth.dto.BundleDto;
 import com.terrarosa.terra_crm.modules.auth.dto.ModuleDTO;
+import com.terrarosa.terra_crm.modules.auth.dto.PasswordResetResponse;
 import com.terrarosa.terra_crm.modules.auth.dto.PermissionResponseDTO;
+import com.terrarosa.terra_crm.modules.auth.dto.TenantUserCreateRequest;
+import com.terrarosa.terra_crm.modules.auth.dto.TenantUserCreateResponse;
 import com.terrarosa.terra_crm.modules.auth.dto.UserDto;
 import com.terrarosa.terra_crm.modules.auth.entity.Permission;
 import com.terrarosa.terra_crm.modules.auth.entity.PermissionBundle;
 import com.terrarosa.terra_crm.modules.auth.entity.User;
 import com.terrarosa.terra_crm.modules.auth.repository.UserRepository;
 import com.terrarosa.terra_crm.modules.auth.service.PermissionService;
+import com.terrarosa.terra_crm.modules.auth.service.TenantUserService;
 import com.terrarosa.terra_crm.modules.auth.service.TenantSecurityService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +47,7 @@ public class TenantAdminController {
     private final PermissionService permissionService;
     private final TenantSecurityService tenantSecurityService;
     private final UserRepository userRepository;
+    private final TenantUserService tenantUserService;
 
     // ========== User Management Endpoints ==========
 
@@ -66,11 +71,31 @@ public class TenantAdminController {
                         .roles(user.getRoles().stream()
                                 .map(role -> role.getName())
                                 .collect(Collectors.toList()))
+                        .permissions(null) // Permissions are fetched separately when needed
+                        .bundleNames(user.getBundles().stream()
+                                .map(PermissionBundle::getName)
+                                .collect(Collectors.toList()))
                         .build())
                 .collect(Collectors.toList());
         
         log.debug("Retrieved {} users for tenant {}", userDtos.size(), tenantId);
         return ResponseEntity.ok(ApiResponse.success(userDtos));
+    }
+
+    /**
+     * Create a new user for the current tenant with an auto-generated password.
+     * Password is generated server-side and returned once in the response.
+     */
+    @PostMapping("/users")
+    @PreAuthorize("hasAnyAuthority('SETTINGS_USERS', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<TenantUserCreateResponse>> createTenantUser(
+            @RequestBody TenantUserCreateRequest request) {
+        UUID tenantId = tenantSecurityService.getCurrentUserTenantId();
+
+        TenantUserCreateResponse response = tenantUserService.createUserForTenant(tenantId, request);
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(response, "User created successfully"));
     }
 
     /**
@@ -95,6 +120,9 @@ public class TenantAdminController {
                         .map(role -> role.getName())
                         .collect(Collectors.toList()))
                 .permissions(permissionService.getUserPermissions(userId))
+                .bundleNames(user.getBundles().stream()
+                        .map(PermissionBundle::getName)
+                        .collect(Collectors.toList()))
                 .build();
         
         return ResponseEntity.ok(ApiResponse.success(userDto));
@@ -144,6 +172,20 @@ public class TenantAdminController {
         
         permissionService.removePermissionFromUser(userId, permissionId);
         return ResponseEntity.ok(ApiResponse.success(null, "Permission removed successfully"));
+    }
+
+    /**
+     * Reset a user's password for the current tenant.
+     * Password is generated server-side and returned once in the response.
+     */
+    @PostMapping("/users/{userId}/reset-password")
+    @PreAuthorize("hasAnyAuthority('SETTINGS_USERS', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<PasswordResetResponse>> resetUserPassword(@PathVariable UUID userId) {
+        // CRITICAL: Validate user belongs to current tenant and is active
+        tenantSecurityService.validateUserActiveAndBelongsToTenant(userId);
+
+        PasswordResetResponse response = tenantUserService.resetUserPassword(userId);
+        return ResponseEntity.ok(ApiResponse.success(response, "Password reset successfully"));
     }
 
     // ========== Bundle Management Endpoints ==========

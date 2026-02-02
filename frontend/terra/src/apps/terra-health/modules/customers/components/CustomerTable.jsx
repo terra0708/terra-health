@@ -5,7 +5,6 @@ import {
 } from '@mui/material';
 import { Info, Edit3, Trash2, UserCheck, Copy, Link as LinkIcon, Circle } from 'lucide-react';
 import { formatLocaleDate, ALL_COUNTRIES } from '../data/countries';
-import { MOCK_USERS } from '@shared/modules/users';
 
 const CustomerTable = ({
     customers,
@@ -87,7 +86,8 @@ const CustomerTable = ({
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                     <UserCheck size={14} color={theme.palette.text.disabled} />
                                     <Typography variant="body2" noWrap sx={{ fontWeight: 500 }}>
-                                        {MOCK_USERS.find(u => u.id === c.consultantId)?.name || '-'}
+                                        {/* TODO: backend consultant name mapping can be wired here */}
+                                        {c.consultantName || c.consultant || '-'}
                                     </Typography>
                                 </Box>
                             </TableCell>

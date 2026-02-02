@@ -21,4 +21,11 @@ public class UserDto {
     private UUID tenantId;
     private List<String> roles;
     private List<String> permissions;
+
+    /**
+     * Names of permission bundles assigned to the user (if any).
+     * This is mainly used by tenant admin UIs to display which bundle
+     * a user belongs to.
+     */
+    private List<String> bundleNames;
 }

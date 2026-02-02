@@ -3,7 +3,6 @@ import { Box, Paper, Typography, Chip, IconButton, alpha, Stack, Button } from '
 import { Edit3, Trash2, Calendar, Phone, Tag, Info, UserCheck } from 'lucide-react';
 import { ALL_COUNTRIES } from '../data/countries';
 import { useTranslation } from 'react-i18next';
-import { MOCK_USERS } from '@shared/modules/users';
 import { useLookup } from '@shared/common/hooks/useLookup';
 
 /**
@@ -94,7 +93,8 @@ export const ClientMobileCard = ({
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <UserCheck size={14} strokeWidth={2.5} color={theme.palette.text.secondary} />
                     <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
-                        {MOCK_USERS.find(u => u.id === client.assignedTo)?.name || '-'}
+                        {/* TODO: backend consultant/owner name mapping can be wired here */}
+                        {client.assignedToName || '-'}
                     </Typography>
                 </Box>
             </Stack>

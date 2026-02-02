@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 import { formatLocaleDate, ALL_COUNTRIES } from '../data/countries';
 import { useTranslation } from 'react-i18next';
-import { MOCK_USERS } from '@shared/modules/users';
 import { UserCheck } from 'lucide-react';
 import { useLookup } from '@common/hooks/useLookup';
 import { ReminderCard, useReminderSettingsStore, useReminderStore } from '@shared/modules/reminders';
@@ -62,7 +61,7 @@ export const CustomerDetailsDialog = ({ open, onClose, customer, client }) => {
     };
 
     const country = ALL_COUNTRIES.find(c => c.code === customerData.country);
-    const consultant = MOCK_USERS.find(u => u.id === customerData.consultantId);
+    const consultantName = customerData.consultantName || customerData.consultant || null;
 
 
     const SectionTitle = ({ icon: Icon, title, count }) => (
@@ -190,7 +189,7 @@ export const CustomerDetailsDialog = ({ open, onClose, customer, client }) => {
                             <DetailItem
                                 icon={UserCheck}
                                 label={t('customers.consultant')}
-                                value={consultant?.name || '-'}
+                                value={consultantName || '-'}
                                 color={theme.palette.secondary.main}
                             />
 

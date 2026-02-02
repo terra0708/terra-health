@@ -12,6 +12,11 @@ export const useUserStore = create((set, get) => ({
     users: [], // List<UserDto> from backend
     loading: false,
     error: null,
+    /**
+     * Last generated password information for create/reset operations.
+     * UI can use this to show the password once in a dialog.
+     */
+    passwordInfo: null,
 
     // Actions
 
@@ -54,16 +59,45 @@ export const useUserStore = create((set, get) => ({
     },
 
     /**
-     * Add a new user (placeholder - backend endpoint may need to be created).
-     * For now, this is a placeholder that will need backend implementation.
+     * Add a new user for current tenant.
+     * Uses backend endpoint: POST /v1/tenant-admin/users
+     * Body: { firstName, lastName, email, bundleId? }
+     * Response: TenantUserCreateResponse with generatedPassword.
      */
     addUser: async (userData) => {
         set({ loading: true, error: null });
         try {
-            // TODO: Backend endpoint needed: POST /v1/tenant-admin/users
-            // For now, just refresh the list
+            // Split full name into firstName / lastName (best-effort)
+            const fullName = (userData.name || '').trim();
+            const [firstNamePart, ...rest] = fullName.split(' ');
+            const firstName = firstNamePart || userData.firstName || 'User';
+            const lastName = rest.join(' ') || userData.lastName || ' ';
+
+            const payload = {
+                firstName,
+                lastName,
+                email: userData.email || userData.corporate_email,
+                bundleId: userData.bundleId || null,
+            };
+
+            const response = await apiClient.post('/v1/tenant-admin/users', payload);
+            // Response is TenantUserCreateResponse (unwrapped by apiClient)
+            const createdUser = response;
+
+            // Refresh user list from backend to keep store in sync
             await get().fetchUsers();
-            set({ loading: false });
+
+            set({
+                loading: false,
+                passwordInfo: {
+                    type: 'create',
+                    userId: createdUser.id,
+                    email: createdUser.email,
+                    password: createdUser.generatedPassword,
+                },
+            });
+
+            return createdUser;
         } catch (error) {
             console.error('Failed to add user:', error);
             set({ error: error.message || 'Failed to add user', loading: false });
@@ -105,6 +139,37 @@ export const useUserStore = create((set, get) => ({
         }
     },
 
+    /**
+     * Reset a user's password.
+     * Uses backend endpoint: POST /v1/tenant-admin/users/{userId}/reset-password
+     * Response: PasswordResetResponse with generatedPassword.
+     */
+    resetPassword: async (userId) => {
+        set({ loading: true, error: null });
+        try {
+            const response = await apiClient.post(`/v1/tenant-admin/users/${userId}/reset-password`);
+            const resetInfo = response; // PasswordResetResponse
+
+            set({
+                loading: false,
+                passwordInfo: {
+                    type: 'reset',
+                    userId: resetInfo.userId,
+                    password: resetInfo.generatedPassword,
+                },
+            });
+
+            return resetInfo;
+        } catch (error) {
+            console.error('Failed to reset user password:', error);
+            set({ error: error.message || 'Failed to reset user password', loading: false });
+            throw error;
+        }
+    },
+
     // Clear error
     clearError: () => set({ error: null }),
+
+    // Clear last password info (after UI dialog is closed)
+    clearPasswordInfo: () => set({ passwordInfo: null }),
 }));

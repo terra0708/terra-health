@@ -25,7 +25,10 @@ import {
     Stack,
     Snackbar,
     Alert,
-    CircularProgress
+    CircularProgress,
+    Dialog,
+    DialogTitle,
+    DialogContent
 } from '@mui/material';
 import {
     Search,
@@ -54,6 +57,7 @@ import {
 import { UserBundleDrawer } from '@shared/modules/users/components/UserBundleDrawer';
 import { ModulePageWrapper } from '@common/ui';
 import { usePerformance } from '@common/hooks';
+import { useUserStore } from '@shared/modules/users/hooks/useUserStore';
 
 const UsersPage = () => {
     usePerformance('UsersPage');
@@ -118,6 +122,10 @@ const UsersPage = () => {
 
     const [terminationOpen, setTerminationOpen] = useState(false);
     const [terminatingUser, setTerminatingUser] = useState(null);
+
+    // NOTE: Selectors ayrı ayrı kullanılmalı; obje dönmek sonsuz render'a sebep olur.
+    const passwordInfo = useUserStore((state) => state.passwordInfo);
+    const clearPasswordInfo = useUserStore((state) => state.clearPasswordInfo);
 
     const handleOpenTermination = (user) => {
         setTerminatingUser(user);
@@ -364,6 +372,64 @@ const UsersPage = () => {
                     {snackbar.message}
                 </Alert>
             </Snackbar>
+
+            {/* Generated password dialog (create & reset) */}
+            {passwordInfo && (
+                <Dialog
+                    open={!!passwordInfo}
+                    onClose={clearPasswordInfo}
+                    maxWidth="xs"
+                    fullWidth
+                >
+                    <DialogTitle sx={{ fontWeight: 800 }}>
+                        {passwordInfo.type === 'reset'
+                            ? t('users.password_reset_title') || 'Şifre Sıfırlandı'
+                            : t('users.password_created_title') || 'Kullanıcı Şifresi Oluşturuldu'}
+                    </DialogTitle>
+                    <DialogContent dividers>
+                        <Typography variant="body2" sx={{ mb: 2 }}>
+                            {t('users.password_info_message') ||
+                                'Bu şifre yalnızca bu ekranda görüntülenir. Lütfen kullanıcıya güvenli bir kanaldan iletin.'}
+                        </Typography>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                px: 2,
+                                py: 1,
+                                borderRadius: '12px',
+                                bgcolor: alpha(theme.palette.primary.main, 0.04),
+                                border: `1px solid ${alpha(theme.palette.primary.main, 0.15)}`,
+                            }}
+                        >
+                            <Typography
+                                variant="subtitle1"
+                                sx={{ fontWeight: 800, fontFamily: 'monospace', mr: 1, wordBreak: 'break-all' }}
+                            >
+                                {passwordInfo.password}
+                            </Typography>
+                            <IconButton
+                                size="small"
+                                onClick={async () => {
+                                    try {
+                                        await navigator.clipboard.writeText(passwordInfo.password);
+                                    } catch {
+                                        // ignore clipboard errors
+                                    }
+                                }}
+                            >
+                                <Lock size={18} />
+                            </IconButton>
+                        </Box>
+                    </DialogContent>
+                    <Box sx={{ p: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                        <Button onClick={clearPasswordInfo} variant="contained">
+                            {t('common.ok') || 'Tamam'}
+                        </Button>
+                    </Box>
+                </Dialog>
+            )}
 
             <style>{`
                 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }

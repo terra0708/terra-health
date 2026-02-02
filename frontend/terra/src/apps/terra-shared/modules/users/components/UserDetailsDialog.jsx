@@ -8,14 +8,45 @@ import {
     HeartPulse, ShieldCheck, Layers, Lock
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { MOCK_PACKAGES } from '../data/mockData';
+import { usePermissionStore } from '../../permissions/hooks/usePermissionStore';
 
 export const UserDetailsDialog = ({ open, onClose, user }) => {
     const { t, i18n } = useTranslation();
     const theme = useTheme();
     const lang = i18n.language;
 
+    const { fetchUserBundles } = usePermissionStore();
+    const [userBundles, setUserBundles] = React.useState([]);
+
+    React.useEffect(() => {
+        if (!open || !user?.id) {
+            setUserBundles([]);
+            return;
+        }
+
+        let isMounted = true;
+        fetchUserBundles(user.id)
+            .then((bundles) => {
+                if (isMounted) {
+                    setUserBundles(bundles || []);
+                }
+            })
+            .catch(() => {
+                if (isMounted) {
+                    setUserBundles([]);
+                }
+            });
+
+        return () => {
+            isMounted = false;
+        };
+    }, [open, user, fetchUserBundles]);
+
     if (!user) return null;
+
+    // Backend UserDto'dan gelen veriler için güvenli fallback'ler
+    const fullName = (user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim()) || null;
+    const corporateEmail = user.corporate_email || user.email || null;
 
     const SectionHeader = ({ icon: Icon, title }) => (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, mt: 3, pb: 1, borderBottom: `1px solid ${theme.palette.divider}` }}>
@@ -69,13 +100,13 @@ export const UserDetailsDialog = ({ open, onClose, user }) => {
                 <SectionHeader icon={UserCircle} title={t('users.basic_info')} />
                 <Grid container spacing={2}>
                     <Grid item xs={12} sm={6}>
-                        <DetailItem label={t('common.name')} value={user.name} />
+                        <DetailItem label={t('common.name')} value={fullName} />
                     </Grid>
                     <Grid item xs={12} sm={6}>
                         <DetailItem label={t('common.phone')} value={user.phone} icon={Phone} />
                     </Grid>
                     <Grid item xs={12} sm={6}>
-                        <DetailItem label={t('common.corporate_email')} value={user.corporate_email || user.email} icon={Mail} />
+                        <DetailItem label={t('common.corporate_email')} value={corporateEmail} icon={Mail} />
                     </Grid>
                     <Grid item xs={12} sm={6}>
                         <DetailItem label={t('common.personal_email')} value={user.personal_email} icon={Mail} />
@@ -110,32 +141,25 @@ export const UserDetailsDialog = ({ open, onClose, user }) => {
                 {/* Access Info */}
                 <SectionHeader icon={ShieldCheck} title={t('users.role_permission')} />
                 <Grid container spacing={2}>
-                    <Grid item xs={12} sm={6}>
-                        <DetailItem label={t('common.role')} value={t(`users.roles.${user.role}`)} />
-                    </Grid>
                     <Grid item xs={12}>
                         <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block', mb: 1 }}>
                             <Layers size={12} style={{ marginRight: 4 }} /> {t('users.permission_packages')}
                         </Typography>
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                            {user.packages?.map(pkgId => {
-                                const pkg = MOCK_PACKAGES.find(p => p.id === pkgId);
-                                const label = lang === 'tr' ? pkg?.name_tr : (pkg?.name_en || pkg?.name_tr);
-                                return (
-                                    <Chip
-                                        key={pkgId}
-                                        label={label}
-                                        size="small"
-                                        sx={{
-                                            fontWeight: 700,
-                                            bgcolor: alpha(pkg?.color || theme.palette.primary.main, 0.1),
-                                            color: pkg?.color || 'primary.main',
-                                            borderRadius: '8px'
-                                        }}
-                                    />
-                                );
-                            })}
-                            {(!user.packages || user.packages.length === 0) && '-'}
+                            {userBundles?.map((bundle) => (
+                                <Chip
+                                    key={bundle.id}
+                                    label={bundle.name}
+                                    size="small"
+                                    sx={{
+                                        fontWeight: 700,
+                                        bgcolor: alpha(theme.palette.primary.main, 0.08),
+                                        color: theme.palette.primary.main,
+                                        borderRadius: '8px'
+                                    }}
+                                />
+                            ))}
+                            {(!userBundles || userBundles.length === 0) && '-'}
                         </Box>
                     </Grid>
                 </Grid>

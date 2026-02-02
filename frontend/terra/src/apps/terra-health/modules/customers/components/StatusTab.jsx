@@ -1,6 +1,5 @@
 import React from 'react';
 import { Stack, TextField, MenuItem, FormControl, InputLabel, Select, OutlinedInput, Box, Chip } from '@mui/material';
-import { MOCK_USERS } from '@shared/modules/users';
 import { useCustomerSettingsStore } from '../hooks/useCustomerSettingsStore';
 import { useLookup } from '@common/hooks/useLookup';
 import { Controller } from 'react-hook-form';
@@ -24,7 +23,7 @@ export const StatusTab = ({ register, control, t, lang, errors }) => {
                         value={field.value || ''}
                     >
                         <MenuItem value=""><em>{t('customers.drawer.no_assignment')}</em></MenuItem>
-                        {MOCK_USERS.filter(u => u.role === 'consultant').map((u) => <MenuItem key={u.id} value={u.id}>{u.name}</MenuItem>)}
+                        {/* TODO: Wire consultant list from backend when available */}
                     </TextField>
                 )}
             />

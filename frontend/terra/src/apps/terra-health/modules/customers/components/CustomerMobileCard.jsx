@@ -4,7 +4,6 @@ import { Edit3, Trash2, Calendar, Phone, Tag, Info, UserCheck } from 'lucide-rea
 import { useCustomerSettingsStore } from '../hooks/useCustomerSettingsStore';
 import { ALL_COUNTRIES } from '../data/countries'; // Import countries data
 import { useTranslation } from 'react-i18next';
-import { MOCK_USERS } from '@shared/modules/users';
 
 import { useLookup } from '@common/hooks/useLookup';
 
@@ -77,7 +76,8 @@ export const CustomerMobileCard = ({ customer, t, theme, onEdit, onInfo, getStat
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <UserCheck size={14} strokeWidth={2.5} color={theme.palette.text.secondary} />
                     <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
-                        {MOCK_USERS.find(u => u.id === customer.consultantId)?.name || '-'}
+                        {/* TODO: backend consultant name mapping can be wired here */}
+                        {customer.consultantName || customer.consultant || '-'}
                     </Typography>
                 </Box>
             </Stack>

@@ -13,10 +13,7 @@ import {
     Drawer,
     MenuItem,
     Divider,
-    Checkbox,
-    ListItemText,
-    useMediaQuery,
-    FormControlLabel
+    useMediaQuery
 } from '@mui/material';
 import {
     X,
@@ -29,14 +26,12 @@ import {
     ShieldCheck,
     CheckCircle2,
     UserCircle,
-    Lock,
-    Eye,
-    EyeOff
+    Lock
 } from 'lucide-react';
-import { MOCK_PACKAGES } from '../data/mockData';
 import { fieldStyles, menuItemStyles } from '../styles';
 
 import { useTranslation } from 'react-i18next';
+import { usePermissionStore } from '../../permissions/hooks/usePermissionStore';
 
 export const UserDrawer = ({ open, onClose, onSave, user, t }) => {
     const theme = useTheme();
@@ -46,18 +41,31 @@ export const UserDrawer = ({ open, onClose, onSave, user, t }) => {
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
     const [formData, setFormData] = useState({
-        name: '', personal_email: '', corporate_email: '', phone: '', tc_no: '', birth_date: '', address: '',
-        emergency_person: '', emergency_phone: '', role: 'staff', packages: [], password: '', passwordConfirm: '',
-        system_access: true
+        name: '',
+        personal_email: '',
+        corporate_email: '',
+        phone: '',
+        tc_no: '',
+        birth_date: '',
+        address: '',
+        emergency_person: '',
+        emergency_phone: '',
+        bundleId: null,
     });
 
-    const [showPassword, setShowPassword] = useState(false);
-    const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
+    const { bundles, fetchBundles } = usePermissionStore();
 
     useEffect(() => {
+        if (open && (!bundles || bundles.length === 0)) {
+            // Lazily load bundles when drawer is opened
+            fetchBundles().catch(() => {
+                // Hata zaten store'da tutuluyor, burada swallow ediyoruz
+            });
+        }
+
         if (user) {
             setFormData({
-                name: user.name || '',
+                name: user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
                 personal_email: user.personal_email || '',
                 corporate_email: user.corporate_email || user.email || '',
                 phone: user.phone || '',
@@ -66,20 +74,25 @@ export const UserDrawer = ({ open, onClose, onSave, user, t }) => {
                 address: user.address || '',
                 emergency_person: user.emergency_person || '',
                 emergency_phone: user.emergency_phone || '',
-                role: user.role || 'staff',
-                packages: user.packages || [],
-                password: '',
-                passwordConfirm: '',
-                system_access: user.system_access !== undefined ? user.system_access : true
+                bundleId: Array.isArray(user.bundleNames) && user.bundleNames.length > 0
+                    ? null
+                    : null,
             });
         } else {
             setFormData({
-                name: '', personal_email: '', corporate_email: '', phone: '', tc_no: '', birth_date: '', address: '',
-                emergency_person: '', emergency_phone: '', role: 'staff', packages: [], password: '', passwordConfirm: '',
-                system_access: true
+                name: '',
+                personal_email: '',
+                corporate_email: '',
+                phone: '',
+                tc_no: '',
+                birth_date: '',
+                address: '',
+                emergency_person: '',
+                emergency_phone: '',
+                bundleId: null,
             });
         }
-    }, [user, open]);
+    }, [user, open, bundles, fetchBundles]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -96,10 +109,6 @@ export const UserDrawer = ({ open, onClose, onSave, user, t }) => {
     );
 
     const handleSave = () => {
-        if (formData.password && formData.password !== formData.passwordConfirm) {
-            alert(t('auth.passwords_do_not_match') || 'Passwords do not match!');
-            return;
-        }
         if (onSave) onSave(formData);
     };
 
@@ -147,48 +156,7 @@ export const UserDrawer = ({ open, onClose, onSave, user, t }) => {
                         </Grid>
 
                         {/* Password Fields */}
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                fullWidth
-                                label={t('common.password')}
-                                name="password"
-                                value={formData.password}
-                                onChange={handleChange}
-                                type={showPassword ? "text" : "password"}
-                                sx={fieldStyles}
-                                InputProps={{
-                                    startAdornment: <InputAdornment position="start"><Lock size={18} /></InputAdornment>,
-                                    endAdornment: (
-                                        <InputAdornment position="end">
-                                            <IconButton onClick={() => setShowPassword(!showPassword)} edge="end" size="small">
-                                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                                            </IconButton>
-                                        </InputAdornment>
-                                    )
-                                }}
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                fullWidth
-                                label={t('common.password_confirm')}
-                                name="passwordConfirm"
-                                value={formData.passwordConfirm}
-                                onChange={handleChange}
-                                type={showPasswordConfirm ? "text" : "password"}
-                                sx={fieldStyles}
-                                InputProps={{
-                                    startAdornment: <InputAdornment position="start"><Lock size={18} /></InputAdornment>,
-                                    endAdornment: (
-                                        <InputAdornment position="end">
-                                            <IconButton onClick={() => setShowPasswordConfirm(!showPasswordConfirm)} edge="end" size="small">
-                                                {showPasswordConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
-                                            </IconButton>
-                                        </InputAdornment>
-                                    )
-                                }}
-                            />
-                        </Grid>
+                        {/* Password fields removed – password is generated by backend */}
 
                     </Grid>
 
@@ -217,79 +185,44 @@ export const UserDrawer = ({ open, onClose, onSave, user, t }) => {
 
                     <SectionTitle icon={ShieldCheck}>{t('users.role_permission')}</SectionTitle>
                     <Grid container spacing={2}>
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                select
-                                fullWidth
-                                label={t('common.role')}
-                                name="role"
-                                value={formData.role}
-                                onChange={handleChange}
-                                sx={fieldStyles}
-                                SelectProps={{
-                                    MenuProps: {
-                                        sx: { zIndex: 3000 },
-                                        slotProps: { paper: { sx: { borderRadius: '16px', mt: 1, bgcolor: 'background.paper', boxShadow: isDark ? '0 10px 40px rgba(0,0,0,0.6)' : '0 10px 40px rgba(0,0,0,0.2)' } } }
-                                    }
-                                }}
-                            >
-                                <MenuItem value="admin" sx={menuItemStyles}>{t('users.roles.admin')}</MenuItem>
-                                <MenuItem value="doctor" sx={menuItemStyles}>{t('users.roles.doctor')}</MenuItem>
-                                <MenuItem value="staff" sx={menuItemStyles}>{t('users.roles.staff')}</MenuItem>
-                            </TextField>
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
+                        <Grid item xs={12}>
                             <TextField
                                 select
                                 fullWidth
                                 label={t('users.permission_packages')}
-                                name="packages"
-                                value={formData.packages}
-                                onChange={handleChange}
+                                name="bundleId"
+                                value={formData.bundleId || ''}
+                                onChange={(e) => setFormData(prev => ({ ...prev, bundleId: e.target.value || null }))}
                                 sx={fieldStyles}
                                 SelectProps={{
-                                    multiple: true,
-                                    renderValue: (selected) => (
-                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                            {selected.map((value) => {
-                                                const pkg = MOCK_PACKAGES.find(p => p.id === value);
-                                                const label = lang === 'tr' ? pkg?.name_tr : (pkg?.name_en || pkg?.name_tr);
-                                                return <Chip key={value} label={label} size="small" sx={{ bgcolor: alpha(pkg?.color || '#000', 0.12), color: pkg?.color, fontWeight: 700, borderRadius: '6px' }} />;
-                                            })}
-                                        </Box>
-                                    ),
                                     MenuProps: {
                                         sx: { zIndex: 3000 },
-                                        slotProps: { paper: { sx: { borderRadius: '16px', mt: 1, bgcolor: 'background.paper', boxShadow: isDark ? '0 10px 40px rgba(0,0,0,0.6)' : '0 10px 40px rgba(0,0,0,0.2)' } } }
-                                    }
+                                        slotProps: {
+                                            paper: {
+                                                sx: {
+                                                    borderRadius: '16px',
+                                                    mt: 1,
+                                                    bgcolor: 'background.paper',
+                                                    boxShadow: isDark
+                                                        ? '0 10px 40px rgba(0,0,0,0.6)'
+                                                        : '0 10px 40px rgba(0,0,0,0.2)',
+                                                },
+                                            },
+                                        },
+                                    },
                                 }}
                             >
-                                {MOCK_PACKAGES.map((pkg) => (
-                                    <MenuItem key={pkg.id} value={pkg.id} sx={menuItemStyles}>
-                                        <Checkbox checked={formData.packages.includes(pkg.id)} size="small" sx={{ color: pkg.color, '&.Mui-checked': { color: pkg.color } }} />
-                                        <ListItemText primary={lang === 'tr' ? pkg.name_tr : (pkg.name_en || pkg.name_tr)} primaryTypographyProps={{ fontWeight: 600, color: 'text.primary' }} />
+                                <MenuItem value="" sx={menuItemStyles}>
+                                    {t('common.none') || 'Seçili paket yok'}
+                                </MenuItem>
+                                {bundles?.map((bundle) => (
+                                    <MenuItem key={bundle.id} value={bundle.id} sx={menuItemStyles}>
+                                        {bundle.name}
                                     </MenuItem>
                                 ))}
                             </TextField>
                         </Grid>
                     </Grid>
-
-                    <Box sx={{ mt: 3, p: 2, borderRadius: '16px', bgcolor: alpha(theme.palette.success.main, 0.04), border: `1px solid ${alpha(theme.palette.success.main, 0.1)}` }}>
-                        <FormControlLabel
-                            control={
-                                <Checkbox
-                                    checked={formData.system_access}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, system_access: e.target.checked }))}
-                                    sx={{ color: 'success.main', '&.Mui-checked': { color: 'success.main' } }}
-                                />
-                            }
-                            label={
-                                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary' }}>
-                                    {t('common.system_access')}
-                                </Typography>
-                            }
-                        />
-                    </Box>
 
                     <Box sx={{ height: 40 }} />
                 </Box>

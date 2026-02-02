@@ -5,29 +5,14 @@ import {
     MenuItem, alpha, useTheme
 } from '@mui/material';
 import { AlertTriangle, Trash2, ArrowRight } from 'lucide-react';
-import { MOCK_USERS } from '../../users/data/mockData';
-
 export const PermissionDeleteDialog = ({ open, onClose, onConfirm, type, item, list, t }) => {
     const theme = useTheme();
     const [action, setAction] = useState('remove'); // 'remove' or 'migrate'
     const [targetId, setTargetId] = useState('');
 
-    // Count affected users
-    const affectedUsers = MOCK_USERS.filter(u => {
-        if (type === 'package') return u.packages?.includes(item.id);
-
-        // Match roles by ID or by common slugs/names used in mocks
-        const roleId = item.id.toString();
-        const roleNameTr = item.name_tr?.toLowerCase();
-        const roleNameEn = item.name_en?.toLowerCase();
-        const userRole = u.role?.toLowerCase();
-
-        return userRole === roleId ||
-            userRole === roleNameTr ||
-            userRole === roleNameEn ||
-            (roleNameTr === 'başhekim' && userRole === 'admin') || // Map mock admin to Chief Physician for demo
-            (roleNameTr === 'uzman doktor' && userRole === 'doctor');
-    });
+    // In the real system, affected users should be calculated using backend data.
+    // For now, we only show a generic warning without listing specific users.
+    const affectedUsers = [];
 
     const handleConfirm = () => {
         onConfirm(action, targetId);
