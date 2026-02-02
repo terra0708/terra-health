@@ -1,6 +1,7 @@
 package com.terrarosa.terra_crm.modules.health.entity;
 
 import com.terrarosa.terra_crm.core.common.entity.BaseEntity;
+import com.terrarosa.terra_crm.modules.ads.entity.Lead;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -16,7 +17,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Patient extends BaseEntity {
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "lead_id")
     private Lead lead;

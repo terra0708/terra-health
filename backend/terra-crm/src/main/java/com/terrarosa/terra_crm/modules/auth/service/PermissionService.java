@@ -853,7 +853,7 @@ public class PermissionService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + userId));
 
-        PermissionBundle bundle = permissionBundleRepository.findById(bundleId)
+        PermissionBundle bundle = permissionBundleRepository.findByIdWithPermissions(bundleId)
                 .orElseThrow(() -> new IllegalArgumentException("Bundle not found with id: " + bundleId));
 
         // Validate bundle belongs to user's tenant
@@ -861,11 +861,14 @@ public class PermissionService {
             throw new IllegalArgumentException("Bundle does not belong to user's tenant");
         }
 
-        // Add bundle to user's bundles (for tracking)
+        // CRITICAL: User.bundles is mappedBy="users" so PermissionBundle owns the relationship.
+        // We must update the owning side for user_bundles join table to be persisted.
+        bundle.getUsers().add(user);
+        permissionBundleRepository.save(bundle);
+        // Keep inverse side in sync for in-memory consistency
         user.getBundles().add(bundle);
-        userRepository.save(user);
 
-        // Copy all permissions from bundle to user_permissions
+        // Copy all permissions from bundle to user_permissions (permissions loaded eagerly above)
         int permissionsAssigned = 0;
         for (Permission permission : bundle.getPermissions()) {
             try {
@@ -911,9 +914,10 @@ public class PermissionService {
             }
         }
         
-        // Remove bundle association from user_bundles
+        // CRITICAL: PermissionBundle owns the relationship; update owning side so user_bundles is updated
+        bundle.getUsers().remove(user);
+        permissionBundleRepository.save(bundle);
         user.getBundles().remove(bundle);
-        userRepository.save(user);
 
         log.info("Removed bundle '{}' from user {}. Removed {} permissions from user_permissions table",
                 bundle.getName(), user.getEmail(), removedCount);
@@ -939,7 +943,6 @@ public class PermissionService {
         PermissionBundle bundle = permissionBundleRepository.findById(bundleId)
                 .orElseThrow(() -> new IllegalArgumentException("Bundle not found with id: " + bundleId));
 
-        UUID tenantId = bundle.getTenant().getId();
         String bundleName = bundle.getName();
         
         // Get all users who have this bundle assigned
@@ -1031,6 +1034,42 @@ public class PermissionService {
     }
 
     /**
+     * Get a single bundle by ID as DTO (validates tenant).
+     * Use this instead of returning PermissionBundle entity to avoid Jackson recursion (Permission parent/child).
+     */
+    @Transactional(readOnly = true)
+    public BundleDto getBundleByIdAsDto(UUID tenantId, UUID bundleId) {
+        PermissionBundle bundle = permissionBundleRepository.findByIdWithPermissions(bundleId)
+                .filter(b -> b.getTenant().getId().equals(tenantId))
+                .orElseThrow(() -> new IllegalArgumentException("Bundle not found with id: " + bundleId));
+        return toBundleDto(bundle);
+    }
+
+    /** Map entity to DTO within transactional context (permissions and tenant loaded). */
+    private BundleDto toBundleDto(PermissionBundle bundle) {
+        Set<Permission> permissions = bundle.getPermissions();
+        List<PermissionResponseDTO> permissionDtos = permissions.stream()
+                .map(p -> PermissionResponseDTO.builder()
+                        .id(p.getId())
+                        .name(p.getName())
+                        .description(p.getDescription())
+                        .type(p.getType())
+                        .parentPermissionId(p.getParentPermission() != null ? p.getParentPermission().getId() : null)
+                        .parentPermissionName(p.getParentPermission() != null ? p.getParentPermission().getName() : null)
+                        .build())
+                .collect(Collectors.toList());
+        return BundleDto.builder()
+                .id(bundle.getId())
+                .name(bundle.getName())
+                .description(bundle.getDescription())
+                .tenantId(bundle.getTenant().getId())
+                .permissions(permissionDtos)
+                .createdAt(bundle.getCreatedAt())
+                .updatedAt(bundle.getUpdatedAt())
+                .build();
+    }
+
+    /**
      * Get all bundles for a tenant as DTOs with eagerly-loaded permissions.
      * 
      * CRITICAL: DTO mapping happens within @Transactional(readOnly = true) context
@@ -1042,34 +1081,7 @@ public class PermissionService {
     @Transactional(readOnly = true)
     public List<BundleDto> getTenantBundlesAsDto(UUID tenantId) {
         List<PermissionBundle> bundles = getTenantBundles(tenantId);
-        
-        // CRITICAL: Mapping işlemi @Transactional context'i içinde
-        return bundles.stream()
-                .map(bundle -> {
-                    // Eager load permissions (session açık)
-                    Set<Permission> permissions = bundle.getPermissions();
-                    List<PermissionResponseDTO> permissionDtos = permissions.stream()
-                            .map(p -> PermissionResponseDTO.builder()
-                                    .id(p.getId())
-                                    .name(p.getName())
-                                    .description(p.getDescription())
-                                    .type(p.getType())
-                                    .parentPermissionId(p.getParentPermission() != null ? p.getParentPermission().getId() : null)
-                                    .parentPermissionName(p.getParentPermission() != null ? p.getParentPermission().getName() : null)
-                                    .build())
-                            .collect(Collectors.toList());
-                    
-                    return BundleDto.builder()
-                            .id(bundle.getId())
-                            .name(bundle.getName())
-                            .description(bundle.getDescription())
-                            .tenantId(bundle.getTenant().getId())
-                            .permissions(permissionDtos) // Always populated
-                            .createdAt(bundle.getCreatedAt())
-                            .updatedAt(bundle.getUpdatedAt())
-                            .build();
-                })
-                .collect(Collectors.toList());
+        return bundles.stream().map(this::toBundleDto).collect(Collectors.toList());
     }
 
     /**
@@ -1095,34 +1107,7 @@ public class PermissionService {
     @Transactional(readOnly = true)
     public List<BundleDto> getUserBundlesAsDto(UUID userId) {
         List<PermissionBundle> bundles = getUserBundles(userId);
-        
-        // Same mapping logic as getTenantBundlesAsDto
-        return bundles.stream()
-                .map(bundle -> {
-                    // Eager load permissions (session açık)
-                    Set<Permission> permissions = bundle.getPermissions();
-                    List<PermissionResponseDTO> permissionDtos = permissions.stream()
-                            .map(p -> PermissionResponseDTO.builder()
-                                    .id(p.getId())
-                                    .name(p.getName())
-                                    .description(p.getDescription())
-                                    .type(p.getType())
-                                    .parentPermissionId(p.getParentPermission() != null ? p.getParentPermission().getId() : null)
-                                    .parentPermissionName(p.getParentPermission() != null ? p.getParentPermission().getName() : null)
-                                    .build())
-                            .collect(Collectors.toList());
-                    
-                    return BundleDto.builder()
-                            .id(bundle.getId())
-                            .name(bundle.getName())
-                            .description(bundle.getDescription())
-                            .tenantId(bundle.getTenant().getId())
-                            .permissions(permissionDtos) // Always populated
-                            .createdAt(bundle.getCreatedAt())
-                            .updatedAt(bundle.getUpdatedAt())
-                            .build();
-                })
-                .collect(Collectors.toList());
+        return bundles.stream().map(this::toBundleDto).collect(Collectors.toList());
     }
 
     /**

@@ -29,7 +29,7 @@ import {
     Lock
 } from 'lucide-react';
 import { fieldStyles, menuItemStyles } from '../styles';
-
+import apiClient from '../../../core/api';
 import { useTranslation } from 'react-i18next';
 import { usePermissionStore } from '../../permissions/hooks/usePermissionStore';
 
@@ -57,10 +57,7 @@ export const UserDrawer = ({ open, onClose, onSave, user, t }) => {
 
     useEffect(() => {
         if (open && (!bundles || bundles.length === 0)) {
-            // Lazily load bundles when drawer is opened
-            fetchBundles().catch(() => {
-                // Hata zaten store'da tutuluyor, burada swallow ediyoruz
-            });
+            fetchBundles().catch(() => { });
         }
 
         if (user) {
@@ -94,6 +91,29 @@ export const UserDrawer = ({ open, onClose, onSave, user, t }) => {
         }
     }, [user, open, bundles, fetchBundles]);
 
+    // When editing, load profile from tenant schema so form shows existing data
+    useEffect(() => {
+        if (!open || !user?.id) return;
+        apiClient
+            .get(`/v1/tenant-admin/users/${user.id}/profile`)
+            .then((response) => {
+                const profile = (response && response.data != null && 'success' in response) ? response.data : response;
+                if (profile && typeof profile === 'object') {
+                    setFormData((prev) => ({
+                        ...prev,
+                        tc_no: profile.tcNo ?? prev.tc_no,
+                        birth_date: profile.birthDate ?? prev.birth_date,
+                        address: profile.address ?? prev.address,
+                        emergency_person: profile.emergencyPerson ?? prev.emergency_person,
+                        emergency_phone: profile.emergencyPhone ?? prev.emergency_phone,
+                        phone: profile.phoneNumber ?? prev.phone,
+                        personal_email: profile.personalEmail ?? prev.personal_email,
+                    }));
+                }
+            })
+            .catch(() => { });
+    }, [open, user?.id]);
+
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
@@ -109,7 +129,32 @@ export const UserDrawer = ({ open, onClose, onSave, user, t }) => {
     );
 
     const handleSave = () => {
-        if (onSave) onSave(formData);
+        if (!onSave) return;
+
+        // Split full name into firstName / lastName (best-effort)
+        const fullName = (formData.name || '').trim();
+        const [firstNamePart, ...rest] = fullName.split(' ');
+        const firstName = firstNamePart || '';
+        const lastName = rest.join(' ');
+
+        const authPayload = {
+            firstName,
+            lastName,
+            email: formData.corporate_email,
+            bundleId: formData.bundleId || null,
+        };
+
+        const profilePayload = {
+            tcNo: formData.tc_no || null,
+            birthDate: formData.birth_date || null,
+            address: formData.address || null,
+            emergencyPerson: formData.emergency_person || null,
+            emergencyPhone: formData.emergency_phone || null,
+            phoneNumber: formData.phone || null,
+            personalEmail: formData.personal_email || null,
+        };
+
+        onSave({ auth: authPayload, profile: profilePayload });
     };
 
     return (

@@ -15,6 +15,8 @@ import com.terrarosa.terra_crm.modules.auth.repository.PermissionBundleRepositor
 import com.terrarosa.terra_crm.modules.auth.repository.RefreshTokenRepository;
 import com.terrarosa.terra_crm.modules.auth.repository.RoleRepository;
 import com.terrarosa.terra_crm.modules.auth.repository.UserRepository;
+import com.terrarosa.terra_crm.modules.auth.dto.UserProfileDto;
+import com.terrarosa.terra_crm.modules.auth.service.UserProfileService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -26,13 +28,15 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Service for tenant-scoped user management operations initiated by tenant admins.
+ * Service for tenant-scoped user management operations initiated by tenant
+ * admins.
  *
- * <p>Responsibilities:
+ * <p>
+ * Responsibilities:
  * <ul>
- *   <li>Create new users for a tenant with system-generated secure passwords</li>
- *   <li>Assign a single permission bundle to the user (optional)</li>
- *   <li>Reset user passwords and revoke their refresh tokens</li>
+ * <li>Create new users for a tenant with system-generated secure passwords</li>
+ * <li>Assign a single permission bundle to the user (optional)</li>
+ * <li>Reset user passwords and revoke their refresh tokens</li>
  * </ul>
  */
 @Slf4j
@@ -50,6 +54,7 @@ public class TenantUserService {
     private final PasswordEncoder passwordEncoder;
     private final QuotaService quotaService;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final UserProfileService userProfileService;
 
     /**
      * Create a new user for the given tenant with an auto-generated password.
@@ -100,6 +105,19 @@ public class TenantUserService {
 
         User savedUser = userRepository.save(user);
 
+        // Create user profile in tenant schema
+        UserProfileDto profileDto = UserProfileDto.builder()
+                .userId(savedUser.getId())
+                .tcNo(request.getTcNo())
+                .birthDate(request.getBirthDate())
+                .address(request.getAddress())
+                .emergencyPerson(request.getEmergencyPerson())
+                .emergencyPhone(request.getEmergencyPhone())
+                .phoneNumber(request.getPhoneNumber())
+                .personalEmail(request.getPersonalEmail())
+                .build();
+        userProfileService.upsertProfile(savedUser.getId(), profileDto);
+
         UUID bundleId = request.getBundleId();
         String bundleName = null;
 
@@ -132,7 +150,8 @@ public class TenantUserService {
     /**
      * Reset a user's password for the given tenant.
      *
-     * <p>Tenant membership is validated at controller layer using
+     * <p>
+     * Tenant membership is validated at controller layer using
      * {@code TenantSecurityService.validateUserActiveAndBelongsToTenant}.
      *
      * @param userId user ID
@@ -150,7 +169,8 @@ public class TenantUserService {
         user.setPassword(encodedPassword);
         userRepository.save(user);
 
-        // Revoke all refresh tokens so that the user must log in again with the new password
+        // Revoke all refresh tokens so that the user must log in again with the new
+        // password
         refreshTokenRepository.revokeAllUserTokens(userId, LocalDateTime.now());
 
         log.info("Reset password for user {}", user.getEmail());
@@ -167,4 +187,3 @@ public class TenantUserService {
                 .orElseThrow(() -> new IllegalArgumentException("Email is required"));
     }
 }
-

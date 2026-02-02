@@ -1,4 +1,4 @@
-package com.terrarosa.terra_crm.modules.health.dto;
+package com.terrarosa.terra_crm.modules.ads.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -13,7 +13,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class LeadUpdateRequest {
-    
+
     private String name;
     private String phone;
     private String email;

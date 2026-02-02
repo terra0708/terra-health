@@ -1,5 +1,6 @@
 package com.terrarosa.terra_crm.modules.auth.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.terrarosa.terra_crm.core.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -31,22 +32,27 @@ public class Permission extends BaseEntity {
     @Column(nullable = false, length = 50)
     private PermissionType type;
     
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_permission_id")
     private Permission parentPermission;
     
+    @JsonIgnore
     @OneToMany(mappedBy = "parentPermission", fetch = FetchType.LAZY)
     @Builder.Default
     private Set<Permission> childPermissions = new HashSet<>();
     
+    @JsonIgnore
     @OneToMany(mappedBy = "permission", fetch = FetchType.LAZY)
     @Builder.Default
     private Set<com.terrarosa.terra_crm.modules.auth.entity.TenantModule> tenants = new HashSet<>();
     
+    @JsonIgnore
     @OneToMany(mappedBy = "permission", fetch = FetchType.LAZY)
     @Builder.Default
     private Set<com.terrarosa.terra_crm.modules.auth.entity.UserPermission> users = new HashSet<>();
     
+    @JsonIgnore
     @ManyToMany(mappedBy = "permissions", fetch = FetchType.LAZY)
     @Builder.Default
     private Set<PermissionBundle> bundles = new HashSet<>();

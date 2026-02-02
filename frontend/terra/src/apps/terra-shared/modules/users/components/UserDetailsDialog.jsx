@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { usePermissionStore } from '../../permissions/hooks/usePermissionStore';
+import apiClient from '../../../core/api';
 
 export const UserDetailsDialog = ({ open, onClose, user }) => {
     const { t, i18n } = useTranslation();
@@ -17,14 +18,18 @@ export const UserDetailsDialog = ({ open, onClose, user }) => {
 
     const { fetchUserBundles } = usePermissionStore();
     const [userBundles, setUserBundles] = React.useState([]);
+    const [profile, setProfile] = React.useState(null);
 
     React.useEffect(() => {
         if (!open || !user?.id) {
             setUserBundles([]);
+            setProfile(null);
             return;
         }
 
         let isMounted = true;
+
+        // Fetch bundles (auth/permissions side)
         fetchUserBundles(user.id)
             .then((bundles) => {
                 if (isMounted) {
@@ -34,6 +39,26 @@ export const UserDetailsDialog = ({ open, onClose, user }) => {
             .catch(() => {
                 if (isMounted) {
                     setUserBundles([]);
+                }
+            });
+
+        // Fetch profile (tenant schema side). Interceptor may return unwrapped DTO or full response.
+        apiClient
+            .get(`/v1/tenant-admin/users/${user.id}/profile`)
+            .then((response) => {
+                if (!isMounted) return;
+                const profileData =
+                    response != null &&
+                        typeof response === 'object' &&
+                        'data' in response &&
+                        'success' in response
+                        ? response.data
+                        : response;
+                setProfile(profileData ?? null);
+            })
+            .catch(() => {
+                if (isMounted) {
+                    setProfile(null);
                 }
             });
 
@@ -47,6 +72,15 @@ export const UserDetailsDialog = ({ open, onClose, user }) => {
     // Backend UserDto'dan gelen veriler için güvenli fallback'ler
     const fullName = (user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim()) || null;
     const corporateEmail = user.corporate_email || user.email || null;
+
+    // Prefer profile fields when available; fall back to legacy props on user
+    const mergedTcNo = profile?.tcNo ?? user.tc_no;
+    const mergedBirthDate = profile?.birthDate ?? user.birth_date;
+    const mergedAddress = profile?.address ?? user.address;
+    const mergedEmergencyPerson = profile?.emergencyPerson ?? user.emergency_person;
+    const mergedEmergencyPhone = profile?.emergencyPhone ?? user.emergency_phone;
+    const mergedPhone = profile?.phoneNumber ?? user.phone;
+    const mergedPersonalEmail = profile?.personalEmail ?? user.personal_email;
 
     const SectionHeader = ({ icon: Icon, title }) => (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, mt: 3, pb: 1, borderBottom: `1px solid ${theme.palette.divider}` }}>
@@ -103,13 +137,13 @@ export const UserDetailsDialog = ({ open, onClose, user }) => {
                         <DetailItem label={t('common.name')} value={fullName} />
                     </Grid>
                     <Grid item xs={12} sm={6}>
-                        <DetailItem label={t('common.phone')} value={user.phone} icon={Phone} />
+                        <DetailItem label={t('common.phone')} value={mergedPhone} icon={Phone} />
                     </Grid>
                     <Grid item xs={12} sm={6}>
                         <DetailItem label={t('common.corporate_email')} value={corporateEmail} icon={Mail} />
                     </Grid>
                     <Grid item xs={12} sm={6}>
-                        <DetailItem label={t('common.personal_email')} value={user.personal_email} icon={Mail} />
+                        <DetailItem label={t('common.personal_email')} value={mergedPersonalEmail} icon={Mail} />
                     </Grid>
                 </Grid>
 
@@ -117,13 +151,13 @@ export const UserDetailsDialog = ({ open, onClose, user }) => {
                 <SectionHeader icon={Fingerprint} title={t('users.personal_info')} />
                 <Grid container spacing={2}>
                     <Grid item xs={12} sm={6}>
-                        <DetailItem label={t('common.tc_no')} value={user.tc_no} />
+                        <DetailItem label={t('common.tc_no')} value={mergedTcNo} />
                     </Grid>
                     <Grid item xs={12} sm={6}>
-                        <DetailItem label={t('common.birth_date')} value={user.birth_date} icon={Calendar} />
+                        <DetailItem label={t('common.birth_date')} value={mergedBirthDate} icon={Calendar} />
                     </Grid>
                     <Grid item xs={12}>
-                        <DetailItem label={t('common.address')} value={user.address} icon={MapPin} />
+                        <DetailItem label={t('common.address')} value={mergedAddress} icon={MapPin} />
                     </Grid>
                 </Grid>
 
@@ -131,10 +165,10 @@ export const UserDetailsDialog = ({ open, onClose, user }) => {
                 <SectionHeader icon={HeartPulse} title={t('users.emergency_info')} />
                 <Grid container spacing={2}>
                     <Grid item xs={12} sm={6}>
-                        <DetailItem label={t('common.emergency_person')} value={user.emergency_person} />
+                        <DetailItem label={t('common.emergency_person')} value={mergedEmergencyPerson} />
                     </Grid>
                     <Grid item xs={12} sm={6}>
-                        <DetailItem label={t('common.emergency_phone')} value={user.emergency_phone} icon={Phone} />
+                        <DetailItem label={t('common.emergency_phone')} value={mergedEmergencyPhone} icon={Phone} />
                     </Grid>
                 </Grid>
 

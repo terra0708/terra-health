@@ -42,7 +42,6 @@ public class CreateTenantRequest {
     @Email(message = "Admin email must be valid")
     private String adminEmail;
 
-    @NotBlank(message = "Admin password is required")
     @Size(min = 8, message = "Admin password must be at least 8 characters")
     private String adminPassword;
 

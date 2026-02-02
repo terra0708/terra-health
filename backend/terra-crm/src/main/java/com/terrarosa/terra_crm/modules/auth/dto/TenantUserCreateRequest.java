@@ -4,15 +4,18 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.util.UUID;
 
 /**
  * Request DTO for creating a new user within a tenant by a tenant admin.
  *
- * <p>IMPORTANT:
+ * <p>
+ * IMPORTANT:
  * <ul>
- *   <li>Password is NOT provided by the client. It is generated server-side.</li>
- *   <li>Tenant information is resolved from the authenticated context, not from this DTO.</li>
+ * <li>Password is NOT provided by the client. It is generated server-side.</li>
+ * <li>Tenant information is resolved from the authenticated context, not from
+ * this DTO.</li>
  * </ul>
  */
 @Data
@@ -28,5 +31,13 @@ public class TenantUserCreateRequest {
      * Optional permission bundle ID to assign to the user after creation.
      */
     private UUID bundleId;
-}
 
+    // Profile fields
+    private String tcNo;
+    private LocalDate birthDate;
+    private String address;
+    private String emergencyPerson;
+    private String emergencyPhone;
+    private String phoneNumber;
+    private String personalEmail;
+}

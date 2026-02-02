@@ -210,17 +210,13 @@ public class TenantAdminController {
     /**
      * Get bundle details by ID.
      * Validates that the bundle belongs to the current tenant.
+     * Returns DTO to avoid Jackson recursion (Permission parent/child).
      */
     @GetMapping("/bundles/{bundleId}")
-    public ResponseEntity<ApiResponse<PermissionBundle>> getBundleDetails(@PathVariable UUID bundleId) {
+    public ResponseEntity<ApiResponse<BundleDto>> getBundleDetails(@PathVariable UUID bundleId) {
         UUID tenantId = tenantSecurityService.getCurrentUserTenantId();
-        
-        PermissionBundle bundle = permissionService.getTenantBundles(tenantId).stream()
-                .filter(b -> b.getId().equals(bundleId))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Bundle not found with id: " + bundleId));
-        
-        return ResponseEntity.ok(ApiResponse.success(bundle));
+        BundleDto dto = permissionService.getBundleByIdAsDto(tenantId, bundleId);
+        return ResponseEntity.ok(ApiResponse.success(dto));
     }
 
     /**
@@ -229,7 +225,7 @@ public class TenantAdminController {
      */
     @PostMapping("/bundles")
     @PreAuthorize("hasAnyAuthority('SETTINGS_PERMISSIONS_CREATE', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
-    public ResponseEntity<ApiResponse<PermissionBundle>> createBundle(@RequestBody CreateBundleRequest request) {
+    public ResponseEntity<ApiResponse<BundleDto>> createBundle(@RequestBody CreateBundleRequest request) {
         // DEBUG: Log authorities at @PreAuthorize evaluation point
         org.springframework.security.core.Authentication authentication = 
                 org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
@@ -252,8 +248,9 @@ public class TenantAdminController {
                 request.getPermissionIds()
         );
         
+        BundleDto dto = permissionService.getBundleByIdAsDto(tenantId, bundle.getId());
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(bundle, "Bundle created successfully"));
+                .body(ApiResponse.success(dto, "Bundle created successfully"));
     }
 
     /**
@@ -262,7 +259,7 @@ public class TenantAdminController {
      */
     @PutMapping("/bundles/{bundleId}")
     @PreAuthorize("hasAnyAuthority('SETTINGS_PERMISSIONS_UPDATE', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
-    public ResponseEntity<ApiResponse<PermissionBundle>> updateBundle(
+    public ResponseEntity<ApiResponse<BundleDto>> updateBundle(
             @PathVariable UUID bundleId,
             @RequestBody UpdateBundleRequest request) {
         UUID tenantId = tenantSecurityService.getCurrentUserTenantId();
@@ -273,8 +270,9 @@ public class TenantAdminController {
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Bundle not found with id: " + bundleId));
         
-        PermissionBundle bundle = permissionService.updateBundle(bundleId, request.getPermissionIds());
-        return ResponseEntity.ok(ApiResponse.success(bundle, "Bundle updated successfully"));
+        permissionService.updateBundle(bundleId, request.getPermissionIds());
+        BundleDto dto = permissionService.getBundleByIdAsDto(tenantId, bundleId);
+        return ResponseEntity.ok(ApiResponse.success(dto, "Bundle updated successfully"));
     }
 
     /**

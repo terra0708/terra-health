@@ -1,5 +1,6 @@
 package com.terrarosa.terra_crm.modules.auth.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.terrarosa.terra_crm.core.common.entity.BaseEntity;
 import com.terrarosa.terra_crm.core.tenancy.entity.Tenant;
 import jakarta.persistence.*;
@@ -30,10 +31,12 @@ public class PermissionBundle extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String description;
     
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tenant_id", nullable = false)
     private Tenant tenant;
     
+    @JsonIgnore
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "bundle_permissions",
@@ -44,6 +47,7 @@ public class PermissionBundle extends BaseEntity {
     @Builder.Default
     private Set<Permission> permissions = new HashSet<>();
     
+    @JsonIgnore
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "user_bundles",

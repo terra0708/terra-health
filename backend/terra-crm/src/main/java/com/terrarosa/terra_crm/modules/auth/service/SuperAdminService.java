@@ -2,6 +2,7 @@ package com.terrarosa.terra_crm.modules.auth.service;
 
 import com.terrarosa.terra_crm.core.audit.annotation.AuditLog;
 import com.terrarosa.terra_crm.core.security.service.JwtService;
+import com.terrarosa.terra_crm.core.security.util.RandomPasswordGenerator;
 import com.terrarosa.terra_crm.core.tenancy.entity.Tenant;
 import com.terrarosa.terra_crm.core.tenancy.entity.TenantStatus;
 import com.terrarosa.terra_crm.core.tenancy.repository.TenantRepository;
@@ -24,6 +25,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -162,8 +164,23 @@ public class SuperAdminService {
                 // This prevents assignAllTenantPermissionsToUser from reading stale module data
                 // Note: setModulesForTenant already flushes, but we ensure it here for clarity
 
-                // Step C: Create admin user in public.users table
-                String encodedPassword = passwordEncoder.encode(request.getAdminPassword());
+                // Step C: Determine admin password (either provided or securely generated)
+                String providedPassword = request.getAdminPassword();
+                String rawPassword;
+                boolean passwordGenerated;
+
+                if (providedPassword != null && !providedPassword.isBlank()) {
+                        rawPassword = providedPassword;
+                        passwordGenerated = false;
+                } else {
+                        rawPassword = RandomPasswordGenerator.generateSecurePassword(16);
+                        passwordGenerated = true;
+                        log.info("Generated secure temporary password for tenant admin of tenant {}", tenant.getName());
+                }
+
+                String encodedPassword = passwordEncoder.encode(rawPassword);
+
+                // Step D: Create admin user in public.users table
                 User adminUser = User.builder()
                                 .email(adminEmail)
                                 .password(encodedPassword)
@@ -173,7 +190,7 @@ public class SuperAdminService {
                                 .enabled(true)
                                 .build();
 
-                // Step D: Assign ROLE_ADMIN role
+                // Step E: Assign ROLE_ADMIN role
                 Role adminRole = roleRepository.findByName("ROLE_ADMIN")
                                 .orElseThrow(() -> new IllegalStateException("ROLE_ADMIN not found. Run migrations."));
                 adminUser.getRoles().add(adminRole);
@@ -182,7 +199,7 @@ public class SuperAdminService {
                 log.info("Created admin user: id={}, email={}, tenantId={}",
                                 savedAdminUser.getId(), savedAdminUser.getEmail(), tenant.getId());
 
-                // Step E: Assign all ACTION permissions from selected modules to admin user
+                // Step F: Assign all ACTION permissions from selected modules to admin user
                 permissionService.assignAllTenantPermissionsToUser(savedAdminUser);
                 log.info("Assigned all module permissions to admin user {}", savedAdminUser.getEmail());
 
@@ -218,19 +235,38 @@ public class SuperAdminService {
                                 .roles(roles)
                                 .build();
 
-                return new TenantAdminCreationResult(tenantDto, adminDto);
+                String generatedPassword = passwordGenerated ? rawPassword : null;
+
+                return new TenantAdminCreationResult(tenantDto, adminDto, generatedPassword);
         }
 
         /**
          * Result class for tenant and admin creation.
          */
         public static class TenantAdminCreationResult {
+                /**
+                 * Created tenant information.
+                 */
                 private final TenantDto tenant;
+
+                /**
+                 * Created admin user information.
+                 */
                 private final TenantAdminDto admin;
 
-                public TenantAdminCreationResult(TenantDto tenant, TenantAdminDto admin) {
+                /**
+                 * One-time visible password for the tenant admin.
+                 * <p>
+                 * This field is only populated when the system generates a temporary password.
+                 * If the Super Admin provided an explicit password in the request,
+                 * this value will be {@code null}.
+                 */
+                private final String generatedPassword;
+
+                public TenantAdminCreationResult(TenantDto tenant, TenantAdminDto admin, String generatedPassword) {
                         this.tenant = tenant;
                         this.admin = admin;
+                        this.generatedPassword = generatedPassword;
                 }
 
                 public TenantDto getTenant() {
@@ -239,6 +275,10 @@ public class SuperAdminService {
 
                 public TenantAdminDto getAdmin() {
                         return admin;
+                }
+
+                public String getGeneratedPassword() {
+                        return generatedPassword;
                 }
         }
 
@@ -678,12 +718,25 @@ public class SuperAdminService {
                         throw new IllegalArgumentException("User with this email already exists");
                 }
 
+                // Determine admin password (either provided or securely generated)
+                String rawPassword;
+                boolean passwordGenerated;
+
+                if (password != null && !password.isBlank()) {
+                        rawPassword = password;
+                        passwordGenerated = false;
+                } else {
+                        rawPassword = RandomPasswordGenerator.generateSecurePassword(16);
+                        passwordGenerated = true;
+                        log.info("Generated secure temporary password for additional admin of tenant {}", tenant.getName());
+                }
+
                 // Create new user
                 User newAdmin = User.builder()
                                 .firstName(firstName)
                                 .lastName(lastName)
                                 .email(email)
-                                .password(passwordEncoder.encode(password))
+                                .password(passwordEncoder.encode(rawPassword))
                                 .tenant(tenant)
                                 .enabled(true)
                                 .build();
@@ -713,12 +766,18 @@ public class SuperAdminService {
                 refreshTokenRepository.revokeAllUserTokens(savedUser.getId(), java.time.LocalDateTime.now());
                 log.info("Revoked all refresh tokens for user {} to force re-login with new permissions", savedUser.getEmail());
 
-                return Map.of(
-                                "id", savedUser.getId(),
-                                "firstName", savedUser.getFirstName(),
-                                "lastName", savedUser.getLastName(),
-                                "email", savedUser.getEmail(),
-                                "enabled", savedUser.getEnabled());
+                Map<String, Object> response = new HashMap<>();
+                response.put("id", savedUser.getId());
+                response.put("firstName", savedUser.getFirstName());
+                response.put("lastName", savedUser.getLastName());
+                response.put("email", savedUser.getEmail());
+                response.put("enabled", savedUser.getEnabled());
+
+                if (passwordGenerated) {
+                        response.put("generatedPassword", rawPassword);
+                }
+
+                return response;
         }
 
         /**

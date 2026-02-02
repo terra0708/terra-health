@@ -1,10 +1,10 @@
-package com.terrarosa.terra_crm.modules.health.controller;
+package com.terrarosa.terra_crm.modules.ads.controller;
 
 import com.terrarosa.terra_crm.core.common.dto.ApiResponse;
-import com.terrarosa.terra_crm.modules.health.dto.LeadCreateRequest;
-import com.terrarosa.terra_crm.modules.health.dto.LeadDto;
-import com.terrarosa.terra_crm.modules.health.dto.LeadUpdateRequest;
-import com.terrarosa.terra_crm.modules.health.service.LeadService;
+import com.terrarosa.terra_crm.modules.ads.dto.LeadCreateRequest;
+import com.terrarosa.terra_crm.modules.ads.dto.LeadDto;
+import com.terrarosa.terra_crm.modules.ads.dto.LeadUpdateRequest;
+import com.terrarosa.terra_crm.modules.ads.service.LeadService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,22 +17,17 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Controller for health module endpoints.
- * All endpoints are tenant-aware through TenantInterceptor.
- * Endpoints are protected with permission-based authorization.
+ * Lead CRUD endpoints for ads / marketing pipeline.
+ * Path: /api/v1/ads/leads
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/v1/health")
+@RequestMapping("/api/v1/ads")
 @RequiredArgsConstructor
-public class HealthController {
+public class LeadController {
 
     private final LeadService leadService;
 
-    /**
-     * Get all leads for the current tenant.
-     * Requires HEALTH_PATIENTS_VIEW permission.
-     */
     @GetMapping("/leads")
     @PreAuthorize("@permissionEvaluator.hasPermission(authentication, 'HEALTH_PATIENTS_VIEW')")
     public ResponseEntity<ApiResponse<List<LeadDto>>> getAllLeads() {
@@ -40,10 +35,6 @@ public class HealthController {
         return ResponseEntity.ok(ApiResponse.success(leads));
     }
 
-    /**
-     * Get a lead by ID.
-     * Requires HEALTH_PATIENTS_VIEW permission.
-     */
     @GetMapping("/leads/{id}")
     @PreAuthorize("@permissionEvaluator.hasPermission(authentication, 'HEALTH_PATIENTS_VIEW')")
     public ResponseEntity<ApiResponse<LeadDto>> getLeadById(@PathVariable UUID id) {
@@ -51,10 +42,6 @@ public class HealthController {
         return ResponseEntity.ok(ApiResponse.success(lead));
     }
 
-    /**
-     * Create a new lead.
-     * Requires HEALTH_PATIENTS_EDIT permission.
-     */
     @PostMapping("/leads")
     @PreAuthorize("@permissionEvaluator.hasPermission(authentication, 'HEALTH_PATIENTS_EDIT')")
     public ResponseEntity<ApiResponse<LeadDto>> createLead(@Valid @RequestBody LeadCreateRequest request) {
@@ -63,10 +50,6 @@ public class HealthController {
                 .body(ApiResponse.success(lead, "Lead created successfully"));
     }
 
-    /**
-     * Update an existing lead.
-     * Requires HEALTH_PATIENTS_EDIT permission.
-     */
     @PutMapping("/leads/{id}")
     @PreAuthorize("@permissionEvaluator.hasPermission(authentication, 'HEALTH_PATIENTS_EDIT')")
     public ResponseEntity<ApiResponse<LeadDto>> updateLead(
@@ -76,10 +59,6 @@ public class HealthController {
         return ResponseEntity.ok(ApiResponse.success(lead, "Lead updated successfully"));
     }
 
-    /**
-     * Delete a lead.
-     * Requires HEALTH_PATIENTS_EDIT permission.
-     */
     @DeleteMapping("/leads/{id}")
     @PreAuthorize("@permissionEvaluator.hasPermission(authentication, 'HEALTH_PATIENTS_EDIT')")
     public ResponseEntity<ApiResponse<Void>> deleteLead(@PathVariable UUID id) {

@@ -154,12 +154,12 @@ public class AuthService {
                     user.getEmail());
         }
 
-        // CRITICAL: JWT Optimization - Only include MODULE_* permissions in JWT
-        // ACTION permissions will be fetched separately from /api/v1/tenant-admin/permissions endpoint
-        List<String> jwtPermissions = filterModulePermissions(allPermissions);
-        log.debug("User {} has {} MODULE permissions for JWT: {}", user.getEmail(), jwtPermissions.size(), jwtPermissions);
+        // Include ALL permissions in JWT so @PreAuthorize("hasAnyAuthority('SETTINGS_USERS', ...)") works
+        // Backend checks ACTION permissions (e.g. SETTINGS_USERS); they must be in token authorities
+        List<String> jwtPermissions = allPermissions;
+        log.debug("User {} has {} permissions for JWT: {}", user.getEmail(), jwtPermissions.size(), jwtPermissions);
 
-        // Generate access token (15 minutes) - only MODULE permissions in JWT
+        // Generate access token (15 minutes) - all permissions in JWT for authorization checks
         String accessToken = jwtService.generateAccessToken(
                 user.getEmail(),
                 userTenantId,
@@ -167,7 +167,7 @@ public class AuthService {
                 roles,
                 jwtPermissions);
 
-        log.debug("Generated access token for user {} with {} MODULE permissions", user.getEmail(), jwtPermissions.size());
+        log.debug("Generated access token for user {} with {} permissions", user.getEmail(), jwtPermissions.size());
 
         // Generate refresh token (7 days) with token rotation
         String tokenId = UUID.randomUUID().toString();
@@ -185,9 +185,7 @@ public class AuthService {
         refreshTokenRepository.save(refreshToken);
         log.debug("Created refresh token for user {} with tokenId {}", user.getEmail(), tokenId);
 
-        // Build user DTO
-        // CRITICAL: UserDto.permissions contains only MODULE permissions (same as JWT)
-        // ACTION permissions will be fetched separately from frontend
+        // Build user DTO (permissions same as JWT for frontend)
         UserDto userDto = UserDto.builder()
                 .id(user.getId())
                 .email(user.getEmail())
@@ -195,7 +193,7 @@ public class AuthService {
                 .lastName(user.getLastName())
                 .tenantId(user.getTenant().getId())
                 .roles(roles)
-                .permissions(jwtPermissions) // Only MODULE permissions
+                .permissions(jwtPermissions)
                 .build();
 
         return LoginResponse.builder()
@@ -236,11 +234,10 @@ public class AuthService {
         // Do not return empty list - getUserPermissions() will return all permissions for Super Admin
         List<String> allPermissions = permissionService.getUserPermissions(user.getId());
 
-        // CRITICAL: JWT Optimization - Only include MODULE_* permissions in JWT
-        // ACTION permissions will be fetched separately from /api/v1/tenant-admin/permissions endpoint
-        List<String> jwtPermissions = filterModulePermissions(allPermissions);
+        // Include ALL permissions in JWT for @PreAuthorize checks
+        List<String> jwtPermissions = allPermissions;
 
-        // Generate access token - only MODULE permissions in JWT
+        // Generate access token - all permissions in JWT
         String accessToken = jwtService.generateAccessToken(
                 user.getEmail(),
                 userTenantId,
@@ -275,20 +272,6 @@ public class AuthService {
         }
 
         return responseBuilder.build();
-    }
-
-    /**
-     * Filter permissions to include only MODULE-level permissions for JWT.
-     * ACTION-level permissions are excluded from JWT to reduce token size.
-     * They will be fetched separately from /api/v1/tenant-admin/permissions endpoint.
-     * 
-     * @param allPermissions All user permissions (MODULE + ACTION)
-     * @return Filtered list containing only MODULE_* permissions
-     */
-    private List<String> filterModulePermissions(List<String> allPermissions) {
-        return allPermissions.stream()
-                .filter(permission -> permission.startsWith("MODULE_"))
-                .collect(Collectors.toList());
     }
 
     /**

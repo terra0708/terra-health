@@ -1,51 +1,42 @@
-package com.terrarosa.terra_crm.modules.health.service;
+package com.terrarosa.terra_crm.modules.ads.service;
 
-import com.terrarosa.terra_crm.modules.health.dto.LeadCreateRequest;
-import com.terrarosa.terra_crm.modules.health.dto.LeadDto;
-import com.terrarosa.terra_crm.modules.health.dto.LeadUpdateRequest;
-import com.terrarosa.terra_crm.modules.health.entity.Lead;
-import com.terrarosa.terra_crm.modules.health.entity.Service;
-import com.terrarosa.terra_crm.modules.health.repository.LeadRepository;
+import com.terrarosa.terra_crm.modules.ads.dto.LeadCreateRequest;
+import com.terrarosa.terra_crm.modules.ads.dto.LeadDto;
+import com.terrarosa.terra_crm.modules.ads.dto.LeadUpdateRequest;
+import com.terrarosa.terra_crm.modules.ads.entity.Lead;
+import com.terrarosa.terra_crm.modules.ads.repository.LeadRepository;
 import com.terrarosa.terra_crm.modules.health.repository.ServiceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
- import org.springframework.transaction.annotation.Transactional;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Slf4j
-@org.springframework.stereotype.Service
+@Service
 @RequiredArgsConstructor
 public class LeadService {
-    
+
     private final LeadRepository leadRepository;
     private final ServiceRepository serviceRepository;
-    
-    /**
-     * Get all leads for the current tenant.
-     */
+
     @Transactional(readOnly = true)
     public List<LeadDto> getAllLeads() {
         return leadRepository.findAll().stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
     }
-    
-    /**
-     * Get a lead by ID.
-     */
+
     @Transactional(readOnly = true)
     public LeadDto getLeadById(UUID id) {
         Lead lead = leadRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Lead not found with id: " + id));
         return toDto(lead);
     }
-    
-    /**
-     * Create a new lead.
-     */
+
     @Transactional
     public LeadDto createLead(LeadCreateRequest request) {
         Lead lead = Lead.builder()
@@ -58,27 +49,22 @@ public class LeadService {
                 .assignedTo(request.getAssignedTo())
                 .status(request.getStatus())
                 .build();
-        
-        // Set service if provided
+
         if (request.getServiceId() != null) {
-            Service service = serviceRepository.findById(request.getServiceId())
+            com.terrarosa.terra_crm.modules.health.entity.Service service = serviceRepository.findById(request.getServiceId())
                     .orElseThrow(() -> new RuntimeException("Service not found with id: " + request.getServiceId()));
             lead.setService(service);
         }
-        
+
         Lead saved = leadRepository.save(lead);
         return toDto(saved);
     }
-    
-    /**
-     * Update an existing lead.
-     */
+
     @Transactional
     public LeadDto updateLead(UUID id, LeadUpdateRequest request) {
         Lead lead = leadRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Lead not found with id: " + id));
-        
-        // Update fields if provided
+
         if (request.getName() != null) {
             lead.setName(request.getName());
         }
@@ -103,31 +89,23 @@ public class LeadService {
         if (request.getStatus() != null) {
             lead.setStatus(request.getStatus());
         }
-        
-        // Update service if provided
         if (request.getServiceId() != null) {
-            Service service = serviceRepository.findById(request.getServiceId())
+            com.terrarosa.terra_crm.modules.health.entity.Service service = serviceRepository.findById(request.getServiceId())
                     .orElseThrow(() -> new RuntimeException("Service not found with id: " + request.getServiceId()));
             lead.setService(service);
         }
-        
+
         Lead updated = leadRepository.save(lead);
         return toDto(updated);
     }
-    
-    /**
-     * Delete a lead (soft delete).
-     */
+
     @Transactional
     public void deleteLead(UUID id) {
         Lead lead = leadRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Lead not found with id: " + id));
         leadRepository.softDelete(lead);
     }
-    
-    /**
-     * Convert Lead entity to DTO.
-     */
+
     private LeadDto toDto(Lead lead) {
         return LeadDto.builder()
                 .id(lead.getId())

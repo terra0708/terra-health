@@ -73,11 +73,22 @@ export const useUserStore = create((set, get) => ({
             const firstName = firstNamePart || userData.firstName || 'User';
             const lastName = rest.join(' ') || userData.lastName || ' ';
 
+            const profile = userData.profile || {};
+            const auth = userData.auth || userData;
+
             const payload = {
                 firstName,
                 lastName,
-                email: userData.email || userData.corporate_email,
-                bundleId: userData.bundleId || null,
+                email: auth.email || auth.corporate_email,
+                bundleId: auth.bundleId || null,
+                // Profile fields from nested profile object or flat direct props
+                tcNo: profile.tcNo || userData.tcNo || null,
+                birthDate: profile.birthDate || userData.birthDate || null,
+                address: profile.address || userData.address || null,
+                emergencyPerson: profile.emergencyPerson || userData.emergencyPerson || null,
+                emergencyPhone: profile.emergencyPhone || userData.emergencyPhone || null,
+                phoneNumber: profile.phoneNumber || userData.phoneNumber || null,
+                personalEmail: profile.personalEmail || userData.personalEmail || null,
             };
 
             const response = await apiClient.post('/v1/tenant-admin/users', payload);
