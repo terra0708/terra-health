@@ -54,6 +54,7 @@ const tryRefreshAndRetry = async (originalRequest) => {
     if (!refreshToken) {
         clearTokens();
         localStorage.removeItem('tenantId');
+        localStorage.removeItem('terra-auth-storage');
         window.location.href = '/login';
         return Promise.reject(new Error('No refresh token'));
     }
@@ -99,6 +100,7 @@ const tryRefreshAndRetry = async (originalRequest) => {
         processQueue(refreshError, null);
         clearTokens();
         localStorage.removeItem('tenantId');
+        localStorage.removeItem('terra-auth-storage');
         window.location.href = '/login';
         return Promise.reject(refreshError);
     } finally {
@@ -180,6 +182,7 @@ apiClient.interceptors.response.use(
             if (!hasRefreshToken) {
                 clearTokens();
                 localStorage.removeItem('tenantId');
+                localStorage.removeItem('terra-auth-storage');
                 window.location.href = '/login';
                 return Promise.reject(error);
             }
