@@ -47,19 +47,23 @@ const ClientsPage = ({
     getSource,
     getService,
     getTag,
-    
+
     // Optional: Domain-specific components
     ClientDrawer = null,
     ClientDetailsDialog = null,
-    
+
     // Optional: Domain-specific features
     showServices = false,
     showTags = false,
-    
+
     // Optional: Custom labels
-    customLabels = {}
+    customLabels = {},
+
+    // Optional: translation function
+    t: tProp
 }) => {
-    const { t, i18n } = useTranslation();
+    const { t: tInternal, i18n } = useTranslation();
+    const t = tProp || tInternal;
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const { clientLabel, addClientLabel } = usePackageLabels();
@@ -90,9 +94,9 @@ const ClientsPage = ({
     return (
         <Box sx={{ animation: 'fadeIn 0.6s ease', pb: 4 }}>
             {/* STAT CARDS */}
-            <ClientStats 
-                stats={stats} 
-                t={t} 
+            <ClientStats
+                stats={stats}
+                t={t}
                 labels={{
                     total: customLabels.total || t('clients.total_clients', 'Total Clients'),
                     active: customLabels.active || t('clients.active_clients', 'Active Clients'),
@@ -145,12 +149,12 @@ const ClientsPage = ({
                 {isMobile ? (
                     <Box sx={{ p: 2 }}>
                         {filteredClients.map((c) => (
-                            <ClientMobileCard 
-                                key={c.id} 
-                                client={c} 
-                                t={t} 
-                                theme={theme} 
-                                onEdit={handleEdit} 
+                            <ClientMobileCard
+                                key={c.id}
+                                client={c}
+                                t={t}
+                                theme={theme}
+                                onEdit={handleEdit}
                                 onInfo={handleInfo}
                                 getStatusChip={getStatusChip}
                                 showServices={showServices}
@@ -205,6 +209,7 @@ const ClientsPage = ({
                     open={detailsOpen}
                     onClose={() => { setDetailsOpen(false); setInfoTarget(null); }}
                     client={infoTarget}
+                    t={t}
                 />
             )}
 

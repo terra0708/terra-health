@@ -8,7 +8,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
 import { useClientStore } from '@shared/modules/clients';
-import { usePatientDetailsStore } from '../hooks/usePatientDetailsStore';
 import { useReminderStore } from '@shared/modules/reminders';
 import { useCustomerSettingsStore } from '../hooks/useCustomerSettingsStore';
 import { customerSchema } from '../data/schema';
@@ -19,13 +18,14 @@ import { FilesTab } from './FilesTab';
 import { PaymentsTab } from './PaymentsTab';
 import { useNotificationStore } from '@modules/notifications/hooks/useNotificationStore';
 
-export const CustomerDrawer = ({ open, onClose, customer, t }) => {
+export const CustomerDrawer = ({ open, onClose, customer, client, t: tProp }) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-    const { i18n } = useTranslation();
+    const { t: tInternal, i18n } = useTranslation(['terra-health', 'translation']);
+    const t = tProp || tInternal;
+    const activeCustomer = customer || client;
     const settings = useCustomerSettingsStore();
-    const { addClient, updateClient, setIndustryType } = useClientStore();
-    const { addPatientDetails, updatePatientDetails, getPatientDetailsByClientId } = usePatientDetailsStore();
+    const { addClient, updateClient } = useClientStore();
     const { addReminder, deleteRemindersByRelation } = useReminderStore();
     const [tabValue, setTabValue] = React.useState(0);
     const [snackbar, setSnackbar] = React.useState({ open: false, message: '', severity: 'success' });
@@ -49,25 +49,24 @@ export const CustomerDrawer = ({ open, onClose, customer, t }) => {
 
     useEffect(() => {
         if (open) {
-            if (customer) {
+            if (activeCustomer) {
                 // Fetch reminders from central store for this customer
                 const centralReminders = useReminderStore.getState().reminders
-                    .filter(r => 
-                        r.relationId === customer.id && 
+                    .filter(r =>
+                        r.relationId === activeCustomer.id &&
                         (r.categoryId === 'customer' || r.categoryId === 'static_category_customer' || r.type === 'customer')
                     );
 
-                // Customer object is already merged (from useCustomers hook)
                 reset({
-                    ...customer,
-                    country: customer.country || 'TR',
-                    status: customer.status || settings.statuses[0]?.value || 'new',
-                    source: customer.source || settings.sources[0]?.value || 'manual',
-                    consultantId: customer.consultantId || '',
-                    category: customer.category || '',
-                    notes: customer.notes || [],
-                    files: customer.files || [],
-                    payments: customer.payments || [],
+                    ...activeCustomer,
+                    country: activeCustomer.country || 'TR',
+                    status: activeCustomer.status || settings.statuses[0]?.value || 'new',
+                    source: activeCustomer.source || settings.sources[0]?.value || 'manual',
+                    consultantId: activeCustomer.consultantId || '',
+                    category: activeCustomer.category || '',
+                    notes: activeCustomer.notes || [],
+                    files: activeCustomer.files || [],
+                    payments: activeCustomer.payments || [],
                     reminder: {
                         active: centralReminders.length > 0,
                         notes: centralReminders
@@ -81,16 +80,17 @@ export const CustomerDrawer = ({ open, onClose, customer, t }) => {
                     source: settings.sources[0]?.value || 'manual',
                     services: [], tags: [], notes: [],
                     files: [], payments: [],
+                    city: '', job: '', medicalHistory: '', operationType: '', passportNumber: '',
                     reminder: { active: false, notes: [] }
                 });
             }
             setTabValue(0);
         }
-    }, [customer, open, reset, settings]);
+    }, [activeCustomer, open, reset, settings]);
 
     const onSubmit = (data) => {
         // Handle Mentions
-        const allNotes = [...data.notes, ...(data.reminder?.notes || []), ...data.payments];
+        const allNotes = [...(data.notes || []), ...(data.reminder?.notes || []), ...(data.payments || [])];
         const mentionRegex = /@(\w+)/g;
         allNotes.forEach(note => {
             let match;
@@ -107,84 +107,57 @@ export const CustomerDrawer = ({ open, onClose, customer, t }) => {
         const { reminder, ...customerData } = data;
         const reminderNotes = reminder?.notes || [];
 
-        // Split data into base client and patient details
-        const {
-            // Base client fields
-            name, phone, email, country, source, registrationDate, assignedTo,
-            // Patient details fields
-            services, tags, status, consultantId, category, notes, files, payments,
-            city, job, medicalHistory, operationType, passportNumber
-        } = customerData;
-
-        const baseClient = {
-            name,
-            phone,
-            email: email || '',
-            country,
-            source,
-            registrationDate,
-            assignedTo: assignedTo || consultantId || null,
+        // Unified Customer Data for Backend
+        const payload = {
+            ...customerData,
+            registrationDate: customerData.registrationDate ?
+                (customerData.registrationDate.length === 10 ?
+                    `${customerData.registrationDate}T00:00:00` :
+                    customerData.registrationDate.substring(0, 19)) :
+                new Date().toISOString().substring(0, 19),
+            assignedTo: customerData.assignedTo || customerData.consultantId || null,
             industryType: 'HEALTH'
         };
 
-        const patientDetails = {
-            services: services || [],
-            tags: tags || [],
-            status: status || 'new',
-            consultantId: consultantId || assignedTo || null,
-            category: category || '',
-            notes: notes || [],
-            files: files || [],
-            payments: payments || [],
-            city: city || '',
-            job: job || '',
-            medicalHistory: medicalHistory || '',
-            operationType: operationType || '',
-            passportNumber: passportNumber || ''
-        };
-
-        if (customer) {
+        if (activeCustomer) {
             // Update existing
-            const clientId = customer.id;
-            
-            // Update base client
-            updateClient(clientId, baseClient);
-            setIndustryType(clientId, 'HEALTH');
-            
-            // Update patient details
-            updatePatientDetails(clientId, patientDetails);
+            const clientId = activeCustomer.id;
 
-            // Sync Reminders
-            deleteRemindersByRelation(clientId);
-            reminderNotes.forEach(rn => {
-                addReminder({ ...rn, relationId: clientId, categoryId: 'customer' });
+            updateClient(clientId, payload).then(() => {
+                // Sync Reminders
+                deleteRemindersByRelation(clientId);
+                reminderNotes.forEach(rn => {
+                    addReminder({ ...rn, relationId: clientId, categoryId: 'customer' });
+                });
+                setSnackbar({ open: true, message: t('common.success_update', 'Güncellendi'), severity: 'success' });
+                onClose();
+            }).catch(err => {
+                console.error('Update failed:', err);
+                setSnackbar({ open: true, message: err.message || t('common.error_occurred'), severity: 'error' });
             });
-
-            setSnackbar({ open: true, message: t('common.success_update', 'Güncellendi'), severity: 'success' });
         } else {
             // New Customer
-            const newClient = addClient(baseClient);
-            const newId = newClient?.id || Date.now();
-            
-            // Set industry type
-            setIndustryType(newId, 'HEALTH');
-            
-            // Add patient details
-            addPatientDetails(newId, patientDetails);
+            addClient(payload).then((newCustomer) => {
+                const newId = newCustomer?.id;
 
-            // Add reminders
-            reminderNotes.forEach(rn => {
-                addReminder({ ...rn, relationId: newId, categoryId: 'customer' });
-            });
+                // Add reminders
+                reminderNotes.forEach(rn => {
+                    addReminder({ ...rn, relationId: newId, categoryId: 'customer' });
+                });
 
-            useNotificationStore.getState().addNotification({
-                title: t('notifications.new_leads'),
-                message: `${data.name} yeni müşteri kaydı.`,
-                type: 'new_lead', priority: 'high', link: '/customers'
+                useNotificationStore.getState().addNotification({
+                    title: t('notifications.new_leads'),
+                    message: `${data.name} yeni müşteri kaydı.`,
+                    type: 'system', priority: 'high', link: '/customers'
+                });
+
+                setSnackbar({ open: true, message: t('common.success_save', 'Kaydedildi'), severity: 'success' });
+                onClose();
+            }).catch(err => {
+                console.error('Save failed:', err);
+                setSnackbar({ open: true, message: err.message || t('common.error_occurred'), severity: 'error' });
             });
-            setSnackbar({ open: true, message: t('common.success_save'), severity: 'success' });
         }
-        setTimeout(onClose, 800);
     };
 
     const tabs = [

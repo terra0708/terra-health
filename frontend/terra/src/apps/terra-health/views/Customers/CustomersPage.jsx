@@ -18,7 +18,7 @@ import { usePerformance } from '@common/hooks';
  */
 const CustomersPage = () => {
     usePerformance('CustomersPage');
-    const { t } = useTranslation();
+    const { t } = useTranslation(['terra-health', 'translation']);
     const { getStatus, getSource, getService, getTag } = useLookup();
 
     const {
@@ -48,45 +48,46 @@ const CustomersPage = () => {
     return (
         <ModulePageWrapper moduleName="Customers" aria-label="Customers Management">
             <ClientsPageBase
-            clients={filteredCustomers}
-            searchTerm={searchTerm} setSearchTerm={setSearchTerm}
-            showFilters={showFilters} setShowFilters={setShowFilters}
-            localFilters={localFilters} setLocalFilters={setLocalFilters}
-            page={page} setPage={setPage}
-            rowsPerPage={rowsPerPage} setRowsPerPage={setRowsPerPage}
-            drawerOpen={drawerOpen} setDrawerOpen={setDrawerOpen}
-            detailsOpen={detailsOpen} setDetailsOpen={setDetailsOpen}
-            editTarget={editTarget} setEditTarget={setEditTarget}
-            infoTarget={infoTarget} setInfoTarget={setInfoTarget}
-            snackbar={snackbar} setSnackbar={setSnackbar}
-            filteredClients={filteredCustomers}
-            totalCount={totalCount}
-            activeFilterCount={activeFilterCount}
-            stats={stats}
-            settings={settings}
-            lang={lang}
-            applyFilters={applyFilters}
-            resetFilters={resetFilters}
-            handleEdit={handleEdit}
-            handleInfo={handleInfo}
-            onDelete={onDelete}
-            getStatus={getStatus}
-            getSource={getSource}
-            getService={getService}
-            getTag={getTag}
-            ClientDrawer={CustomerDrawer}
-            ClientDetailsDialog={CustomerDetailsDialog}
-            showServices={true}
-            showTags={true}
-            customLabels={{
-                title: t('customers.title', 'Customers'),
-                total: t('customers.total_customers'),
-                active: t('customers.active_customers'),
-                pending: t('customers.pending_customers'),
-                completed: t('customers.completed_customers'),
-                addButton: t('customers.add_customer')
-            }}
-        />
+                clients={filteredCustomers}
+                searchTerm={searchTerm} setSearchTerm={setSearchTerm}
+                showFilters={showFilters} setShowFilters={setShowFilters}
+                localFilters={localFilters} setLocalFilters={setLocalFilters}
+                page={page} setPage={setPage}
+                rowsPerPage={rowsPerPage} setRowsPerPage={setRowsPerPage}
+                drawerOpen={drawerOpen} setDrawerOpen={setDrawerOpen}
+                detailsOpen={detailsOpen} setDetailsOpen={setDetailsOpen}
+                editTarget={editTarget} setEditTarget={setEditTarget}
+                infoTarget={infoTarget} setInfoTarget={setInfoTarget}
+                snackbar={snackbar} setSnackbar={setSnackbar}
+                filteredClients={filteredCustomers}
+                totalCount={totalCount}
+                activeFilterCount={activeFilterCount}
+                stats={stats}
+                settings={settings}
+                lang={lang}
+                applyFilters={applyFilters}
+                resetFilters={resetFilters}
+                handleEdit={handleEdit}
+                handleInfo={handleInfo}
+                onDelete={onDelete}
+                getStatus={getStatus}
+                getSource={getSource}
+                getService={getService}
+                getTag={getTag}
+                ClientDrawer={CustomerDrawer}
+                ClientDetailsDialog={CustomerDetailsDialog}
+                showServices={true}
+                showTags={true}
+                customLabels={{
+                    title: t('customers.title', 'Customers'),
+                    total: t('customers.total_customers'),
+                    active: t('customers.active_customers'),
+                    pending: t('customers.pending_customers'),
+                    completed: t('customers.completed_customers'),
+                    addButton: t('customers.add_customer')
+                }}
+                t={t}
+            />
         </ModulePageWrapper>
     );
 };

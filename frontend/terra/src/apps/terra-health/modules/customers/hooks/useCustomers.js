@@ -18,17 +18,14 @@ export const useCustomers = () => {
     const { t, i18n } = useTranslation();
     const theme = useTheme();
     const { getStatus, getSource, getService, getTag } = useLookup();
-    
-    // Base client store (shared)
-    const { clients, deleteClient, syncWithMockData: syncClients } = useClientStore();
-    
-    // Health-specific patient details store
-    const { patientDetails, deletePatientDetails, getAllPatientDetails } = usePatientDetailsStore();
-    
+
+    // Base client store (shared) - Now contains unified customer data
+    const { clients, loading, fetchClients, deleteClient } = useClientStore();
+
     // Settings store
     const settings = useCustomerSettingsStore();
-    
-    // Migration hook
+
+    // Migration hook (Deprecated, but keeping for now)
     const migration = useMigrateCustomers();
 
     const lang = i18n.language;
@@ -57,9 +54,9 @@ export const useCustomers = () => {
         services: [], tags: [], dateRange: { start: '', end: '' }
     });
 
-    // Initial Sync
+    // Initial Fetch - Replaces Sync
     useEffect(() => {
-        if (syncClients) syncClients();
+        fetchClients();
         if (settings.repairData) settings.repairData();
     }, []);
 
@@ -73,34 +70,10 @@ export const useCustomers = () => {
         }
     }, [showFilters]);
 
-    // --- MERGE LOGIC: Combine base clients with patient details ---
-    // This creates a unified customer object for backward compatibility
+    // --- UNIFIED DATA: Use clients directly ---
     const customers = useMemo(() => {
-        return clients
-            .filter(c => c.industryType === 'HEALTH' || c.industryType === null) // Only health clients or unassigned
-            .map(client => {
-                const details = patientDetails.find(p => p.clientId === client.id);
-                
-                // Merge base client with patient details
-                return {
-                    ...client,
-                    // Patient details (health-specific)
-                    services: details?.services || [],
-                    tags: details?.tags || [],
-                    status: details?.status || 'new',
-                    consultantId: details?.consultantId || client.assignedTo || null,
-                    category: details?.category || '',
-                    notes: details?.notes || [],
-                    files: details?.files || [],
-                    payments: details?.payments || [],
-                    city: details?.city || '',
-                    job: details?.job || '',
-                    medicalHistory: details?.medicalHistory || '',
-                    operationType: details?.operationType || '',
-                    passportNumber: details?.passportNumber || ''
-                };
-            });
-    }, [clients, patientDetails]);
+        return clients || [];
+    }, [clients]);
 
     // --- ACTIONS ---
     const applyFilters = () => {
@@ -140,7 +113,6 @@ export const useCustomers = () => {
 
     const onDelete = (id) => {
         deleteClient(id);
-        deletePatientDetails(id);
         setSnackbar({ open: true, message: t('common.success_delete'), severity: 'success' });
     };
 

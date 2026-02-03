@@ -6,15 +6,17 @@ import { useReminderStore } from './useReminderStore';
 import { useReminderSettingsStore } from './useReminderSettingsStore';
 
 export const useReminders = (options = {}) => {
-    const { t, i18n } = useTranslation();
-    const [searchParams, setSearchParams] = useSearchParams();
-
-    // Options: customersResolver, enableMigration, migrationConfig
+    // Options: customersResolver, enableMigration, migrationConfig, t
     const {
         customersResolver = null, // (relationId) => customer object | null
         enableMigration = false,
-        migrationConfig = null // { customers, syncWithMockData, clearNestedReminders, syncFromCustomerStore }
+        migrationConfig = null, // { customers, syncWithMockData, clearNestedReminders, syncFromCustomerStore }
+        t: tProp = null
     } = options;
+
+    const { t: tInternal, i18n } = useTranslation(['terra-health', 'translation']);
+    const t = tProp || tInternal;
+    const [searchParams, setSearchParams] = useSearchParams();
 
     // Stores
     const {
@@ -27,12 +29,12 @@ export const useReminders = (options = {}) => {
 
     const settingsStore = useReminderSettingsStore();
     const { categories, subCategories, statuses, customParameterTypes, repairData } = settingsStore;
-    
+
     // Ensure repairData is called once to sync customParameterTypes to legacy fields
     useEffect(() => {
         const repairKey = 'reminder-settings-repair-completed';
         const repairCompleted = localStorage.getItem(repairKey);
-        
+
         // Only call repairData if it hasn't been called yet (or if customParameterTypes is empty)
         if (repairData && (!repairCompleted || !customParameterTypes || customParameterTypes.length === 0)) {
             try {
@@ -68,7 +70,7 @@ export const useReminders = (options = {}) => {
     // --- INITIALIZATION & MIGRATION ---
     // Migration flag - localStorage'da tutarak sadece bir kez çalışmasını sağla
     const migrationKey = 'terra-reminders-migration-completed';
-    
+
     useEffect(() => {
         // Migration logic only runs if enabled and migration config provided
         if (enableMigration && migrationConfig) {
@@ -208,8 +210,8 @@ export const useReminders = (options = {}) => {
         const uniqueMap = new Map();
 
         reminders.forEach(r => {
-            const customer = r.relationId && customersResolver 
-                ? customersResolver(r.relationId) 
+            const customer = r.relationId && customersResolver
+                ? customersResolver(r.relationId)
                 : null;
             const enriched = {
                 ...r,

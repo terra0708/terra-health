@@ -20,7 +20,7 @@ import {
  * Health-specific bağımlılıklar (CustomerDetailsDialog, customers) optional olarak
  * props ile geçilebilir.
  */
-const RemindersPage = ({ 
+const RemindersPage = ({
     // Optional: Health-specific components
     CustomerDetailsDialog = null,
     // Optional: Customers resolver for migration and enrichment
@@ -28,11 +28,13 @@ const RemindersPage = ({
     // Optional: Migration config
     migrationConfig = null,
     // Optional: Customers list for AddReminderDialog
-    customers = []
+    customers = [],
+    // Optional: translation function
+    t: tProp
 }) => {
     const theme = useTheme();
     const { addReminder } = useReminderStore();
-    
+
     const {
         categories, subCategories, statuses, customParameterTypes,
         openAddDialog, setOpenAddDialog,
@@ -58,7 +60,8 @@ const RemindersPage = ({
     } = useReminders({
         customersResolver,
         enableMigration: !!migrationConfig,
-        migrationConfig
+        migrationConfig,
+        t: tProp
     });
 
     const generateRandomReminders = () => {

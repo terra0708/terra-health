@@ -29,21 +29,21 @@ public class LeadController {
     private final LeadService leadService;
 
     @GetMapping("/leads")
-    @PreAuthorize("@permissionEvaluator.hasPermission(authentication, 'HEALTH_CUSTOMERS_VIEW')")
+    @PreAuthorize("@permissionEvaluator.hasPermission(authentication, 'HEALTH_CUSTOMERS_VIEW') or @permissionEvaluator.hasPermission(authentication, 'CUSTOMERS_VIEW')")
     public ResponseEntity<ApiResponse<List<LeadDto>>> getAllLeads() {
         List<LeadDto> leads = leadService.getAllLeads();
         return ResponseEntity.ok(ApiResponse.success(leads));
     }
 
     @GetMapping("/leads/{id}")
-    @PreAuthorize("@permissionEvaluator.hasPermission(authentication, 'HEALTH_CUSTOMERS_VIEW')")
+    @PreAuthorize("@permissionEvaluator.hasPermission(authentication, 'HEALTH_CUSTOMERS_VIEW') or @permissionEvaluator.hasPermission(authentication, 'CUSTOMERS_VIEW')")
     public ResponseEntity<ApiResponse<LeadDto>> getLeadById(@PathVariable UUID id) {
         LeadDto lead = leadService.getLeadById(id);
         return ResponseEntity.ok(ApiResponse.success(lead));
     }
 
     @PostMapping("/leads")
-    @PreAuthorize("@permissionEvaluator.hasPermission(authentication, 'HEALTH_CUSTOMERS_EDIT')")
+    @PreAuthorize("@permissionEvaluator.hasPermission(authentication, 'HEALTH_CUSTOMERS_EDIT') or @permissionEvaluator.hasPermission(authentication, 'CUSTOMERS_CREATE')")
     public ResponseEntity<ApiResponse<LeadDto>> createLead(@Valid @RequestBody LeadCreateRequest request) {
         LeadDto lead = leadService.createLead(request);
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -51,7 +51,7 @@ public class LeadController {
     }
 
     @PutMapping("/leads/{id}")
-    @PreAuthorize("@permissionEvaluator.hasPermission(authentication, 'HEALTH_CUSTOMERS_EDIT')")
+    @PreAuthorize("@permissionEvaluator.hasPermission(authentication, 'HEALTH_CUSTOMERS_EDIT') or @permissionEvaluator.hasPermission(authentication, 'CUSTOMERS_UPDATE')")
     public ResponseEntity<ApiResponse<LeadDto>> updateLead(
             @PathVariable UUID id,
             @Valid @RequestBody LeadUpdateRequest request) {
@@ -60,7 +60,7 @@ public class LeadController {
     }
 
     @DeleteMapping("/leads/{id}")
-    @PreAuthorize("@permissionEvaluator.hasPermission(authentication, 'HEALTH_CUSTOMERS_EDIT')")
+    @PreAuthorize("@permissionEvaluator.hasPermission(authentication, 'HEALTH_CUSTOMERS_EDIT') or @permissionEvaluator.hasPermission(authentication, 'CUSTOMERS_DELETE')")
     public ResponseEntity<ApiResponse<Void>> deleteLead(@PathVariable UUID id) {
         leadService.deleteLead(id);
         return ResponseEntity.ok(ApiResponse.success(null, "Lead deleted successfully"));

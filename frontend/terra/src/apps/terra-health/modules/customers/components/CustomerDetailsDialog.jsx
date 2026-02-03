@@ -6,7 +6,7 @@ import {
 import {
     X, User, Phone, Globe, Link as LinkIcon, Calendar, Mail,
     Tag as TagIcon, Briefcase, Activity, Clock, FileText, Bell, CreditCard,
-    File, Download, ExternalLink, CheckCircle2, ChevronRight
+    File, Download, ExternalLink, CheckCircle2, ChevronRight, MapPin, IdCard, Stethoscope
 } from 'lucide-react';
 import { formatLocaleDate, ALL_COUNTRIES } from '../data/countries';
 import { useTranslation } from 'react-i18next';
@@ -16,9 +16,10 @@ import { ReminderCard, useReminderSettingsStore, useReminderStore } from '@share
 // CustomerDetailsDialog uses merged customer object from useCustomers hook
 // No direct store import needed
 
-export const CustomerDetailsDialog = ({ open, onClose, customer, client }) => {
+export const CustomerDetailsDialog = ({ open, onClose, customer, client, t: tProp }) => {
     const theme = useTheme();
-    const { t, i18n } = useTranslation();
+    const { t: tInternal, i18n } = useTranslation(['terra-health', 'translation']);
+    const t = tProp || tInternal;
     const { getStatus, getSource, getService, getTag } = useLookup();
     const categories = useReminderSettingsStore(state => state.categories);
     const subCategories = useReminderSettingsStore(state => state.subCategories);
@@ -33,8 +34,8 @@ export const CustomerDetailsDialog = ({ open, onClose, customer, client }) => {
         if (!customerData) return [];
         // Filter reminders that belong to this customer
         // Check both relationId and categoryId to ensure we catch all customer-related reminders
-        return reminders.filter(r => 
-            r.relationId === customerData.id && 
+        return reminders.filter(r =>
+            r.relationId === customerData.id &&
             (r.categoryId === 'customer' || r.categoryId === 'static_category_customer' || r.type === 'customer')
         );
     }, [reminders, customerData?.id]);
@@ -154,6 +155,31 @@ export const CustomerDetailsDialog = ({ open, onClose, customer, client }) => {
                             <DetailItem icon={Phone} label={t('customers.phone')} value={customerData.phone} color={theme.palette.primary.main} />
                             <DetailItem icon={Mail} label={t('customers.email')} value={customerData.email || '-'} color={theme.palette.info.main} />
                             <DetailItem icon={Globe} label={t('customers.country')} value={`${country?.flag} ${country?.name} (${customerData.country})`} />
+
+                            <Box sx={{ mt: 4 }}>
+                                <SectionTitle icon={Briefcase} title={t('customers.job')} />
+                                <Grid container spacing={2}>
+                                    <Grid item xs={6}>
+                                        <DetailItem icon={MapPin} label={t('customers.city')} value={customerData.city} />
+                                    </Grid>
+                                    <Grid item xs={6}>
+                                        <DetailItem icon={Briefcase} label={t('customers.job')} value={customerData.job} />
+                                    </Grid>
+                                </Grid>
+                            </Box>
+
+                            <Box sx={{ mt: 2 }}>
+                                <SectionTitle icon={FileText} title={t('customers.basic_info')} />
+                                <Grid container spacing={2}>
+                                    <Grid item xs={6}>
+                                        <DetailItem icon={IdCard} label={t('customers.passport_number')} value={customerData.passportNumber} />
+                                    </Grid>
+                                    <Grid item xs={6}>
+                                        <DetailItem icon={Stethoscope} label={t('customers.operation_type')} value={customerData.operationType} />
+                                    </Grid>
+                                </Grid>
+                                <DetailItem icon={Activity} label={t('customers.medical_history')} value={customerData.medicalHistory} />
+                            </Box>
 
                             <Box sx={{ mt: 4 }}>
                                 <SectionTitle icon={Briefcase} title={t('customers.services')} count={Array.isArray(customerData.services) ? customerData.services.length : 0} />

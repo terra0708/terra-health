@@ -1,4 +1,5 @@
 import React, { useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import RemindersPageBase from '@shared/views/Reminders/RemindersPage';
 import { CustomerDetailsDialog } from '@terra-health/modules/customers';
 import { useCustomers } from '@terra-health/modules/customers';
@@ -15,9 +16,10 @@ import { usePerformance } from '@common/hooks';
  */
 const RemindersPage = () => {
     usePerformance('RemindersPage');
+    const { t } = useTranslation(['terra-health', 'translation']);
     const { customers } = useCustomers();
     const { syncWithMockData, clearNestedReminders } = useCustomerStore();
-    
+
     // Migration helper function - useCallback ile memoize et
     const syncFromCustomerStore = useCallback((customers) => {
         const currentReminders = useReminderStore.getState().reminders;
@@ -65,6 +67,7 @@ const RemindersPage = () => {
                 customersResolver={customersResolver}
                 migrationConfig={migrationConfig}
                 customers={customers}
+                t={t}
             />
         </ModulePageWrapper>
     );

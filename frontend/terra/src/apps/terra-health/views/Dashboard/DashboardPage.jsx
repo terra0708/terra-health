@@ -47,7 +47,7 @@ import { usePerformance } from '@common/hooks';
 
 const DashboardPage = () => {
     usePerformance('DashboardPage');
-    const { t, i18n } = useTranslation();
+    const { t, i18n } = useTranslation(['terra-health', 'translation']);
     const theme = useTheme();
     const navigate = useNavigate();
     const { customers } = useCustomers();
@@ -181,241 +181,241 @@ const DashboardPage = () => {
 
     return (
         <ModulePageWrapper moduleName="Dashboard" aria-label="Dashboard">
-        <Box sx={{ p: { xs: 2, md: 4 } }}>
-            {/* Header */}
-            <Box sx={{ mb: 4 }}>
-                <Typography variant="h4" fontWeight={800} color="text.primary" sx={{ mb: 0.5 }}>
-                    {t('dashboard.welcome')}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                    {format(new Date(), i18n.language.startsWith('tr') ? 'dd MMMM yyyy, EEEE' : 'EEEE, MMMM dd, yyyy', { locale: i18n.language.startsWith('tr') ? tr : enUS })}
-                </Typography>
-            </Box>
+            <Box sx={{ p: { xs: 2, md: 4 } }}>
+                {/* Header */}
+                <Box sx={{ mb: 4 }}>
+                    <Typography variant="h4" fontWeight={800} color="text.primary" sx={{ mb: 0.5 }}>
+                        {t('dashboard.welcome')}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                        {format(new Date(), i18n.language.startsWith('tr') ? 'dd MMMM yyyy, EEEE' : 'EEEE, MMMM dd, yyyy', { locale: i18n.language.startsWith('tr') ? tr : enUS })}
+                    </Typography>
+                </Box>
 
-            {/* Main Stats */}
-            <Grid container spacing={3} sx={{ mb: 4 }}>
-                <Grid item xs={12} sm={6} md={3}>
-                    <StatCard
-                        icon={Users}
-                        title={t('customers.customers')}
-                        value={metrics.totalCustomers}
-                        subtitle={`${metrics.statusCounts.pending || 0} ${i18n.language.startsWith('tr') ? 'beklemede' : 'pending'}`}
-                        color={theme.palette.primary.main}
-                        onClick={() => navigate('/customers')}
-                    />
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                    <StatCard
-                        icon={Calendar}
-                        title={t('dashboard.todays_appointments')}
-                        value={metrics.todaysAppointments}
-                        subtitle={`${metrics.tomorrowsAppointments} ${i18n.language.startsWith('tr') ? 'yarın' : 'tomorrow'}`}
-                        color="#6366f1"
-                        onClick={() => navigate('/appointments')}
-                    />
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                    <StatCard
-                        icon={Clock}
-                        title={t('dashboard.todays_reminders')}
-                        value={metrics.todaysReminders.length}
-                        subtitle={i18n.language.startsWith('tr') ? 'hatırlatıcı var' : 'reminders'}
-                        color="#8b5cf6"
-                        onClick={() => navigate('/reminders')}
-                    />
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                    <StatCard
-                        icon={BarChart3}
-                        title={t('menu.marketing')}
-                        value={i18n.language.startsWith('tr') ? 'Aktif' : 'Active'}
-                        subtitle={i18n.language.startsWith('tr') ? 'Performansı gör' : 'View performance'}
-                        color="#10b981"
-                        onClick={() => navigate('/marketing/dashboard')}
-                    />
-                </Grid>
-            </Grid>
-
-            <Grid container spacing={3}>
-                {/* Quick Actions */}
-                <Grid item xs={12} md={4}>
-                    <Card sx={{ p: 3, height: '100%', border: `1px solid ${theme.palette.divider}` }}>
-                        <Typography variant="h6" fontWeight={700} sx={{ mb: 2.5 }}>
-                            {t('dashboard.quick_actions')}
-                        </Typography>
-                        <Stack spacing={1.5}>
-                            <Button
-                                onClick={() => navigate('/customers')}
-                                variant="outlined"
-                                startIcon={<UserPlus size={18} />}
-                                sx={{
-                                    justifyContent: 'flex-start',
-                                    py: 1.5,
-                                    borderRadius: 2,
-                                    fontWeight: 600,
-                                    textTransform: 'none',
-                                    borderColor: theme.palette.divider,
-                                    color: 'text.primary',
-                                    '&:hover': {
-                                        borderColor: theme.palette.primary.main,
-                                        bgcolor: alpha(theme.palette.primary.main, 0.04)
-                                    }
-                                }}
-                            >
-                                {t('dashboard.add_customer')}
-                            </Button>
-                            <Button
-                                onClick={() => navigate('/appointments')}
-                                variant="outlined"
-                                startIcon={<CalendarPlus size={18} />}
-                                sx={{
-                                    justifyContent: 'flex-start',
-                                    py: 1.5,
-                                    borderRadius: 2,
-                                    fontWeight: 600,
-                                    textTransform: 'none',
-                                    borderColor: theme.palette.divider,
-                                    color: 'text.primary',
-                                    '&:hover': {
-                                        borderColor: theme.palette.primary.main,
-                                        bgcolor: alpha(theme.palette.primary.main, 0.04)
-                                    }
-                                }}
-                            >
-                                {t('dashboard.create_appointment')}
-                            </Button>
-                            <Button
-                                onClick={() => navigate('/ads')}
-                                variant="outlined"
-                                startIcon={<BarChart3 size={18} />}
-                                sx={{
-                                    justifyContent: 'flex-start',
-                                    py: 1.5,
-                                    borderRadius: 2,
-                                    fontWeight: 600,
-                                    textTransform: 'none',
-                                    borderColor: theme.palette.divider,
-                                    color: 'text.primary',
-                                    '&:hover': {
-                                        borderColor: theme.palette.primary.main,
-                                        bgcolor: alpha(theme.palette.primary.main, 0.04)
-                                    }
-                                }}
-                            >
-                                {t('dashboard.ad_performance')}
-                            </Button>
-                        </Stack>
-                    </Card>
+                {/* Main Stats */}
+                <Grid container spacing={3} sx={{ mb: 4 }}>
+                    <Grid item xs={12} sm={6} md={3}>
+                        <StatCard
+                            icon={Users}
+                            title={t('customers.customers')}
+                            value={metrics.totalCustomers}
+                            subtitle={`${metrics.statusCounts.pending || 0} ${i18n.language.startsWith('tr') ? 'beklemede' : 'pending'}`}
+                            color={theme.palette.primary.main}
+                            onClick={() => navigate('/customers')}
+                        />
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}>
+                        <StatCard
+                            icon={Calendar}
+                            title={t('dashboard.todays_appointments')}
+                            value={metrics.todaysAppointments}
+                            subtitle={`${metrics.tomorrowsAppointments} ${i18n.language.startsWith('tr') ? 'yarın' : 'tomorrow'}`}
+                            color="#6366f1"
+                            onClick={() => navigate('/appointments')}
+                        />
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}>
+                        <StatCard
+                            icon={Clock}
+                            title={t('dashboard.todays_reminders')}
+                            value={metrics.todaysReminders.length}
+                            subtitle={i18n.language.startsWith('tr') ? 'hatırlatıcı var' : 'reminders'}
+                            color="#8b5cf6"
+                            onClick={() => navigate('/reminders')}
+                        />
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}>
+                        <StatCard
+                            icon={BarChart3}
+                            title={t('menu.marketing')}
+                            value={i18n.language.startsWith('tr') ? 'Aktif' : 'Active'}
+                            subtitle={i18n.language.startsWith('tr') ? 'Performansı gör' : 'View performance'}
+                            color="#10b981"
+                            onClick={() => navigate('/marketing/dashboard')}
+                        />
+                    </Grid>
                 </Grid>
 
-                {/* Recent Customers */}
-                <Grid item xs={12} md={4}>
-                    <Card sx={{ p: 3, height: '100%', border: `1px solid ${theme.palette.divider}` }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                            <Typography variant="h6" fontWeight={700}>
-                                {t('dashboard.recent_customers')}
+                <Grid container spacing={3}>
+                    {/* Quick Actions */}
+                    <Grid item xs={12} md={4}>
+                        <Card sx={{ p: 3, height: '100%', border: `1px solid ${theme.palette.divider}` }}>
+                            <Typography variant="h6" fontWeight={700} sx={{ mb: 2.5 }}>
+                                {t('dashboard.quick_actions')}
                             </Typography>
-                            <IconButton size="small" onClick={() => navigate('/customers')}>
-                                <ChevronRight size={20} />
-                            </IconButton>
-                        </Box>
-                        <List sx={{ p: 0 }}>
-                            {metrics.recentCustomers.length > 0 ? (
-                                metrics.recentCustomers.map((customer, idx) => (
-                                    <React.Fragment key={customer.id}>
-                                        {idx > 0 && <Divider sx={{ my: 1 }} />}
-                                        <ListItem
-                                            sx={{
-                                                px: 0,
-                                                py: 1,
-                                                cursor: 'pointer',
-                                                borderRadius: 1,
-                                                '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) }
-                                            }}
-                                            onClick={() => navigate('/customers')}
-                                        >
-                                            <ListItemAvatar>
-                                                <Avatar sx={{
-                                                    bgcolor: alpha(theme.palette.primary.main, 0.1),
-                                                    color: theme.palette.primary.main,
-                                                    fontWeight: 700,
-                                                    fontSize: '0.9rem'
-                                                }}>
-                                                    {customer.name.charAt(0)}
-                                                </Avatar>
-                                            </ListItemAvatar>
-                                            <ListItemText
-                                                primary={
-                                                    <Typography variant="body2" fontWeight={600}>
-                                                        {customer.name}
-                                                    </Typography>
-                                                }
-                                                secondary={
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        {getTimeAgo(customer.registrationDate)}
-                                                    </Typography>
-                                                }
-                                            />
-                                        </ListItem>
-                                    </React.Fragment>
-                                ))
-                            ) : (
-                                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-                                    {t('dashboard.no_data')}
-                                </Typography>
-                            )}
-                        </List>
-                    </Card>
-                </Grid>
+                            <Stack spacing={1.5}>
+                                <Button
+                                    onClick={() => navigate('/customers')}
+                                    variant="outlined"
+                                    startIcon={<UserPlus size={18} />}
+                                    sx={{
+                                        justifyContent: 'flex-start',
+                                        py: 1.5,
+                                        borderRadius: 2,
+                                        fontWeight: 600,
+                                        textTransform: 'none',
+                                        borderColor: theme.palette.divider,
+                                        color: 'text.primary',
+                                        '&:hover': {
+                                            borderColor: theme.palette.primary.main,
+                                            bgcolor: alpha(theme.palette.primary.main, 0.04)
+                                        }
+                                    }}
+                                >
+                                    {t('dashboard.add_customer')}
+                                </Button>
+                                <Button
+                                    onClick={() => navigate('/appointments')}
+                                    variant="outlined"
+                                    startIcon={<CalendarPlus size={18} />}
+                                    sx={{
+                                        justifyContent: 'flex-start',
+                                        py: 1.5,
+                                        borderRadius: 2,
+                                        fontWeight: 600,
+                                        textTransform: 'none',
+                                        borderColor: theme.palette.divider,
+                                        color: 'text.primary',
+                                        '&:hover': {
+                                            borderColor: theme.palette.primary.main,
+                                            bgcolor: alpha(theme.palette.primary.main, 0.04)
+                                        }
+                                    }}
+                                >
+                                    {t('dashboard.create_appointment')}
+                                </Button>
+                                <Button
+                                    onClick={() => navigate('/ads')}
+                                    variant="outlined"
+                                    startIcon={<BarChart3 size={18} />}
+                                    sx={{
+                                        justifyContent: 'flex-start',
+                                        py: 1.5,
+                                        borderRadius: 2,
+                                        fontWeight: 600,
+                                        textTransform: 'none',
+                                        borderColor: theme.palette.divider,
+                                        color: 'text.primary',
+                                        '&:hover': {
+                                            borderColor: theme.palette.primary.main,
+                                            bgcolor: alpha(theme.palette.primary.main, 0.04)
+                                        }
+                                    }}
+                                >
+                                    {t('dashboard.ad_performance')}
+                                </Button>
+                            </Stack>
+                        </Card>
+                    </Grid>
 
-                {/* Customer Sources */}
-                <Grid item xs={12} md={4}>
-                    <Card sx={{ p: 3, height: '100%', border: `1px solid ${theme.palette.divider}` }}>
-                        <Typography variant="h6" fontWeight={700} sx={{ mb: 2.5 }}>
-                            {t('dashboard.top_source')}
-                        </Typography>
-                        <Stack spacing={2}>
-                            {metrics.topSources.map(([source, count], idx) => {
-                                const percentage = ((count / metrics.totalCustomers) * 100).toFixed(0);
-                                return (
-                                    <Box key={source}>
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                            <Typography variant="body2" fontWeight={600}>
-                                                {source}
-                                            </Typography>
-                                            <Typography variant="body2" fontWeight={700} color="primary.main">
-                                                {count}
+                    {/* Recent Customers */}
+                    <Grid item xs={12} md={4}>
+                        <Card sx={{ p: 3, height: '100%', border: `1px solid ${theme.palette.divider}` }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                                <Typography variant="h6" fontWeight={700}>
+                                    {t('dashboard.recent_customers')}
+                                </Typography>
+                                <IconButton size="small" onClick={() => navigate('/customers')}>
+                                    <ChevronRight size={20} />
+                                </IconButton>
+                            </Box>
+                            <List sx={{ p: 0 }}>
+                                {metrics.recentCustomers.length > 0 ? (
+                                    metrics.recentCustomers.map((customer, idx) => (
+                                        <React.Fragment key={customer.id}>
+                                            {idx > 0 && <Divider sx={{ my: 1 }} />}
+                                            <ListItem
+                                                sx={{
+                                                    px: 0,
+                                                    py: 1,
+                                                    cursor: 'pointer',
+                                                    borderRadius: 1,
+                                                    '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) }
+                                                }}
+                                                onClick={() => navigate('/customers')}
+                                            >
+                                                <ListItemAvatar>
+                                                    <Avatar sx={{
+                                                        bgcolor: alpha(theme.palette.primary.main, 0.1),
+                                                        color: theme.palette.primary.main,
+                                                        fontWeight: 700,
+                                                        fontSize: '0.9rem'
+                                                    }}>
+                                                        {customer.name.charAt(0)}
+                                                    </Avatar>
+                                                </ListItemAvatar>
+                                                <ListItemText
+                                                    primary={
+                                                        <Typography variant="body2" fontWeight={600}>
+                                                            {customer.name}
+                                                        </Typography>
+                                                    }
+                                                    secondary={
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            {getTimeAgo(customer.registrationDate)}
+                                                        </Typography>
+                                                    }
+                                                />
+                                            </ListItem>
+                                        </React.Fragment>
+                                    ))
+                                ) : (
+                                    <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+                                        {t('dashboard.no_data')}
+                                    </Typography>
+                                )}
+                            </List>
+                        </Card>
+                    </Grid>
+
+                    {/* Customer Sources */}
+                    <Grid item xs={12} md={4}>
+                        <Card sx={{ p: 3, height: '100%', border: `1px solid ${theme.palette.divider}` }}>
+                            <Typography variant="h6" fontWeight={700} sx={{ mb: 2.5 }}>
+                                {t('dashboard.top_source')}
+                            </Typography>
+                            <Stack spacing={2}>
+                                {metrics.topSources.map(([source, count], idx) => {
+                                    const percentage = ((count / metrics.totalCustomers) * 100).toFixed(0);
+                                    return (
+                                        <Box key={source}>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                                <Typography variant="body2" fontWeight={600}>
+                                                    {source}
+                                                </Typography>
+                                                <Typography variant="body2" fontWeight={700} color="primary.main">
+                                                    {count}
+                                                </Typography>
+                                            </Box>
+                                            <LinearProgress
+                                                variant="determinate"
+                                                value={parseInt(percentage)}
+                                                sx={{
+                                                    height: 6,
+                                                    borderRadius: 3,
+                                                    bgcolor: alpha(theme.palette.primary.main, 0.1),
+                                                    '& .MuiLinearProgress-bar': {
+                                                        borderRadius: 3,
+                                                        bgcolor: theme.palette.primary.main
+                                                    }
+                                                }}
+                                            />
+                                            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                                                {percentage}% {i18n.language.startsWith('tr') ? 'toplam' : 'of total'}
                                             </Typography>
                                         </Box>
-                                        <LinearProgress
-                                            variant="determinate"
-                                            value={parseInt(percentage)}
-                                            sx={{
-                                                height: 6,
-                                                borderRadius: 3,
-                                                bgcolor: alpha(theme.palette.primary.main, 0.1),
-                                                '& .MuiLinearProgress-bar': {
-                                                    borderRadius: 3,
-                                                    bgcolor: theme.palette.primary.main
-                                                }
-                                            }}
-                                        />
-                                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                                            {percentage}% {i18n.language.startsWith('tr') ? 'toplam' : 'of total'}
-                                        </Typography>
-                                    </Box>
-                                );
-                            })}
-                            {metrics.topSources.length === 0 && (
-                                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-                                    {t('dashboard.no_data')}
-                                </Typography>
-                            )}
-                        </Stack>
-                    </Card>
+                                    );
+                                })}
+                                {metrics.topSources.length === 0 && (
+                                    <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+                                        {t('dashboard.no_data')}
+                                    </Typography>
+                                )}
+                            </Stack>
+                        </Card>
+                    </Grid>
                 </Grid>
-            </Grid>
-        </Box>
+            </Box>
         </ModulePageWrapper>
     );
 };

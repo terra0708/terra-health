@@ -1,59 +1,75 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { mockBaseClients } from '../data/mockData';
+import apiClient from '@shared/core/api';
 
 export const useClientStore = create(
     persist(
         (set, get) => ({
-            clients: mockBaseClients,
+            clients: [],
+            loading: false,
+            error: null,
 
-            // Mock Data Sync
+            // Fetch health customers from backend
+            fetchClients: async () => {
+                set({ loading: true, error: null });
+                try {
+                    const response = await apiClient.get('/v1/health/customers');
+                    // Ensure response is an array
+                    const data = Array.isArray(response) ? response : (response?.data || []);
+                    set({ clients: data, loading: false });
+                } catch (error) {
+                    console.error('Failed to fetch clients:', error);
+                    set({ error, loading: false });
+                }
+            },
+
+            // Mock Data Sync (Deprecated)
             syncWithMockData: () => {
-                const currentClients = get().clients;
-
-                const merged = mockBaseClients.map(mock => {
-                    const existing = currentClients.find(c => c.id === mock.id);
-                    if (existing) {
-                        return {
-                            ...existing,
-                            // Preserve existing data, merge with mock defaults
-                        };
-                    }
-                    return mock;
-                });
-
-                const newRecords = mockBaseClients.filter(m => !currentClients.find(c => c.id === m.id));
-                set({ clients: [...merged, ...newRecords] });
+                // No-op - transitioned to backend API
             },
 
-            addClient: (newClient) => {
-                const clientWithId = {
-                    ...newClient,
-                    id: newClient.id || Date.now(),
-                    registrationDate: newClient.registrationDate || new Date().toISOString().split('T')[0],
-                    createdAt: newClient.createdAt || new Date().toISOString(),
-                    updatedAt: new Date().toISOString()
-                };
-                set((state) => ({
-                    clients: [clientWithId, ...state.clients]
-                }));
-                return clientWithId;
+            addClient: async (newClient) => {
+                set({ loading: true, error: null });
+                try {
+                    const response = await apiClient.post('/v1/health/customers', newClient);
+                    set((state) => ({
+                        clients: [response, ...state.clients],
+                        loading: false
+                    }));
+                    return response;
+                } catch (error) {
+                    set({ error, loading: false });
+                    throw error;
+                }
             },
 
-            updateClient: (id, updatedData) => {
-                set((state) => ({
-                    clients: state.clients.map(c => 
-                        c.id === id 
-                            ? { ...c, ...updatedData, updatedAt: new Date().toISOString() }
-                            : c
-                    )
-                }));
+            updateClient: async (id, updatedData) => {
+                set({ loading: true, error: null });
+                try {
+                    const response = await apiClient.put(`/v1/health/customers/${id}`, updatedData);
+                    set((state) => ({
+                        clients: state.clients.map(c => c.id === id ? response : c),
+                        loading: false
+                    }));
+                    return response;
+                } catch (error) {
+                    set({ error, loading: false });
+                    throw error;
+                }
             },
 
-            deleteClient: (id) => {
-                set((state) => ({
-                    clients: state.clients.filter(c => c.id !== id)
-                }));
+            deleteClient: async (id) => {
+                set({ loading: true, error: null });
+                try {
+                    await apiClient.delete(`/v1/health/customers/${id}`);
+                    set((state) => ({
+                        clients: state.clients.filter(c => c.id !== id),
+                        loading: false
+                    }));
+                } catch (error) {
+                    set({ error, loading: false });
+                    throw error;
+                }
             },
 
             getClientById: (id) => {
@@ -71,8 +87,8 @@ export const useClientStore = create(
             // Set industry type for a client (when assigned to a module)
             setIndustryType: (id, industryType) => {
                 set((state) => ({
-                    clients: state.clients.map(c => 
-                        c.id === id 
+                    clients: state.clients.map(c =>
+                        c.id === id
                             ? { ...c, industryType, updatedAt: new Date().toISOString() }
                             : c
                     )

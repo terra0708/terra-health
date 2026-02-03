@@ -15,7 +15,7 @@ import { usePerformance } from '@common/hooks';
 
 const AppointmentsPage = () => {
     usePerformance('AppointmentsPage');
-    const { t } = useTranslation();
+    const { t } = useTranslation(['terra-health', 'translation']);
     const theme = useTheme();
 
     // --- DATA ---
@@ -140,75 +140,75 @@ const AppointmentsPage = () => {
 
     return (
         <ModulePageWrapper moduleName="Appointments" aria-label="Appointments Management">
-        <Box sx={{ height: 'calc(100vh - 32px)', display: 'flex', flexDirection: 'column', animation: 'fadeIn 0.6s ease', overflow: 'hidden', pb: 2 }}>
-            {/* TOP BAR */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Box>
-                    <Typography variant="h4" sx={{ fontWeight: 900, letterSpacing: '-0.03em' }}>{t('menu.appointments')}</Typography>
-                </Box>
-                <Button
-                    variant="contained"
-                    startIcon={<Plus size={18} />}
-                    onClick={() => { setSelectedAppointment(null); setDrawerOpen(true); }}
-                    disabled={!selectedDoctorId}
-                    sx={{
-                        borderRadius: '16px', px: 3, py: 1.2, fontWeight: 800,
-                        background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-                        boxShadow: `0 8px 16px ${alpha(theme.palette.primary.main, 0.25)}`
-                    }}
-                >
-                    {t('appointments.new_appointment')}
-                </Button>
-            </Box>
-
-            {/* DOCTOR SELECTOR */}
-            <DoctorSelector
-                doctors={doctors}
-                selectedDoctorId={selectedDoctorId}
-                onSelect={setSelectedDoctorId}
-            />
-
-            {/* CALENDAR */}
-            <Paper elevation={0} sx={{ flex: 1, borderRadius: '24px', border: `1px solid ${theme.palette.divider}`, overflow: 'hidden', p: 0, '& .fc': { height: '100%' } }}>
-                {selectedDoctorId ? (
-                    <AppointmentCalendar
-                        events={calendarEvents}
-                        onSelect={handleSelect}
-                        onEventClick={handleEventClick}
-                        clearSelection={!drawerOpen}
-                    />
-                ) : (
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                        <Typography variant="h6" color="text.secondary">{t('appointments.select_doctor_msg')}</Typography>
+            <Box sx={{ height: 'calc(100vh - 32px)', display: 'flex', flexDirection: 'column', animation: 'fadeIn 0.6s ease', overflow: 'hidden', pb: 2 }}>
+                {/* TOP BAR */}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Box>
+                        <Typography variant="h4" sx={{ fontWeight: 900, letterSpacing: '-0.03em' }}>{t('menu.appointments')}</Typography>
                     </Box>
-                )}
-            </Paper>
+                    <Button
+                        variant="contained"
+                        startIcon={<Plus size={18} />}
+                        onClick={() => { setSelectedAppointment(null); setDrawerOpen(true); }}
+                        disabled={!selectedDoctorId}
+                        sx={{
+                            borderRadius: '16px', px: 3, py: 1.2, fontWeight: 800,
+                            background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                            boxShadow: `0 8px 16px ${alpha(theme.palette.primary.main, 0.25)}`
+                        }}
+                    >
+                        {t('appointments.new_appointment')}
+                    </Button>
+                </Box>
 
-            <AppointmentDrawer
-                open={drawerOpen}
-                onClose={() => setDrawerOpen(false)}
-                onSave={handleSave}
-                onDelete={handleDelete}
-                appointment={selectedAppointment}
-                doctor={selectedDoctor}
-                doctors={doctors}
-                onDoctorChange={setSelectedDoctorId}
-                t={t}
-            />
+                {/* DOCTOR SELECTOR */}
+                <DoctorSelector
+                    doctors={doctors}
+                    selectedDoctorId={selectedDoctorId}
+                    onSelect={setSelectedDoctorId}
+                />
 
-            <Snackbar
-                open={snackbar.open}
-                autoHideDuration={3000}
-                onClose={() => setSnackbar({ ...snackbar, open: false })}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-            >
-                <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} sx={{ width: '100%', borderRadius: '12px', fontWeight: 600 }}>
-                    {snackbar.message}
-                </Alert>
-            </Snackbar>
+                {/* CALENDAR */}
+                <Paper elevation={0} sx={{ flex: 1, borderRadius: '24px', border: `1px solid ${theme.palette.divider}`, overflow: 'hidden', p: 0, '& .fc': { height: '100%' } }}>
+                    {selectedDoctorId ? (
+                        <AppointmentCalendar
+                            events={calendarEvents}
+                            onSelect={handleSelect}
+                            onEventClick={handleEventClick}
+                            clearSelection={!drawerOpen}
+                        />
+                    ) : (
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                            <Typography variant="h6" color="text.secondary">{t('appointments.select_doctor_msg')}</Typography>
+                        </Box>
+                    )}
+                </Paper>
 
-            <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }`}</style>
-        </Box>
+                <AppointmentDrawer
+                    open={drawerOpen}
+                    onClose={() => setDrawerOpen(false)}
+                    onSave={handleSave}
+                    onDelete={handleDelete}
+                    appointment={selectedAppointment}
+                    doctor={selectedDoctor}
+                    doctors={doctors}
+                    onDoctorChange={setSelectedDoctorId}
+                    t={t}
+                />
+
+                <Snackbar
+                    open={snackbar.open}
+                    autoHideDuration={3000}
+                    onClose={() => setSnackbar({ ...snackbar, open: false })}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                >
+                    <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} sx={{ width: '100%', borderRadius: '12px', fontWeight: 600 }}>
+                        {snackbar.message}
+                    </Alert>
+                </Snackbar>
+
+                <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+            </Box>
         </ModulePageWrapper>
     );
 };

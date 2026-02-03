@@ -22,5 +22,10 @@ export const customerSchema = z.object({
     tags: z.array(z.string()).default([]),
     notes: z.array(noteSchema).default([]),
     files: z.array(z.any()).default([]),
-    payments: z.array(noteSchema).default([])
+    payments: z.array(noteSchema).default([]),
+    city: z.string().optional(),
+    job: z.string().optional(),
+    medicalHistory: z.string().optional(),
+    operationType: z.string().optional(),
+    passportNumber: z.string().optional()
 });

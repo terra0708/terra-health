@@ -22,7 +22,7 @@ import { Autocomplete } from '@mui/material';
 
 export const AppointmentDrawer = ({ open, onClose, onSave, onDelete, appointment, doctor, doctors = [], onDoctorChange }) => {
     const theme = useTheme();
-    const { t, i18n } = useTranslation();
+    const { t, i18n } = useTranslation(['terra-health', 'translation']);
     const { customers } = useCustomers();
 
     // Initial State

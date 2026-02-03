@@ -1,6 +1,6 @@
 import React from 'react';
 import { Stack, TextField, Box, MenuItem, Typography } from '@mui/material';
-import { User, Phone, Mail, Calendar } from 'lucide-react';
+import { User, Phone, Mail, Calendar, MapPin, Briefcase, Activity, IdCard, Stethoscope } from 'lucide-react';
 import { ALL_COUNTRIES } from '../data/countries';
 import { EditableList } from '@common/ui/EditableList';
 import { useTranslation } from 'react-i18next';
@@ -83,6 +83,60 @@ export const PersonalInfoTab = ({ register, control, t, i18n, errors }) => {
                 InputProps={{
                     sx: { borderRadius: '16px' },
                     startAdornment: <Mail size={18} style={{ marginRight: 12, opacity: 0.5 }} />
+                }}
+            />
+
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                <TextField
+                    {...register('city')}
+                    label={t('customers.city')}
+                    sx={{ flex: 1, minWidth: { xs: '100%', sm: '200px' } }}
+                    InputProps={{
+                        sx: { borderRadius: '16px' },
+                        startAdornment: <MapPin size={18} style={{ marginRight: 12, opacity: 0.5 }} />
+                    }}
+                />
+                <TextField
+                    {...register('job')}
+                    label={t('customers.job')}
+                    sx={{ flex: 1, minWidth: { xs: '100%', sm: '200px' } }}
+                    InputProps={{
+                        sx: { borderRadius: '16px' },
+                        startAdornment: <Briefcase size={18} style={{ marginRight: 12, opacity: 0.5 }} />
+                    }}
+                />
+            </Box>
+
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                <TextField
+                    {...register('passportNumber')}
+                    label={t('customers.passport_number')}
+                    sx={{ flex: 1, minWidth: { xs: '100%', sm: '200px' } }}
+                    InputProps={{
+                        sx: { borderRadius: '16px' },
+                        startAdornment: <IdCard size={18} style={{ marginRight: 12, opacity: 0.5 }} />
+                    }}
+                />
+                <TextField
+                    {...register('operationType')}
+                    label={t('customers.operation_type')}
+                    sx={{ flex: 1, minWidth: { xs: '100%', sm: '200px' } }}
+                    InputProps={{
+                        sx: { borderRadius: '16px' },
+                        startAdornment: <Stethoscope size={18} style={{ marginRight: 12, opacity: 0.5 }} />
+                    }}
+                />
+            </Box>
+
+            <TextField
+                {...register('medicalHistory')}
+                fullWidth
+                multiline
+                rows={3}
+                label={t('customers.medical_history')}
+                InputProps={{
+                    sx: { borderRadius: '16px' },
+                    startAdornment: <Activity size={18} style={{ marginRight: 12, marginTop: -40, opacity: 0.5 }} />
                 }}
             />
 
