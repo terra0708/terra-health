@@ -10,33 +10,33 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "patients")
+@Table(name = "customers")
 @Data
 @EqualsAndHashCode(callSuper = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Patient extends BaseEntity {
+public class Customer extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "lead_id")
     private Lead lead;
-    
+
     @Column(nullable = false)
     private String name;
-    
+
     @Column(nullable = false)
     private String phone;
-    
+
     @Column
     private String email;
-    
+
     @Column(nullable = false)
     private String country;
-    
+
     @Column(name = "medical_history", columnDefinition = "TEXT")
     private String medicalHistory;
-    
+
     @Column(name = "passport_number")
     private String passportNumber;
 }

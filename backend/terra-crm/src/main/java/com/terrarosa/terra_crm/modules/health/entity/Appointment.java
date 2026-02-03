@@ -19,20 +19,20 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Appointment extends BaseEntity {
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "patient_id", nullable = false)
-    private Patient patient;
-    
+    @JoinColumn(name = "customer_id", nullable = false)
+    private Customer customer;
+
     @Column(name = "doctor_id")
     private UUID doctorId;
-    
+
     @Column(name = "appointment_date", nullable = false)
     private LocalDateTime appointmentDate;
-    
+
     @Column(nullable = false)
     private String status;
-    
+
     @Column(columnDefinition = "TEXT")
     private String notes;
 }

@@ -67,7 +67,7 @@ public class PermissionMapper {
         SUBMODULE_ABBREV.put("SCHEMAPOOL", "SCH");
         SUBMODULE_ABBREV.put("CUSTOMER_PANEL", "CPN");
         SUBMODULE_ABBREV.put("SYSTEM", "SYS");
-        SUBMODULE_ABBREV.put("PATIENTS", "PAT");
+        SUBMODULE_ABBREV.put("CUSTOMERS", "CUS");
         SUBMODULE_ABBREV.put("CAMPAIGNS", "CAM");
         SUBMODULE_ABBREV.put("ATTRIBUTION", "ATT");
         SUBMODULE_ABBREV.put("DASHBOARD", "DSH");
