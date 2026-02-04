@@ -134,3 +134,9 @@ export const deleteFileCategory = async (id) => {
     await api.delete(`${BASE_URL}/file-categories/${id}`);
 };
 
+// ==================== TENANT USERS ====================
+
+export const getTenantUsers = async () => {
+    return await api.get('/v1/tenant-admin/users');
+};
+

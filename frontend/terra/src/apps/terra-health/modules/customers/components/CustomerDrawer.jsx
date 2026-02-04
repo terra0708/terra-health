@@ -35,6 +35,7 @@ export const CustomerDrawer = ({ open, onClose, customer, client, t: tProp }) =>
         control,
         handleSubmit,
         reset,
+        watch,
         formState: { errors }
     } = useForm({
         resolver: zodResolver(customerSchema),
@@ -230,7 +231,7 @@ export const CustomerDrawer = ({ open, onClose, customer, client, t: tProp }) =>
 
                     <Box sx={{ flex: 1, overflowY: 'auto', p: { xs: 3, md: 5 }, bgcolor: 'background.paper' }}>
                         <Box sx={{ maxWidth: 600, mx: 'auto' }}>
-                            <ActiveTabComponent register={register} control={control} t={t} i18n={i18n} lang={i18n.language} errors={errors} customerId={customer?.id} />
+                            <ActiveTabComponent register={register} control={control} t={t} i18n={i18n} lang={i18n.language} errors={errors} customerId={customer?.id} watch={watch} />
 
                             <Box sx={{ mt: 6, display: 'flex', gap: 2 }}>
                                 <Button fullWidth variant="outlined" onClick={onClose} sx={{ borderRadius: '12px', py: 1.5, fontWeight: 800 }}>{t('common.cancel')}</Button>

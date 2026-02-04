@@ -24,10 +24,95 @@ public class CustomerParametersService {
     private final TagRepository tagRepository;
     private final FileCategoryRepository fileCategoryRepository;
 
+    /**
+     * Implementation of seeding logic.
+     * Assumes TenantContext is already set if running in a multi-tenant
+     * environment.
+     */
+    @Transactional
+    public void ensureSystemDefaults() {
+        // System Category
+        Category systemCategory = categoryRepository.findByLabelEn("system")
+                .orElseGet(() -> categoryRepository.save(Category.builder()
+                        .labelTr("Sistem")
+                        .labelEn("system")
+                        .color("#9e9e9e")
+                        .icon("Settings")
+                        .isSystem(true)
+                        .build()));
+
+        // System Service
+        if (serviceRepository.findByValue("system").isEmpty()) {
+            serviceRepository.save(ServiceEntity.builder()
+                    .nameTr("Sistem Hizmeti")
+                    .nameEn("system")
+                    .value("system")
+                    .categoryId(systemCategory.getId())
+                    .color("#9e9e9e")
+                    .icon("Settings")
+                    .isSystem(true)
+                    .build());
+        }
+
+        // System Status
+        if (statusRepository.findByValue("system").isEmpty()) {
+            statusRepository.save(Status.builder()
+                    .labelTr("Sistem Durumu")
+                    .labelEn("system")
+                    .value("system")
+                    .color("#9e9e9e")
+                    .icon("Settings")
+                    .isSystem(true)
+                    .build());
+        }
+
+        // System Source
+        if (sourceRepository.findByValue("system").isEmpty()) {
+            sourceRepository.save(Source.builder()
+                    .labelTr("Sistem Kaynağı")
+                    .labelEn("system")
+                    .value("system")
+                    .color("#9e9e9e")
+                    .icon("Settings")
+                    .isSystem(true)
+                    .build());
+        }
+
+        // System Tag
+        if (tagRepository.findByValue("system").isEmpty()) {
+            tagRepository.save(Tag.builder()
+                    .labelTr("Sistem Etiketi")
+                    .labelEn("system")
+                    .value("system")
+                    .color("#9e9e9e")
+                    .icon("Settings")
+                    .isSystem(true)
+                    .build());
+        }
+
+        // System File Category
+        if (fileCategoryRepository.findByLabelEn("system").isEmpty()) {
+            fileCategoryRepository.save(FileCategory.builder()
+                    .labelTr("Sistem Dosya Kategorisi")
+                    .labelEn("system")
+                    .color("#9e9e9e")
+                    .icon("Settings")
+                    .isSystem(true)
+                    .build());
+        }
+    }
+
     // ==================== CATEGORIES ====================
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<CategoryDto> getAllCategories() {
+        // Lazy seed check: if system category is missing, seed all defaults for this
+        // tenant
+        if (categoryRepository.findByLabelEn("system").isEmpty()) {
+            log.info("System parameters missing for current tenant. Seeding defaults...");
+            ensureSystemDefaults();
+        }
+
         return categoryRepository.findAll().stream()
                 .map(this::convertCategoryToDto)
                 .collect(Collectors.toList());

@@ -50,7 +50,7 @@ public class CustomerService {
                 .passportNumber(request.getPassportNumber())
                 .status(request.getStatus() != null ? request.getStatus() : "new")
                 .consultantId(request.getConsultantId())
-                .category(request.getCategory())
+                .categories(request.getCategories())
                 .source(request.getSource())
                 .registrationDate(request.getRegistrationDate() != null ? request.getRegistrationDate()
                         : java.time.LocalDateTime.now())
@@ -85,7 +85,7 @@ public class CustomerService {
         customer.setPassportNumber(request.getPassportNumber());
         customer.setStatus(request.getStatus());
         customer.setConsultantId(request.getConsultantId());
-        customer.setCategory(request.getCategory());
+        customer.setCategories(request.getCategories());
         customer.setSource(request.getSource());
         customer.setRegistrationDate(request.getRegistrationDate());
         customer.setServices(request.getServices());
@@ -122,7 +122,7 @@ public class CustomerService {
                 .passportNumber(customer.getPassportNumber())
                 .status(customer.getStatus())
                 .consultantId(customer.getConsultantId())
-                .category(customer.getCategory())
+                .categories(customer.getCategories())
                 .source(customer.getSource())
                 .registrationDate(customer.getRegistrationDate())
                 .services(customer.getServices())

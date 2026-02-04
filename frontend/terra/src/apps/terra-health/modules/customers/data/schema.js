@@ -15,7 +15,7 @@ export const customerSchema = z.object({
     country: z.string().min(2),
     registrationDate: z.string(),
     consultantId: z.string().optional(),
-    category: z.string().optional(),
+    categories: z.array(z.string()).default([]),
     services: z.array(z.string()).default([]),
     status: z.string().min(1),
     source: z.string().min(1),

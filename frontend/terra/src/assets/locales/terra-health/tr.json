@@ -124,7 +124,8 @@
       "error": {
         "name_min": "İsim en az 2 karakter olmalıdır",
         "phone_min": "Geçerli bir telefon numarası giriniz",
-        "invalid_email": "Geçerli bir e-posta adresi giriniz"
+        "invalid_email": "Geçerli bir e-posta adresi giriniz",
+        "no_services_found": "Seçilen kategori(ler) için hizmet bulunamadı"
       }
     }
   },

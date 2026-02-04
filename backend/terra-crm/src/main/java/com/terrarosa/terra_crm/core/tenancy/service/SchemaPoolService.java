@@ -1,5 +1,6 @@
 package com.terrarosa.terra_crm.core.tenancy.service;
 
+import com.terrarosa.terra_crm.core.tenancy.TenantContext;
 import com.terrarosa.terra_crm.core.tenancy.dto.SchemaPoolStatsResponse;
 import com.terrarosa.terra_crm.core.tenancy.entity.SchemaPool;
 import com.terrarosa.terra_crm.core.tenancy.entity.SchemaPoolStatus;
@@ -34,29 +35,31 @@ import java.util.Optional;
 @RequiredArgsConstructor
 @DependsOn("flyway") // CRITICAL: Wait for Flyway migrations to complete before accessing tables
 public class SchemaPoolService {
-    
+
     private final SchemaPoolRepository schemaPoolRepository;
     private final TenantRepository tenantRepository;
     private final JdbcTemplate jdbcTemplate;
     private final TenantService tenantService; // For reusing createTenantSchema and runTenantMigrations
-    
+    private final com.terrarosa.terra_crm.modules.health.service.CustomerParametersService customerParametersService;
+
     @Value("${schema-pool.min-ready-count:3}")
     private int minReadyCount;
-    
+
     @Value("${schema-pool.schema-prefix:tp_}")
     private String schemaPrefix;
-    
+
     @Value("${schema-pool.schema-name-length:8}")
     private int schemaNameLength;
-    
+
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private static final String ALPHANUMERIC = "abcdefghijklmnopqrstuvwxyz0123456789";
-    
+
     /**
      * Scheduled task to replenish the schema pool.
      * Runs every 5 minutes and ensures minimum number of READY schemas.
      * 
-     * CRITICAL: DDL operations (schema creation, migrations) run outside transaction
+     * CRITICAL: DDL operations (schema creation, migrations) run outside
+     * transaction
      * to prevent connection pool exhaustion.
      */
     @Scheduled(fixedDelay = 300000) // 5 minutes = 300000 milliseconds
@@ -65,11 +68,11 @@ public class SchemaPoolService {
         try {
             long readyCount = schemaPoolRepository.countByStatus(SchemaPoolStatus.READY);
             log.debug("Schema pool status: {} READY schemas (minimum: {})", readyCount, minReadyCount);
-            
+
             if (readyCount < minReadyCount) {
                 int schemasToCreate = (int) (minReadyCount - readyCount);
                 log.info("Pool replenishment needed. Creating {} schema(s)...", schemasToCreate);
-                
+
                 for (int i = 0; i < schemasToCreate; i++) {
                     try {
                         provisionSchema();
@@ -84,10 +87,11 @@ public class SchemaPoolService {
             // Don't rethrow - scheduled tasks should not crash the application
         }
     }
-    
+
     /**
      * Provision a new schema and add it to the pool.
-     * Creates the schema, runs migrations, and adds it to the pool with READY status.
+     * Creates the schema, runs migrations, and adds it to the pool with READY
+     * status.
      * 
      * @return The created SchemaPool entry
      */
@@ -95,46 +99,56 @@ public class SchemaPoolService {
     public SchemaPool provisionSchema() {
         String schemaName = generateUniqueSchemaName();
         log.info("Provisioning new schema: {}", schemaName);
-        
+
         try {
             // Create schema
             tenantService.createTenantSchema(schemaName);
-            
+
             // Run migrations using reusable Flyway configuration
             runTenantMigrations(schemaName);
-            
+
+            // Seed system default parameters for the health module
+            // CRITICAL: Set context BEFORE calling transactional seeding method
+            TenantContext.setCurrentTenant(null, schemaName);
+            try {
+                customerParametersService.ensureSystemDefaults();
+            } finally {
+                TenantContext.clear();
+            }
+
             // Create SchemaPool entry with READY status
             SchemaPool schemaPool = SchemaPool.builder()
                     .schemaName(schemaName)
                     .status(SchemaPoolStatus.READY)
                     .build();
-            
+
             SchemaPool saved = schemaPoolRepository.save(schemaPool);
             log.info("Successfully provisioned schema: {} (id: {})", schemaName, saved.getId());
-            
+
             return saved;
         } catch (Exception e) {
             log.error("Failed to provision schema {}: {}", schemaName, e.getMessage(), e);
-            
+
             // Try to drop the schema if it was created
             try {
                 dropSchema(schemaName);
             } catch (Exception dropException) {
-                log.error("Failed to drop schema {} after provisioning failure: {}", schemaName, dropException.getMessage());
+                log.error("Failed to drop schema {} after provisioning failure: {}", schemaName,
+                        dropException.getMessage());
             }
-            
+
             // Create SchemaPool entry with ERROR status for tracking
             SchemaPool errorEntry = SchemaPool.builder()
                     .schemaName(schemaName)
                     .status(SchemaPoolStatus.ERROR)
                     .build();
-            
+
             schemaPoolRepository.save(errorEntry);
-            
+
             throw new RuntimeException("Failed to provision schema: " + schemaName, e);
         }
     }
-    
+
     /**
      * Generate a unique schema name with retry loop to prevent collisions.
      * Checks both SchemaPool and Tenant tables for uniqueness.
@@ -145,24 +159,24 @@ public class SchemaPoolService {
         String schemaName;
         int maxRetries = 10;
         int retryCount = 0;
-        
+
         do {
-            // Use String.format for compatibility (Java 25 String Templates may not be stable)
+            // Use String.format for compatibility (Java 25 String Templates may not be
+            // stable)
             String randomPart = generateRandomString(schemaNameLength);
             schemaName = String.format("%s%s", schemaPrefix, randomPart);
-            
+
             retryCount++;
             if (retryCount >= maxRetries) {
                 throw new IllegalStateException(
-                    String.format("Failed to generate unique schema name after %d attempts", maxRetries)
-                );
+                        String.format("Failed to generate unique schema name after %d attempts", maxRetries));
             }
-        } while (schemaPoolRepository.existsBySchemaName(schemaName) || 
-                 tenantRepository.findBySchemaName(schemaName).isPresent());
-        
+        } while (schemaPoolRepository.existsBySchemaName(schemaName) ||
+                tenantRepository.findBySchemaName(schemaName).isPresent());
+
         return schemaName;
     }
-    
+
     /**
      * Generate a random alphanumeric string of specified length.
      * Uses SecureRandom for cryptographically secure randomness.
@@ -178,7 +192,7 @@ public class SchemaPoolService {
         }
         return sb.toString();
     }
-    
+
     /**
      * Run Flyway migrations on a tenant schema.
      * Uses the same approach as TenantService but with reusable configuration.
@@ -188,9 +202,9 @@ public class SchemaPoolService {
     private void runTenantMigrations(String schemaName) {
         // Validate schema name
         tenantService.validateSchemaName(schemaName);
-        
+
         String sanitizedSchemaName = tenantService.sanitizeSchemaName(schemaName);
-        
+
         try {
             // Create Flyway instance for this specific schema
             // Reuse configuration pattern from TenantService for consistency
@@ -202,7 +216,7 @@ public class SchemaPoolService {
                     .baselineOnMigrate(true)
                     .validateOnMigrate(true)
                     .load();
-            
+
             // Run migrations
             flyway.migrate();
             log.info("Successfully ran migrations on schema: {}", sanitizedSchemaName);
@@ -211,7 +225,7 @@ public class SchemaPoolService {
             throw new RuntimeException("Failed to migrate schema: " + sanitizedSchemaName, e);
         }
     }
-    
+
     /**
      * Drop a schema (used for cleanup on provisioning failure).
      * 
@@ -223,7 +237,7 @@ public class SchemaPoolService {
         jdbcTemplate.execute(sql);
         log.info("Dropped schema: {}", sanitizedSchemaName);
     }
-    
+
     /**
      * Get comprehensive statistics about the schema pool.
      * Uses a single GROUP BY query to minimize database I/O.
@@ -237,10 +251,10 @@ public class SchemaPoolService {
     @Transactional(readOnly = true)
     public SchemaPoolStatsResponse getPoolStats() {
         log.debug("Fetching schema pool statistics");
-        
+
         // 1. Get all status counts in a single GROUP BY query
         List<Object[]> groupedResults = schemaPoolRepository.countByStatusGrouped();
-        
+
         // 2. Initialize EnumMap with default 0L for all statuses
         // This ensures that even if PostgreSQL doesn't return a row for a status,
         // we have a safe default value (0L)
@@ -248,7 +262,7 @@ public class SchemaPoolService {
         for (SchemaPoolStatus status : SchemaPoolStatus.values()) {
             statusCounts.put(status, 0L);
         }
-        
+
         // 3. Parse database results and populate the map
         // Each Object[] contains [status, count]
         for (Object[] row : groupedResults) {
@@ -256,25 +270,25 @@ public class SchemaPoolService {
             Long count = ((Number) row[1]).longValue();
             statusCounts.put(status, count);
         }
-        
+
         // 4. Safely extract counts from EnumMap (guaranteed to have values)
         Long readyCount = statusCounts.get(SchemaPoolStatus.READY);
         Long assignedCount = statusCounts.get(SchemaPoolStatus.ASSIGNED);
         Long errorCount = statusCounts.get(SchemaPoolStatus.ERROR);
-        
+
         // 5. Calculate total count
         Long totalCount = readyCount + assignedCount + errorCount;
-        
+
         // 6. Get last provisioning time (most recently created READY schema)
         Optional<SchemaPool> lastReadySchema = schemaPoolRepository
                 .findFirstByStatusAndDeletedFalseOrderByCreatedAtDesc(SchemaPoolStatus.READY);
         LocalDateTime lastProvisioningTime = lastReadySchema
                 .map(SchemaPool::getCreatedAt)
                 .orElse(null);
-        
+
         // 7. Get minReadyCount from configuration (already injected via @Value)
         Long minReadyCountLong = (long) minReadyCount;
-        
+
         // 8. Create and return response
         SchemaPoolStatsResponse response = new SchemaPoolStatsResponse(
                 readyCount,
@@ -282,12 +296,11 @@ public class SchemaPoolService {
                 errorCount,
                 totalCount,
                 minReadyCountLong,
-                lastProvisioningTime
-        );
-        
+                lastProvisioningTime);
+
         log.debug("Schema pool statistics: READY={}, ASSIGNED={}, ERROR={}, TOTAL={}, MIN_READY={}",
                 readyCount, assignedCount, errorCount, totalCount, minReadyCountLong);
-        
+
         return response;
     }
 }

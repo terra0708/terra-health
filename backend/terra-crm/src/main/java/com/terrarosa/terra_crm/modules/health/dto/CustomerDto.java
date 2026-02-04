@@ -28,7 +28,7 @@ public class CustomerDto {
     private String passportNumber;
     private String status;
     private UUID consultantId;
-    private String category;
+    private List<String> categories;
     private String source;
     private LocalDateTime registrationDate;
     private List<String> services;

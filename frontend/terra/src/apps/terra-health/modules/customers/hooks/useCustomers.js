@@ -72,8 +72,14 @@ export const useCustomers = () => {
 
     // --- UNIFIED DATA: Use clients directly ---
     const customers = useMemo(() => {
-        return clients || [];
-    }, [clients]);
+        return (clients || []).map(c => {
+            const consultant = settings.consultants?.find(u => u.id === c.consultantId);
+            return {
+                ...c,
+                assignedToName: consultant ? consultant.name : (c.assignedToName || '-')
+            };
+        });
+    }, [clients, settings.consultants]);
 
     // --- ACTIONS ---
     const applyFilters = () => {

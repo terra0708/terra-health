@@ -124,7 +124,8 @@
       "error": {
         "name_min": "Name must be at least 2 characters",
         "phone_min": "Enter a valid phone number",
-        "invalid_email": "Enter a valid email address"
+        "invalid_email": "Enter a valid email address",
+        "no_services_found": "No services found for selected category(ies)"
       }
     }
   },

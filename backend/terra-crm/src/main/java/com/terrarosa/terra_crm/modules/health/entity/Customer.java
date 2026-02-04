@@ -60,8 +60,9 @@ public class Customer extends BaseEntity {
     @Column(name = "consultant_id")
     private java.util.UUID consultantId;
 
-    @Column
-    private String category;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "categories", columnDefinition = "jsonb")
+    private List<String> categories;
 
     @Column
     private String source;

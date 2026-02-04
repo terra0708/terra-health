@@ -26,6 +26,12 @@ const convertDtoToFrontend = (dto, type) => {
             label_tr: dto.labelTr,
             label_en: dto.labelEn
         };
+    } else if (type === 'consultant') {
+        return {
+            id: dto.id,
+            name: `${dto.firstName} ${dto.lastName}`.trim() || dto.email,
+            email: dto.email
+        };
     } else {
         return {
             ...base,
@@ -73,6 +79,7 @@ export const useCustomerSettingsStore = create((set, get) => ({
     sources: [],
     tags: [],
     fileCategories: [],
+    consultants: [],
 
     // Loading states
     loading: {
@@ -81,7 +88,8 @@ export const useCustomerSettingsStore = create((set, get) => ({
         statuses: false,
         sources: false,
         tags: false,
-        fileCategories: false
+        fileCategories: false,
+        consultants: false
     },
 
     // Error states
@@ -174,15 +182,29 @@ export const useCustomerSettingsStore = create((set, get) => ({
         }
     },
 
+    fetchConsultants: async () => {
+        set(state => ({ loading: { ...state.loading, consultants: true } }));
+        try {
+            const response = await parametersAPI.getTenantUsers();
+            const users = response.data || [];
+            set({ consultants: users.map(dto => convertDtoToFrontend(dto, 'consultant')) });
+        } catch (error) {
+            console.error('Failed to fetch consultants:', error);
+        } finally {
+            set(state => ({ loading: { ...state.loading, consultants: false } }));
+        }
+    },
+
     fetchAll: async () => {
-        const { fetchCategories, fetchServices, fetchStatuses, fetchSources, fetchTags, fetchFileCategories } = get();
+        const { fetchCategories, fetchServices, fetchStatuses, fetchSources, fetchTags, fetchFileCategories, fetchConsultants } = get();
         await Promise.all([
             fetchCategories(),
             fetchServices(),
             fetchStatuses(),
             fetchSources(),
             fetchTags(),
-            fetchFileCategories()
+            fetchFileCategories(),
+            fetchConsultants()
         ]);
     },
 
