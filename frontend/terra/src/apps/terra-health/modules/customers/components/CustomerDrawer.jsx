@@ -88,6 +88,29 @@ export const CustomerDrawer = ({ open, onClose, customer, client, t: tProp }) =>
         }
     }, [activeCustomer, open, reset, settings]);
 
+    const onInvalid = (formErrors) => {
+        console.error('Customer Form Validation Errors:', formErrors);
+
+        // Find which tab the first error belongs to and switch to it
+        const firstErrorPath = Object.keys(formErrors)[0];
+
+        // Tab mapping
+        const personalInfoFields = ['name', 'phone', 'email', 'country', 'city', 'job', 'passportNumber', 'operationType', 'medicalHistory', 'registrationDate'];
+        const statusFields = ['consultantId', 'category', 'services', 'status', 'source'];
+
+        if (personalInfoFields.includes(firstErrorPath)) {
+            setTabValue(0);
+        } else if (statusFields.includes(firstErrorPath)) {
+            setTabValue(1);
+        }
+
+        setSnackbar({
+            open: true,
+            message: t('common.validation_error', 'Lütfen eksik veya hatalı alanları kontrol ediniz'),
+            severity: 'warning'
+        });
+    };
+
     const onSubmit = (data) => {
         // Handle Mentions
         const allNotes = [...(data.notes || []), ...(data.reminder?.notes || []), ...(data.payments || [])];
@@ -115,7 +138,8 @@ export const CustomerDrawer = ({ open, onClose, customer, client, t: tProp }) =>
                     `${customerData.registrationDate}T00:00:00` :
                     customerData.registrationDate.substring(0, 19)) :
                 new Date().toISOString().substring(0, 19),
-            assignedTo: customerData.assignedTo || customerData.consultantId || null,
+            consultantId: customerData.consultantId || null,
+            leadId: customerData.leadId || null,
             industryType: 'HEALTH'
         };
 
@@ -133,7 +157,7 @@ export const CustomerDrawer = ({ open, onClose, customer, client, t: tProp }) =>
                 onClose();
             }).catch(err => {
                 console.error('Update failed:', err);
-                setSnackbar({ open: true, message: err.message || t('common.error_occurred'), severity: 'error' });
+                setSnackbar({ open: true, message: err.message || t('common.error'), severity: 'error' });
             });
         } else {
             // New Customer
@@ -155,7 +179,7 @@ export const CustomerDrawer = ({ open, onClose, customer, client, t: tProp }) =>
                 onClose();
             }).catch(err => {
                 console.error('Save failed:', err);
-                setSnackbar({ open: true, message: err.message || t('common.error_occurred'), severity: 'error' });
+                setSnackbar({ open: true, message: err.message || t('common.error'), severity: 'error' });
             });
         }
     };
@@ -210,7 +234,7 @@ export const CustomerDrawer = ({ open, onClose, customer, client, t: tProp }) =>
 
                             <Box sx={{ mt: 6, display: 'flex', gap: 2 }}>
                                 <Button fullWidth variant="outlined" onClick={onClose} sx={{ borderRadius: '12px', py: 1.5, fontWeight: 800 }}>{t('common.cancel')}</Button>
-                                <Button fullWidth variant="contained" onClick={handleSubmit(onSubmit)} sx={{ borderRadius: '12px', py: 1.5, fontWeight: 800 }}>{t('common.save')}</Button>
+                                <Button fullWidth variant="contained" onClick={handleSubmit(onSubmit, onInvalid)} sx={{ borderRadius: '12px', py: 1.5, fontWeight: 800 }}>{t('common.save')}</Button>
                             </Box>
                         </Box>
                     </Box>

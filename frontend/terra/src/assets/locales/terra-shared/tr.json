@@ -65,7 +65,8 @@
         "pending": "Bekleyen",
         "all": "Tümü",
         "title": "Başlık",
-        "note": "Not"
+        "note": "Not",
+        "validation_error": "Lütfen eksik veya hatalı alanları kontrol ediniz"
     },
     "reminders": {
         "title": "Hatırlatıcılar",

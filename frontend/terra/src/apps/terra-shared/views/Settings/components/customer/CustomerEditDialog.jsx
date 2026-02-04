@@ -13,6 +13,7 @@ import {
     Select,
     MenuItem,
     Box,
+    Typography,
     alpha,
     useTheme
 } from '@mui/material';
@@ -48,6 +49,7 @@ export const CustomerEditDialog = ({
             PaperProps={{ sx: { borderRadius: '28px', width: '100%', maxWidth: 480, overflow: 'visible' } }}
             disableEnforceFocus={false}
             disableAutoFocus={false}
+            disableRestoreFocus={true}
         >
             <DialogTitle sx={{ fontWeight: 900, px: 4, pt: 4, pb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 {editMode ? t('common.edit') : t('common.add_new')}
@@ -57,6 +59,15 @@ export const CustomerEditDialog = ({
             </DialogTitle>
             <DialogContent sx={{ px: 4, pb: 2 }}>
                 <Stack spacing={3} sx={{ mt: 2 }}>
+                    {/* System item warning */}
+                    {currentItem?.isSystem && (
+                        <Box sx={{ p: 2, borderRadius: '12px', bgcolor: alpha(theme.palette.warning.main, 0.1), border: `1px solid ${alpha(theme.palette.warning.main, 0.3)}` }}>
+                            <Typography variant="caption" sx={{ color: 'warning.main', fontWeight: 700 }}>
+                                {t('customers.system_item_warning', 'Bu sistem öğesidir ve düzenlenemez')}
+                            </Typography>
+                        </Box>
+                    )}
+
                     {/* TR Name */}
                     <TextField
                         fullWidth
@@ -69,6 +80,7 @@ export const CustomerEditDialog = ({
                                 setCurrentItem({ ...currentItem, label_tr: e.target.value });
                             }
                         }}
+                        disabled={currentItem?.isSystem}
                         InputProps={{
                             startAdornment: <Languages size={18} style={{ marginRight: 12, opacity: 0.5 }} />,
                             sx: { borderRadius: '16px', fontWeight: 700 }
@@ -86,14 +98,15 @@ export const CustomerEditDialog = ({
                                 setCurrentItem({ ...currentItem, label_en: e.target.value });
                             }
                         }}
+                        disabled={currentItem?.isSystem}
                         InputProps={{
                             startAdornment: <Languages size={18} style={{ marginRight: 12, opacity: 0.5 }} />,
                             sx: { borderRadius: '16px', fontWeight: 700 }
                         }}
                     />
 
-                    {/* Service için kategori desteği */}
-                    {activeTab?.type === 'service' && !activeTab?.hasCategory && (
+                    {/* Service için kategori seçimi - ID bazlı */}
+                    {activeTab?.type === 'service' && (
                         <FormControl fullWidth>
                             <InputLabel id="service-cat-label" sx={{ fontWeight: 600 }}>{t('customers.service_category')}</InputLabel>
                             <Select
@@ -101,11 +114,12 @@ export const CustomerEditDialog = ({
                                 value={currentItem?.category || ''}
                                 label={t('customers.service_category')}
                                 onChange={(e) => setCurrentItem({ ...currentItem, category: e.target.value })}
+                                disabled={currentItem?.isSystem}
                                 sx={{ borderRadius: '16px', fontWeight: 700 }}
                             >
                                 <MenuItem value=""><em>{t('common.select')}</em></MenuItem>
                                 {settings.categories?.map(c => (
-                                    <MenuItem key={c.id} value={i18n.language === 'tr' ? c.label_tr : c.label_en} sx={{ fontWeight: 700 }}>
+                                    <MenuItem key={c.id} value={c.id} sx={{ fontWeight: 700 }}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                                             <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: c.color }} />
                                             {i18n.language === 'tr' ? c.label_tr : c.label_en}
@@ -120,6 +134,7 @@ export const CustomerEditDialog = ({
                         value={currentItem?.color}
                         onChange={handleColorChange}
                         label={t('customers.select_color')}
+                        disabled={currentItem?.isSystem}
                     />
                 </Stack>
             </DialogContent>
@@ -135,7 +150,11 @@ export const CustomerEditDialog = ({
                     fullWidth
                     onClick={onSave}
                     variant="contained"
-                    disabled={!(currentItem?.label_tr || currentItem?.name_tr)}
+                    disabled={
+                        activeTab?.type === 'service'
+                            ? !(currentItem?.name_tr || currentItem?.name_en) || !currentItem?.category
+                            : !(currentItem?.label_tr || currentItem?.label_en)
+                    }
                     sx={{
                         borderRadius: '14px',
                         py: 1.5,

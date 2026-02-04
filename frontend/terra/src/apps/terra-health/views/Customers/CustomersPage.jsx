@@ -21,6 +21,11 @@ const CustomersPage = () => {
     const { t } = useTranslation(['terra-health', 'translation']);
     const { getStatus, getSource, getService, getTag } = useLookup();
 
+    // Fetch parameters on mount
+    React.useEffect(() => {
+        settings?.fetchAll?.();
+    }, []);
+
     const {
         searchTerm, setSearchTerm,
         showFilters, setShowFilters,

@@ -83,6 +83,8 @@ export const StatusTab = ({ register, control, t, lang, errors }) => {
                             sx={{ flex: 1, minWidth: { xs: '100%', sm: '45%' } }}
                             InputProps={{ sx: { borderRadius: '16px' } }}
                             value={field.value || settings.statuses[0]?.value || ''}
+                            error={!!errors.status}
+                            helperText={errors.status && t(errors.status.message)}
                         >
                             {settings.statuses.map((s) => <MenuItem key={s.id} value={s.value}>{getLocalized(s)}</MenuItem>)}
                         </TextField>
@@ -101,6 +103,8 @@ export const StatusTab = ({ register, control, t, lang, errors }) => {
                             sx={{ flex: 1, minWidth: { xs: '100%', sm: '45%' } }}
                             InputProps={{ sx: { borderRadius: '16px' } }}
                             value={field.value || settings.sources[0]?.value || ''}
+                            error={!!errors.source}
+                            helperText={errors.source && t(errors.source.message)}
                         >
                             {settings.sources.map((s) => <MenuItem key={s.id} value={s.value}>{getLocalized(s)}</MenuItem>)}
                         </TextField>

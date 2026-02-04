@@ -400,7 +400,7 @@ const Sidebar = () => {
             { key: 'permissions', icon: 'permissions', label: t('menu.permissions'), path: '/settings/permissions', requiredPermission: ['SETTINGS_PERMISSIONS'] },
             { key: 'reminder_settings', icon: 'settings', label: t('settings.reminder_settings', 'Hatırlatıcı Ayarları'), path: '/settings/reminders', requiredPermission: ['SETTINGS_REMINDERS'] },
             { key: 'system_settings', icon: 'system_settings', label: t('menu.system_settings'), path: '/settings', requiredPermission: ['SETTINGS_SYSTEM'] },
-            { key: 'customer_panel', icon: 'customer_panel', label: t('menu.customer_panel'), path: '/settings/customer-panel', requiredPermission: ['SETTINGS_CUSTOMER_PANEL'] },
+            { key: 'customer_panel', icon: 'customer_panel', label: t('menu.customer_panel'), path: '/settings/customer-panel', requiredPermission: ['SETTINGS_CUSTOMERS_P'] },
         ].filter(item => hasPermission(item.requiredPermission))
     };
 

@@ -51,47 +51,53 @@ const CustomerPanel = () => {
     const settings = useCustomerSettingsStore();
     const { customers } = useCustomers();
 
+    // Fetch all parameters on mount
+    React.useEffect(() => {
+        settings.fetchAll();
+    }, []);
+
+
 
     // Basit tab'lar - eski yapı
     const tabs = useMemo(() => [
-        { 
-            key: 'categories', 
-            label: i18n.language === 'tr' ? 'Kategoriler' : 'Categories', 
+        {
+            key: 'categories',
+            label: i18n.language === 'tr' ? 'Kategoriler' : 'Categories',
             icon: Layers,
             data: settings.categories || [],
             type: 'category'
         },
-        { 
-            key: 'services', 
-            label: i18n.language === 'tr' ? 'Hizmetler' : 'Services', 
+        {
+            key: 'services',
+            label: i18n.language === 'tr' ? 'Hizmetler' : 'Services',
             icon: Briefcase,
             data: settings.services || [],
             type: 'service'
         },
-        { 
-            key: 'statuses', 
-            label: i18n.language === 'tr' ? 'Durumlar' : 'Statuses', 
+        {
+            key: 'statuses',
+            label: i18n.language === 'tr' ? 'Durumlar' : 'Statuses',
             icon: Activity,
             data: settings.statuses || [],
             type: 'status'
         },
-        { 
-            key: 'sources', 
-            label: i18n.language === 'tr' ? 'Kaynaklar' : 'Sources', 
+        {
+            key: 'sources',
+            label: i18n.language === 'tr' ? 'Kaynaklar' : 'Sources',
             icon: Link,
             data: settings.sources || [],
             type: 'source'
         },
-        { 
-            key: 'tags', 
-            label: i18n.language === 'tr' ? 'Etiketler' : 'Tags', 
+        {
+            key: 'tags',
+            label: i18n.language === 'tr' ? 'Etiketler' : 'Tags',
             icon: TagIcon,
             data: settings.tags || [],
             type: 'tag'
         },
-        { 
-            key: 'fileCategories', 
-            label: i18n.language === 'tr' ? 'Dosya Kategorileri' : 'File Categories', 
+        {
+            key: 'fileCategories',
+            label: i18n.language === 'tr' ? 'Dosya Kategorileri' : 'File Categories',
             icon: FileText,
             data: settings.fileCategories || [],
             type: 'file_category'
@@ -121,62 +127,67 @@ const CustomerPanel = () => {
     };
 
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!activeTab || !currentItem) {
             setSnackbar({ open: true, message: t('common.error', 'Bir hata oluştu'), severity: 'error' });
             return;
         }
 
-        const newItem = { ...currentItem };
-        
-        // Basit CRUD işlemleri
-        switch (activeTab.type) {
-            case 'category':
-                if (!editMode) {
-                    settings.addCategory(newItem);
-                } else {
-                    settings.updateCategory(currentItem.id, newItem);
-                }
-                break;
-            case 'service':
-                if (!editMode) {
-                    settings.addService(newItem);
-                } else {
-                    settings.updateService(currentItem.id, newItem);
-                }
-                break;
-            case 'status':
-                if (!editMode) {
-                    settings.addStatus(newItem);
-                } else {
-                    settings.updateStatus(currentItem.id, newItem);
-                }
-                break;
-            case 'source':
-                if (!editMode) {
-                    settings.addSource(newItem);
-                } else {
-                    settings.updateSource(currentItem.id, newItem);
-                }
-                break;
-            case 'tag':
-                if (!editMode) {
-                    settings.addTag(newItem);
-                } else {
-                    settings.updateTag(currentItem.id, newItem);
-                }
-                break;
-            case 'file_category':
-                if (!editMode) {
-                    settings.addFileCategory(newItem);
-                } else {
-                    settings.updateFileCategory(currentItem.id, newItem);
-                }
-                break;
+        try {
+            const newItem = { ...currentItem };
+
+            // Async CRUD operations
+            switch (activeTab.type) {
+                case 'category':
+                    if (!editMode) {
+                        await settings.addCategory(newItem);
+                    } else {
+                        await settings.updateCategory(currentItem.id, newItem);
+                    }
+                    break;
+                case 'service':
+                    if (!editMode) {
+                        await settings.addService(newItem);
+                    } else {
+                        await settings.updateService(currentItem.id, newItem);
+                    }
+                    break;
+                case 'status':
+                    if (!editMode) {
+                        await settings.addStatus(newItem);
+                    } else {
+                        await settings.updateStatus(currentItem.id, newItem);
+                    }
+                    break;
+                case 'source':
+                    if (!editMode) {
+                        await settings.addSource(newItem);
+                    } else {
+                        await settings.updateSource(currentItem.id, newItem);
+                    }
+                    break;
+                case 'tag':
+                    if (!editMode) {
+                        await settings.addTag(newItem);
+                    } else {
+                        await settings.updateTag(currentItem.id, newItem);
+                    }
+                    break;
+                case 'file_category':
+                    if (!editMode) {
+                        await settings.addFileCategory(newItem);
+                    } else {
+                        await settings.updateFileCategory(currentItem.id, newItem);
+                    }
+                    break;
+            }
+
+            setDialogOpen(false);
+            setSnackbar({ open: true, message: t('common.success_save'), severity: 'success' });
+        } catch (error) {
+            console.error('Save failed:', error);
+            setSnackbar({ open: true, message: error.message || t('common.error'), severity: 'error' });
         }
-        
-        setDialogOpen(false);
-        setSnackbar({ open: true, message: t('common.success_save'), severity: 'success' });
     };
 
 
@@ -185,34 +196,39 @@ const CustomerPanel = () => {
         setDeleteConfirm({ open: true, item: item });
     };
 
-    const executeDelete = () => {
+    const executeDelete = async () => {
         if (!deleteConfirm.item || !activeTab) return;
-        
-        // Basit silme işlemleri
-        switch (activeTab.type) {
-            case 'category':
-                settings.deleteCategory(itemToDelete.id);
-                break;
-            case 'service':
-                settings.deleteService(itemToDelete.id);
-                break;
-            case 'status':
-                settings.deleteStatus(itemToDelete.id);
-                break;
-            case 'source':
-                settings.deleteSource(itemToDelete.id);
-                break;
-            case 'tag':
-                settings.deleteTag(itemToDelete.id);
-                break;
-            case 'file_category':
-                settings.deleteFileCategory(itemToDelete.id);
-                break;
+
+        try {
+            // Async delete operations
+            switch (activeTab.type) {
+                case 'category':
+                    await settings.deleteCategory(itemToDelete.id);
+                    break;
+                case 'service':
+                    await settings.deleteService(itemToDelete.id);
+                    break;
+                case 'status':
+                    await settings.deleteStatus(itemToDelete.id);
+                    break;
+                case 'source':
+                    await settings.deleteSource(itemToDelete.id);
+                    break;
+                case 'tag':
+                    await settings.deleteTag(itemToDelete.id);
+                    break;
+                case 'file_category':
+                    await settings.deleteFileCategory(itemToDelete.id);
+                    break;
+            }
+
+            setDeleteConfirm({ open: false, item: null });
+            setItemToDelete(null);
+            setSnackbar({ open: true, message: t('common.success_delete'), severity: 'success' });
+        } catch (error) {
+            console.error('Delete failed:', error);
+            setSnackbar({ open: true, message: error.message || t('common.error'), severity: 'error' });
         }
-        
-        setDeleteConfirm({ open: false, item: null });
-        setItemToDelete(null);
-        setSnackbar({ open: true, message: t('common.success_delete'), severity: 'success' });
     };
 
     const getDisplayName = (item) => {
@@ -244,114 +260,114 @@ const CustomerPanel = () => {
 
     return (
         <ModulePageWrapper moduleName="Settings" aria-label="Customer Panel Settings">
-        <Box sx={{ animation: 'fadeIn 0.5s ease', p: 3 }}>
-            {/* Header */}
-            <Box sx={{ mb: 4, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2 }}>
-                <Box>
-                    <Typography variant="h4" sx={{ fontWeight: 900, mb: 1, letterSpacing: '-0.02em', background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                        {t('menu.customer_panel')}
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-                        {t('customers.panel_subtitle')}
-                    </Typography>
-                </Box>
-            </Box>
-
-            {/* Basit Tabs Yapısı */}
-            <Paper elevation={0} sx={{ borderRadius: '24px', border: `1px solid ${theme.palette.divider}`, bgcolor: 'background.paper', overflow: 'hidden' }}>
-                <Tabs
-                    value={tabValue}
-                    onChange={(e, newValue) => setTabValue(newValue)}
-                    sx={{
-                        borderBottom: `1px solid ${theme.palette.divider}`,
-                        px: 2,
-                        '& .MuiTab-root': { fontWeight: 700, textTransform: 'none', minHeight: 64 }
-                    }}
-                >
-                    {tabs.map((tab, index) => {
-                        const IconComponent = tab.icon;
-                        return (
-                            <Tab 
-                                key={tab.key} 
-                                label={tab.label}
-                                icon={<IconComponent size={18} />}
-                                iconPosition="start"
-                            />
-                        );
-                    })}
-                </Tabs>
-
-                {/* Tab Content */}
-                {activeTab && (
-                    <Box sx={{ p: 3 }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                            <Typography variant="h6" sx={{ fontWeight: 900 }}>
-                                {activeTab.label} ({activeTab.data?.length || 0})
-                            </Typography>
-                            <Button
-                                variant="contained"
-                                startIcon={<Plus size={18} />}
-                                onClick={() => openDialog()}
-                                sx={{
-                                    borderRadius: '14px', px: 3, py: 1.5,
-                                    fontWeight: 800,
-                                    textTransform: 'none'
-                                }}
-                            >
-                                {t('common.add_new')}
-                            </Button>
-                        </Box>
-
-                        {/* Basit Grid */}
-                        <Grid container spacing={2.5}>
-                            <CustomerItemGrid
-                                items={activeTab?.data || []}
-                                activeTab={activeTab}
-                                onEdit={openDialog}
-                                onDelete={confirmDelete}
-                                getDisplayName={getDisplayName}
-                                getLocalizedCategory={getLocalizedCategory}
-                            />
-                        </Grid>
+            <Box sx={{ animation: 'fadeIn 0.5s ease', p: 3 }}>
+                {/* Header */}
+                <Box sx={{ mb: 4, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2 }}>
+                    <Box>
+                        <Typography variant="h4" sx={{ fontWeight: 900, mb: 1, letterSpacing: '-0.02em', background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                            {t('menu.customer_panel')}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+                            {t('customers.panel_subtitle')}
+                        </Typography>
                     </Box>
-                )}
-            </Paper>
+                </Box>
 
-            {/* Smart Delete Dialog */}
-            <CustomerDeleteDialog
-                open={deleteConfirm.open}
-                onClose={() => setDeleteConfirm({ open: false, item: null })}
-                onConfirm={executeDelete}
-                itemToDelete={itemToDelete}
-                getDisplayName={getDisplayName}
-            />
+                {/* Basit Tabs Yapısı */}
+                <Paper elevation={0} sx={{ borderRadius: '24px', border: `1px solid ${theme.palette.divider}`, bgcolor: 'background.paper', overflow: 'hidden' }}>
+                    <Tabs
+                        value={tabValue}
+                        onChange={(e, newValue) => setTabValue(newValue)}
+                        sx={{
+                            borderBottom: `1px solid ${theme.palette.divider}`,
+                            px: 2,
+                            '& .MuiTab-root': { fontWeight: 700, textTransform: 'none', minHeight: 64 }
+                        }}
+                    >
+                        {tabs.map((tab, index) => {
+                            const IconComponent = tab.icon;
+                            return (
+                                <Tab
+                                    key={tab.key}
+                                    label={tab.label}
+                                    icon={<IconComponent size={18} />}
+                                    iconPosition="start"
+                                />
+                            );
+                        })}
+                    </Tabs>
 
-            {/* Add/Edit Dialog */}
-            <CustomerEditDialog
-                open={dialogOpen}
-                onClose={() => setDialogOpen(false)}
-                editMode={editMode}
-                currentItem={currentItem}
-                setCurrentItem={setCurrentItem}
-                activeTab={activeTab}
-                settings={settings}
-                i18n={i18n}
-                onSave={handleSave}
-            />
+                    {/* Tab Content */}
+                    {activeTab && (
+                        <Box sx={{ p: 3 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                                <Typography variant="h6" sx={{ fontWeight: 900 }}>
+                                    {activeTab.label} ({activeTab.data?.length || 0})
+                                </Typography>
+                                <Button
+                                    variant="contained"
+                                    startIcon={<Plus size={18} />}
+                                    onClick={() => openDialog()}
+                                    sx={{
+                                        borderRadius: '14px', px: 3, py: 1.5,
+                                        fontWeight: 800,
+                                        textTransform: 'none'
+                                    }}
+                                >
+                                    {t('common.add_new')}
+                                </Button>
+                            </Box>
+
+                            {/* Basit Grid */}
+                            <Grid container spacing={2.5}>
+                                <CustomerItemGrid
+                                    items={activeTab?.data || []}
+                                    activeTab={activeTab}
+                                    onEdit={openDialog}
+                                    onDelete={confirmDelete}
+                                    getDisplayName={getDisplayName}
+                                    getLocalizedCategory={getLocalizedCategory}
+                                />
+                            </Grid>
+                        </Box>
+                    )}
+                </Paper>
+
+                {/* Smart Delete Dialog */}
+                <CustomerDeleteDialog
+                    open={deleteConfirm.open}
+                    onClose={() => setDeleteConfirm({ open: false, item: null })}
+                    onConfirm={executeDelete}
+                    itemToDelete={itemToDelete}
+                    getDisplayName={getDisplayName}
+                />
+
+                {/* Add/Edit Dialog */}
+                <CustomerEditDialog
+                    open={dialogOpen}
+                    onClose={() => setDialogOpen(false)}
+                    editMode={editMode}
+                    currentItem={currentItem}
+                    setCurrentItem={setCurrentItem}
+                    activeTab={activeTab}
+                    settings={settings}
+                    i18n={i18n}
+                    onSave={handleSave}
+                />
 
 
-            <Snackbar
-                open={snackbar.open}
-                autoHideDuration={4000}
-                onClose={() => setSnackbar({ ...snackbar, open: false })}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-            >
-                <Alert severity={snackbar.severity} sx={{ borderRadius: '16px', fontWeight: 700, px: 3, boxShadow: theme.shadows[10] }}>
-                    {snackbar.message}
-                </Alert>
-            </Snackbar>
+                <Snackbar
+                    open={snackbar.open}
+                    autoHideDuration={4000}
+                    onClose={() => setSnackbar({ ...snackbar, open: false })}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                >
+                    <Alert severity={snackbar.severity} sx={{ borderRadius: '16px', fontWeight: 700, px: 3, boxShadow: theme.shadows[10] }}>
+                        {snackbar.message}
+                    </Alert>
+                </Snackbar>
 
-            <style>{`
+                <style>{`
                 @keyframes fadeIn { 
                     from { opacity: 0; transform: translateY(10px); } 
                     to { opacity: 1; transform: translateY(0); } 
@@ -360,7 +376,7 @@ const CustomerPanel = () => {
                     opacity: 0.3;
                 }
             `}</style>
-        </Box>
+            </Box>
         </ModulePageWrapper>
     );
 };

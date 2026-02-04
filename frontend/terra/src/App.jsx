@@ -192,7 +192,7 @@ function App() {
             <Route path="users" element={<ProtectedRoute requiredPermission={['SETTINGS_USERS_VIEW', 'MODULE_SETTINGS']}><LazyRoute moduleName="Settings"><UsersPage /></LazyRoute></ProtectedRoute>} />
             <Route path="permissions" element={<ProtectedRoute requiredPermission={['SETTINGS_ROLES_VIEW', 'MODULE_SETTINGS']}><LazyRoute moduleName="Settings"><PermissionsPage /></LazyRoute></ProtectedRoute>} />
             <Route path="reminders" element={<ProtectedRoute requiredPermission={['SETTINGS_SYSTEM_UPDATE', 'MODULE_SETTINGS']}><LazyRoute moduleName="Settings"><ReminderSettingsPage /></LazyRoute></ProtectedRoute>} />
-            <Route path="customer-panel" element={<ProtectedRoute requiredPermission={['SETTINGS_CUSTOMER_PANEL_MANAGE', 'MODULE_SETTINGS']}><LazyRoute moduleName="Settings"><CustomerPanel /></LazyRoute></ProtectedRoute>} />
+            <Route path="customer-panel" element={<ProtectedRoute requiredPermission={['SETTINGS_CUSTOMERS_P']}><LazyRoute moduleName="Settings"><CustomerPanel /></LazyRoute></ProtectedRoute>} />
           </Route>
           <Route path="super-admin">
             <Route index element={<Navigate to="/super-admin/dashboard" replace />} />

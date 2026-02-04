@@ -1,98 +1,416 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import * as parametersAPI from '../api/customerParametersAPI';
 
-const INITIAL_SERVICES = [
-    { id: '1', name_tr: 'Saç Ekimi', name_en: 'Hair Transplant', value: 'sac_ekimi', category: 'Estetik', color: '#a259ff' },
-    { id: '2', name_tr: 'Diş Tedavisi', name_en: 'Dental Treatment', value: 'dis_tedavisi', category: 'Diş', color: '#3b82f6' },
-    { id: '3', name_tr: 'Rinoplasti', name_en: 'Rhinoplasty', value: 'rinoplasti', category: 'Estetik', color: '#10b981' },
-    { id: '4', name_tr: 'Liposuction', name_en: 'Liposuction', value: 'liposuction', category: 'Estetik', color: '#f472b6' },
-    { id: '5', name_tr: 'Diş Beyazlatma', name_en: 'Teeth Whitening', value: 'dis_beyazlatma', category: 'Diş', color: '#06b6d4' },
-    { id: '6', name_tr: 'Gülüş Tasarımı', name_en: 'Smile Design', value: 'gulus_tasarimi', category: 'Diş', color: '#f59e0b' },
-    { id: '7', name_tr: 'Estetik Cerrahi', name_en: 'Plastic Surgery', value: 'estetik_cerrahi', category: 'Estetik', color: '#ec4899' },
-    { id: '8', name_tr: 'Burun Estetiği', name_en: 'Nose Job', value: 'burun_estetigi', category: 'Estetik', color: '#8b5cf6' },
-];
+// Helper function to convert backend DTO to frontend format
+const convertDtoToFrontend = (dto, type) => {
+    const base = {
+        id: dto.id,
+        color: dto.color,
+        icon: dto.icon,
+        isSystem: dto.isSystem
+    };
 
-const INITIAL_STATUSES = [
-    { id: '1', label_tr: 'Yeni', label_en: 'New', value: 'new', color: '#3b82f6' },
-    { id: '2', label_tr: 'İşlemde', label_en: 'In Process', value: 'process', color: '#f59e0b' },
-    { id: '3', label_tr: 'İletişime Geçildi', label_en: 'Contacted', value: 'contacted', color: '#8b5cf6' },
-    { id: '4', label_tr: 'Randevu', label_en: 'Appointment', value: 'appointment', color: '#10b981' },
-    { id: '5', label_tr: 'Operasyon Sonrası', label_en: 'Post Op', value: 'post_op', color: '#6366f1' },
-    { id: '6', label_tr: 'Kaybedildi', label_en: 'Lost', value: 'lost', color: '#ef4444' },
-    { id: '7', label_tr: 'Satış', label_en: 'Sale', value: 'sale', color: '#10b981' },
-];
+    if (type === 'service') {
+        return {
+            ...base,
+            name_tr: dto.nameTr,
+            name_en: dto.nameEn,
+            value: dto.value,
+            category: dto.categoryId,
+            categoryLabelTr: dto.categoryLabelTr,
+            categoryLabelEn: dto.categoryLabelEn
+        };
+    } else if (type === 'category') {
+        return {
+            ...base,
+            label_tr: dto.labelTr,
+            label_en: dto.labelEn
+        };
+    } else {
+        return {
+            ...base,
+            label_tr: dto.labelTr,
+            label_en: dto.labelEn,
+            value: dto.value
+        };
+    }
+};
 
-const INITIAL_SOURCES = [
-    { id: '1', label_tr: 'Manuel Eklendi', label_en: 'Added Manually', value: 'manual', color: '#6b7280' },
-    { id: '2', label_tr: 'Google Ads', label_en: 'Google Ads', value: 'google_ads', color: '#3b82f6' },
-    { id: '3', label_tr: 'Facebook Ads', label_en: 'Facebook Ads', value: 'facebook_ads', color: '#10b981' },
-    { id: '4', label_tr: 'Instagram Ads', label_en: 'Instagram Ads', value: 'instagram_ads', color: '#ec4899' },
-    { id: '5', label_tr: 'Tavsiye', label_en: 'Referral', value: 'referral', color: '#8b5cf6' },
-];
+// Helper function to convert frontend format to backend DTO
+const convertFrontendToDto = (item, type) => {
+    if (type === 'service') {
+        return {
+            nameTr: item.name_tr,
+            nameEn: item.name_en,
+            value: item.value,
+            categoryId: item.category,
+            color: item.color,
+            icon: item.icon
+        };
+    } else if (type === 'category' || type === 'file_category') {
+        return {
+            labelTr: item.label_tr,
+            labelEn: item.label_en,
+            color: item.color,
+            icon: item.icon
+        };
+    } else {
+        return {
+            labelTr: item.label_tr,
+            labelEn: item.label_en,
+            value: item.value,
+            color: item.color,
+            icon: item.icon
+        };
+    }
+};
 
-const INITIAL_TAGS = [
-    { id: '1', label_tr: 'VIP', label_en: 'VIP', value: 'vip', color: '#8b5cf6' },
-    { id: '2', label_tr: 'Öncelikli', label_en: 'Priority', value: 'oncelikli', color: '#ef4444' },
-    { id: '3', label_tr: 'İngilizce', label_en: 'English', value: 'ingilizce', color: '#3b82f6' },
-    { id: '4', label_tr: 'Arapça', label_en: 'Arabic', value: 'arapca', color: '#10b981' },
-    { id: '5', label_tr: 'Rusça', label_en: 'Russian', value: 'rusca', color: '#f43f5e' },
-    { id: '6', label_tr: 'Almanca', label_en: 'German', value: 'almanca', color: '#f59e0b' },
-];
+export const useCustomerSettingsStore = create((set, get) => ({
+    // Data
+    categories: [],
+    services: [],
+    statuses: [],
+    sources: [],
+    tags: [],
+    fileCategories: [],
 
-const INITIAL_FILE_CATEGORIES = [
-    { id: '1', label_tr: 'Kimlik Belgeleri', label_en: 'Identity Documents', color: '#312e81' },
-    { id: '2', label_tr: 'Tıbbi Raporlar', label_en: 'Medical Reports', color: '#ef4444' },
-    { id: '3', label_tr: 'Ödeme Makbuzları', label_en: 'Payment Receipts', color: '#10b981' },
-    { id: '4', label_tr: 'Fotoğraflar', label_en: 'Photos', color: '#f59e0b' },
-    { id: '5', label_tr: 'Uçuş ve Konaklama', label_en: 'Flight & Stay', color: '#6366f1' },
-    { id: '6', label_tr: 'Diğer', label_en: 'Other', color: '#64748b' },
-];
+    // Loading states
+    loading: {
+        categories: false,
+        services: false,
+        statuses: false,
+        sources: false,
+        tags: false,
+        fileCategories: false
+    },
 
-const INITIAL_CATEGORIES = [
-    { id: 'system', label_tr: 'Sistem', label_en: 'System', color: '#6366f1' },
-    { id: '1', label_tr: 'Estetik', label_en: 'Aesthetics', color: '#a259ff' },
-    { id: '2', label_tr: 'Obezite', label_en: 'Obesity', color: '#3b82f6' },
-    { id: '3', label_tr: 'Diş', label_en: 'Dental', color: '#10b981' },
-    { id: '4', label_tr: 'Göz', label_en: 'Eye', color: '#f472b6' },
-];
+    // Error states
+    errors: {
+        categories: null,
+        services: null,
+        statuses: null,
+        sources: null,
+        tags: null,
+        fileCategories: null
+    },
 
-export const useCustomerSettingsStore = create(
-    persist(
-        (set, get) => ({
-            services: INITIAL_SERVICES,
-            statuses: INITIAL_STATUSES,
-            sources: INITIAL_SOURCES,
-            tags: INITIAL_TAGS,
-            fileCategories: INITIAL_FILE_CATEGORIES,
-            categories: INITIAL_CATEGORIES,
+    // ==================== FETCH METHODS ====================
 
-            addService: (service) => set((state) => ({ services: [...state.services, { ...service, id: Date.now().toString() }] })),
-            updateService: (id, updated) => set((state) => ({ services: state.services.map(s => s.id === id ? { ...s, ...updated } : s) })),
-            deleteService: (id) => set((state) => ({ services: state.services.filter(s => s.id !== id) })),
-
-            addStatus: (status) => set((state) => ({ statuses: [...state.statuses, { ...status, id: Date.now().toString() }] })),
-            updateStatus: (id, updated) => set((state) => ({ statuses: state.statuses.map(s => s.id === id ? { ...s, ...updated } : s) })),
-            deleteStatus: (id) => set((state) => ({ statuses: state.statuses.filter(s => s.id !== id) })),
-
-            addSource: (source) => set((state) => ({ sources: [...state.sources, { ...source, id: Date.now().toString() }] })),
-            updateSource: (id, updated) => set((state) => ({ sources: state.sources.map(s => s.id === id ? { ...s, ...updated } : s) })),
-            deleteSource: (id) => set((state) => ({ sources: state.sources.filter(s => s.id !== id) })),
-
-            addTag: (tag) => set((state) => ({ tags: [...state.tags, { ...tag, id: Date.now().toString() }] })),
-            updateTag: (id, updated) => set((state) => ({ tags: state.tags.map(t => t.id === id ? { ...t, ...updated } : t) })),
-            deleteTag: (id) => set((state) => ({ tags: state.tags.filter(t => t.id !== id) })),
-
-            addFileCategory: (cat) => set((state) => ({ fileCategories: [...state.fileCategories, { ...cat, id: Date.now().toString() }] })),
-            updateFileCategory: (id, updated) => set((state) => ({ fileCategories: state.fileCategories.map(c => c.id === id ? { ...c, ...updated } : c) })),
-            deleteFileCategory: (id) => set((state) => ({ fileCategories: state.fileCategories.filter(c => c.id !== id) })),
-
-            addCategory: (cat) => set((state) => ({ categories: [...state.categories, { ...cat, id: Date.now().toString() }] })),
-            updateCategory: (id, updated) => set((state) => ({ categories: state.categories.map(c => c.id === id ? { ...c, ...updated } : c) })),
-            deleteCategory: (id) => set((state) => ({ categories: state.categories.filter(c => c.id !== id && c.id !== 'system') })),
-        }),
-        {
-            name: 'customer-settings-storage-v1',
-            version: 1
+    fetchCategories: async () => {
+        set(state => ({ loading: { ...state.loading, categories: true }, errors: { ...state.errors, categories: null } }));
+        try {
+            const data = await parametersAPI.getAllCategories();
+            set({ categories: data.map(dto => convertDtoToFrontend(dto, 'category')) });
+        } catch (error) {
+            console.error('Failed to fetch categories:', error);
+            set(state => ({ errors: { ...state.errors, categories: error.message } }));
+        } finally {
+            set(state => ({ loading: { ...state.loading, categories: false } }));
         }
-    )
-);
+    },
+
+    fetchServices: async () => {
+        set(state => ({ loading: { ...state.loading, services: true }, errors: { ...state.errors, services: null } }));
+        try {
+            const data = await parametersAPI.getAllServices();
+            set({ services: data.map(dto => convertDtoToFrontend(dto, 'service')) });
+        } catch (error) {
+            console.error('Failed to fetch services:', error);
+            set(state => ({ errors: { ...state.errors, services: error.message } }));
+        } finally {
+            set(state => ({ loading: { ...state.loading, services: false } }));
+        }
+    },
+
+    fetchStatuses: async () => {
+        set(state => ({ loading: { ...state.loading, statuses: true }, errors: { ...state.errors, statuses: null } }));
+        try {
+            const data = await parametersAPI.getAllStatuses();
+            set({ statuses: data.map(dto => convertDtoToFrontend(dto, 'status')) });
+        } catch (error) {
+            console.error('Failed to fetch statuses:', error);
+            set(state => ({ errors: { ...state.errors, statuses: error.message } }));
+        } finally {
+            set(state => ({ loading: { ...state.loading, statuses: false } }));
+        }
+    },
+
+    fetchSources: async () => {
+        set(state => ({ loading: { ...state.loading, sources: true }, errors: { ...state.errors, sources: null } }));
+        try {
+            const data = await parametersAPI.getAllSources();
+            set({ sources: data.map(dto => convertDtoToFrontend(dto, 'source')) });
+        } catch (error) {
+            console.error('Failed to fetch sources:', error);
+            set(state => ({ errors: { ...state.errors, sources: error.message } }));
+        } finally {
+            set(state => ({ loading: { ...state.loading, sources: false } }));
+        }
+    },
+
+    fetchTags: async () => {
+        set(state => ({ loading: { ...state.loading, tags: true }, errors: { ...state.errors, tags: null } }));
+        try {
+            const data = await parametersAPI.getAllTags();
+            set({ tags: data.map(dto => convertDtoToFrontend(dto, 'tag')) });
+        } catch (error) {
+            console.error('Failed to fetch tags:', error);
+            set(state => ({ errors: { ...state.errors, tags: error.message } }));
+        } finally {
+            set(state => ({ loading: { ...state.loading, tags: false } }));
+        }
+    },
+
+    fetchFileCategories: async () => {
+        set(state => ({ loading: { ...state.loading, fileCategories: true }, errors: { ...state.errors, fileCategories: null } }));
+        try {
+            const data = await parametersAPI.getAllFileCategories();
+            set({ fileCategories: data.map(dto => convertDtoToFrontend(dto, 'file_category')) });
+        } catch (error) {
+            console.error('Failed to fetch file categories:', error);
+            set(state => ({ errors: { ...state.errors, fileCategories: error.message } }));
+        } finally {
+            set(state => ({ loading: { ...state.loading, fileCategories: false } }));
+        }
+    },
+
+    fetchAll: async () => {
+        const { fetchCategories, fetchServices, fetchStatuses, fetchSources, fetchTags, fetchFileCategories } = get();
+        await Promise.all([
+            fetchCategories(),
+            fetchServices(),
+            fetchStatuses(),
+            fetchSources(),
+            fetchTags(),
+            fetchFileCategories()
+        ]);
+    },
+
+    // ==================== CATEGORIES ====================
+
+    addCategory: async (category) => {
+        try {
+            const dto = convertFrontendToDto(category, 'category');
+            const created = await parametersAPI.createCategory(dto);
+            set(state => ({ categories: [...state.categories, convertDtoToFrontend(created, 'category')] }));
+            return created;
+        } catch (error) {
+            console.error('Failed to create category:', error);
+            throw error;
+        }
+    },
+
+    updateCategory: async (id, updated) => {
+        try {
+            const dto = convertFrontendToDto(updated, 'category');
+            const result = await parametersAPI.updateCategory(id, dto);
+            set(state => ({
+                categories: state.categories.map(c => c.id === id ? convertDtoToFrontend(result, 'category') : c)
+            }));
+            return result;
+        } catch (error) {
+            console.error('Failed to update category:', error);
+            throw error;
+        }
+    },
+
+    deleteCategory: async (id) => {
+        try {
+            await parametersAPI.deleteCategory(id);
+            set(state => ({ categories: state.categories.filter(c => c.id !== id) }));
+        } catch (error) {
+            console.error('Failed to delete category:', error);
+            throw error;
+        }
+    },
+
+    // ==================== SERVICES ====================
+
+    addService: async (service) => {
+        try {
+            const dto = convertFrontendToDto(service, 'service');
+            const created = await parametersAPI.createService(dto);
+            set(state => ({ services: [...state.services, convertDtoToFrontend(created, 'service')] }));
+            return created;
+        } catch (error) {
+            console.error('Failed to create service:', error);
+            throw error;
+        }
+    },
+
+    updateService: async (id, updated) => {
+        try {
+            const dto = convertFrontendToDto(updated, 'service');
+            const result = await parametersAPI.updateService(id, dto);
+            set(state => ({
+                services: state.services.map(s => s.id === id ? convertDtoToFrontend(result, 'service') : s)
+            }));
+            return result;
+        } catch (error) {
+            console.error('Failed to update service:', error);
+            throw error;
+        }
+    },
+
+    deleteService: async (id) => {
+        try {
+            await parametersAPI.deleteService(id);
+            set(state => ({ services: state.services.filter(s => s.id !== id) }));
+        } catch (error) {
+            console.error('Failed to delete service:', error);
+            throw error;
+        }
+    },
+
+    // ==================== STATUSES ====================
+
+    addStatus: async (status) => {
+        try {
+            const dto = convertFrontendToDto(status, 'status');
+            const created = await parametersAPI.createStatus(dto);
+            set(state => ({ statuses: [...state.statuses, convertDtoToFrontend(created, 'status')] }));
+            return created;
+        } catch (error) {
+            console.error('Failed to create status:', error);
+            throw error;
+        }
+    },
+
+    updateStatus: async (id, updated) => {
+        try {
+            const dto = convertFrontendToDto(updated, 'status');
+            const result = await parametersAPI.updateStatus(id, dto);
+            set(state => ({
+                statuses: state.statuses.map(s => s.id === id ? convertDtoToFrontend(result, 'status') : s)
+            }));
+            return result;
+        } catch (error) {
+            console.error('Failed to update status:', error);
+            throw error;
+        }
+    },
+
+    deleteStatus: async (id) => {
+        try {
+            await parametersAPI.deleteStatus(id);
+            set(state => ({ statuses: state.statuses.filter(s => s.id !== id) }));
+        } catch (error) {
+            console.error('Failed to delete status:', error);
+            throw error;
+        }
+    },
+
+    // ==================== SOURCES ====================
+
+    addSource: async (source) => {
+        try {
+            const dto = convertFrontendToDto(source, 'source');
+            const created = await parametersAPI.createSource(dto);
+            set(state => ({ sources: [...state.sources, convertDtoToFrontend(created, 'source')] }));
+            return created;
+        } catch (error) {
+            console.error('Failed to create source:', error);
+            throw error;
+        }
+    },
+
+    updateSource: async (id, updated) => {
+        try {
+            const dto = convertFrontendToDto(updated, 'source');
+            const result = await parametersAPI.updateSource(id, dto);
+            set(state => ({
+                sources: state.sources.map(s => s.id === id ? convertDtoToFrontend(result, 'source') : s)
+            }));
+            return result;
+        } catch (error) {
+            console.error('Failed to update source:', error);
+            throw error;
+        }
+    },
+
+    deleteSource: async (id) => {
+        try {
+            await parametersAPI.deleteSource(id);
+            set(state => ({ sources: state.sources.filter(s => s.id !== id) }));
+        } catch (error) {
+            console.error('Failed to delete source:', error);
+            throw error;
+        }
+    },
+
+    // ==================== TAGS ====================
+
+    addTag: async (tag) => {
+        try {
+            const dto = convertFrontendToDto(tag, 'tag');
+            const created = await parametersAPI.createTag(dto);
+            set(state => ({ tags: [...state.tags, convertDtoToFrontend(created, 'tag')] }));
+            return created;
+        } catch (error) {
+            console.error('Failed to create tag:', error);
+            throw error;
+        }
+    },
+
+    updateTag: async (id, updated) => {
+        try {
+            const dto = convertFrontendToDto(updated, 'tag');
+            const result = await parametersAPI.updateTag(id, dto);
+            set(state => ({
+                tags: state.tags.map(t => t.id === id ? convertDtoToFrontend(result, 'tag') : t)
+            }));
+            return result;
+        } catch (error) {
+            console.error('Failed to update tag:', error);
+            throw error;
+        }
+    },
+
+    deleteTag: async (id) => {
+        try {
+            await parametersAPI.deleteTag(id);
+            set(state => ({ tags: state.tags.filter(t => t.id !== id) }));
+        } catch (error) {
+            console.error('Failed to delete tag:', error);
+            throw error;
+        }
+    },
+
+    // ==================== FILE CATEGORIES ====================
+
+    addFileCategory: async (fileCategory) => {
+        try {
+            const dto = convertFrontendToDto(fileCategory, 'file_category');
+            const created = await parametersAPI.createFileCategory(dto);
+            set(state => ({ fileCategories: [...state.fileCategories, convertDtoToFrontend(created, 'file_category')] }));
+            return created;
+        } catch (error) {
+            console.error('Failed to create file category:', error);
+            throw error;
+        }
+    },
+
+    updateFileCategory: async (id, updated) => {
+        try {
+            const dto = convertFrontendToDto(updated, 'file_category');
+            const result = await parametersAPI.updateFileCategory(id, dto);
+            set(state => ({
+                fileCategories: state.fileCategories.map(c => c.id === id ? convertDtoToFrontend(result, 'file_category') : c)
+            }));
+            return result;
+        } catch (error) {
+            console.error('Failed to update file category:', error);
+            throw error;
+        }
+    },
+
+    deleteFileCategory: async (id) => {
+        try {
+            await parametersAPI.deleteFileCategory(id);
+            set(state => ({ fileCategories: state.fileCategories.filter(c => c.id !== id) }));
+        } catch (error) {
+            console.error('Failed to delete file category:', error);
+            throw error;
+        }
+    }
+}));
