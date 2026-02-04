@@ -36,7 +36,7 @@ const RemindersPage = ({
     const { addReminder } = useReminderStore();
 
     const {
-        categories, subCategories, statuses, customParameterTypes,
+        categories, subCategories, statuses,
         openAddDialog, setOpenAddDialog,
         editingReminder, setEditingReminder,
         page, setPage,
@@ -72,7 +72,11 @@ const RemindersPage = ({
         randomReminders.forEach(r => addReminder(r));
     };
 
-    const getDisplayName = (item) => item ? (i18n.language === 'tr' ? item.label_tr : (item.label_en || item.label_tr)) : '';
+    const getDisplayName = (item) => {
+        if (!item) return '';
+        if (i18n.language === 'tr') return item.labelTr || item.label_tr || '';
+        return item.labelEn || item.label_en || item.labelTr || item.label_tr || '';
+    };
 
     return (
         <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: 1000, mx: 'auto' }}>
@@ -158,7 +162,6 @@ const RemindersPage = ({
                 statuses={statuses}
                 categories={categories}
                 subCategories={subCategories}
-                customParameterTypes={customParameterTypes}
             />
 
             {/* Optional: Health-specific CustomerDetailsDialog */}

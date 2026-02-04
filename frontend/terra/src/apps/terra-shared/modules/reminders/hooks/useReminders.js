@@ -21,6 +21,7 @@ export const useReminders = (options = {}) => {
     // Stores
     const {
         reminders,
+        fetchReminders,
         addReminder,
         updateReminder,
         deleteReminder,
@@ -28,23 +29,13 @@ export const useReminders = (options = {}) => {
     } = useReminderStore();
 
     const settingsStore = useReminderSettingsStore();
-    const { categories, subCategories, statuses, customParameterTypes, repairData } = settingsStore;
+    const { categories, subCategories, statuses, fetchSettings, getCustomerCategory } = settingsStore;
 
-    // Ensure repairData is called once to sync customParameterTypes to legacy fields
+    // Fetch settings and reminders on mount
     useEffect(() => {
-        const repairKey = 'reminder-settings-repair-completed';
-        const repairCompleted = localStorage.getItem(repairKey);
-
-        // Only call repairData if it hasn't been called yet (or if customParameterTypes is empty)
-        if (repairData && (!repairCompleted || !customParameterTypes || customParameterTypes.length === 0)) {
-            try {
-                repairData();
-                localStorage.setItem(repairKey, 'true');
-            } catch (error) {
-                console.error('repairData error:', error);
-            }
-        }
-    }, []); // Only run once on mount
+        fetchSettings();
+        fetchReminders();
+    }, [fetchSettings, fetchReminders]);
 
     // UI States
     const [openAddDialog, setOpenAddDialog] = useState(false);
@@ -67,52 +58,7 @@ export const useReminders = (options = {}) => {
         dateStart: '', dateEnd: ''
     });
 
-    // --- INITIALIZATION & MIGRATION ---
-    // Migration flag - localStorage'da tutarak sadece bir kez çalışmasını sağla
-    const migrationKey = 'terra-reminders-migration-completed';
-
-    useEffect(() => {
-        // Migration logic only runs if enabled and migration config provided
-        if (enableMigration && migrationConfig) {
-            const migrationCompleted = localStorage.getItem(migrationKey);
-            if (migrationCompleted === 'true') {
-                return; // Migration already completed
-            }
-
-            const { customers, syncWithMockData, clearNestedReminders, syncFromCustomerStore } = migrationConfig;
-
-            // 1. Sync customers with base mock data if needed
-            if (syncWithMockData) {
-                syncWithMockData();
-            }
-
-            // 2. Perform one-time migration from Nested -> Centralized
-            // We check if any customer still has a 'reminder' property with notes
-            if (customers && syncFromCustomerStore && clearNestedReminders) {
-                const needsMigration = customers.some(c => c.reminder?.notes?.length > 0);
-                if (needsMigration) {
-                    const synced = syncFromCustomerStore(customers);
-                    if (synced) {
-                        clearNestedReminders();
-                        localStorage.setItem(migrationKey, 'true');
-                    }
-                }
-            }
-        }
-
-        // 3. Generate initial demo data if everything is empty (only once)
-        const demoDataKey = 'terra-reminders-demo-data-generated';
-        const demoDataGenerated = localStorage.getItem(demoDataKey);
-        if (reminders.length === 0 && !demoDataGenerated) {
-            // Self-generating standard demo reminders
-            const demoReminders = [
-                { title: 'Hoşgeldin Mesajı', note: 'Yeni sistem hatırlatıcısı', categoryId: 'personal', statusId: 'pending' },
-                { title: 'Haftalık Rapor', note: 'Performans kontrolü', categoryId: 'finance', statusId: 'pending' }
-            ];
-            demoReminders.forEach(r => addReminder(r));
-            localStorage.setItem(demoDataKey, 'true');
-        }
-    }, [enableMigration, migrationConfig, reminders.length, addReminder]);
+    // --- INITIALIZATION & MIGRATION REMOVED (BACKEND HANDLES IT) ---
 
     // Auto-filter by customerId from URL params
     useEffect(() => {
@@ -204,23 +150,23 @@ export const useReminders = (options = {}) => {
 
     // --- COMPUTED (THE ENGINE) ---
 
-    // We enrich reminders with customer data on-the-fly (Reference based)
-    // Uses customersResolver if provided, otherwise customer will be null
     const enrichedReminders = useMemo(() => {
         const uniqueMap = new Map();
+        const customerCategory = getCustomerCategory();
 
         reminders.forEach(r => {
             const customer = r.relationId && customersResolver
                 ? customersResolver(r.relationId)
                 : null;
+
+            const isCustomerRem = customerCategory && r.categoryId === customerCategory.id;
+
             const enriched = {
                 ...r,
-                customer: customer, // Dynamic link (null if no resolver)
-                source: r.categoryId === 'customer' ? 'CRM' : 'Personal',
-                type: r.categoryId === 'customer' ? 'customer' : 'personal'
+                customer: customer,
+                source: isCustomerRem ? 'CRM' : 'Personal',
+                type: isCustomerRem ? 'customer' : 'personal'
             };
-            // If duplicate ID exists, last one wins or we skip. 
-            // Here, we ensure the key used in UI will be unique.
             if (!uniqueMap.has(r.id)) {
                 uniqueMap.set(r.id, enriched);
             }
@@ -292,7 +238,7 @@ export const useReminders = (options = {}) => {
 
     return {
         // States & Stores
-        categories, subCategories, statuses, customParameterTypes,
+        categories, subCategories, statuses,
         openAddDialog, setOpenAddDialog,
         editingReminder, setEditingReminder,
         page, setPage,

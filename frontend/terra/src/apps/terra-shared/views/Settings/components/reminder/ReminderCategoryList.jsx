@@ -34,7 +34,9 @@ export const ReminderCategoryList = ({
                     const paramType = settings.customParameterTypes.find(pt => pt.id === tab.paramTypeId);
                     const isSelected = index === tabValue;
                     const paramColor = tab.color || paramType?.color || theme.palette.primary.main;
-                    
+
+                    const canEdit = paramType && !paramType.isSystem && paramType.id !== 'static_category_status';
+
                     return (
                         <ListItem
                             key={tab.paramTypeId || tab.key || `tab_${index}`}
@@ -76,9 +78,9 @@ export const ReminderCategoryList = ({
                                         }
                                     }}
                                 />
-                                {/* Edit/delete butonları - "Müşteri" ve "Durum" hariç hepsi düzenlenebilir/silinebilir */}
-                                {paramType && !(paramType.id === 'static_category_customer' || paramType.id === 'static_category_status' || paramType.label_tr === 'Müşteri' || paramType.label_tr === 'Durum') && (
-                                    <Box 
+                                {/* Edit/delete buttons - disabled for system categories and status virtual category */}
+                                {canEdit && (
+                                    <Box
                                         sx={{ display: 'flex', gap: 0.5, ml: 1 }}
                                         onClick={(e) => e.stopPropagation()}
                                     >
@@ -88,12 +90,12 @@ export const ReminderCategoryList = ({
                                                 e.stopPropagation();
                                                 onEditCategory(paramType);
                                             }}
-                                            sx={{ 
+                                            sx={{
                                                 p: 0.5,
                                                 opacity: 0.6,
-                                                '&:hover': { 
+                                                '&:hover': {
                                                     opacity: 1,
-                                                    bgcolor: alpha(theme.palette.primary.main, 0.15) 
+                                                    bgcolor: alpha(theme.palette.primary.main, 0.15)
                                                 }
                                             }}
                                         >
@@ -105,10 +107,10 @@ export const ReminderCategoryList = ({
                                                 e.stopPropagation();
                                                 onDeleteCategory(paramType);
                                             }}
-                                            sx={{ 
+                                            sx={{
                                                 p: 0.5,
                                                 opacity: 0.6,
-                                                '&:hover': { 
+                                                '&:hover': {
                                                     opacity: 1,
                                                     bgcolor: alpha(theme.palette.error.main, 0.15),
                                                     color: 'error.main'

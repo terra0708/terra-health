@@ -179,5 +179,12 @@
     "urgent": "ACİL",
     "this_week_stats": "Bu Hafta",
     "vs_last_week": "Geçen Haftaya Göre"
+  },
+  "settings": {
+    "reminder_settings": "Hatırlatıcı Ayarları",
+    "reminder_settings_desc": "Hatırlatıcı kategorilerini, alt başlıklarını ve durumlarını buradan yönetebilirsiniz.",
+    "reminder_types": "Hatırlatıcı Türleri",
+    "initializing_parameters": "Parametreler yükleniyor...",
+    "select_category_to_see_subs": "Alt başlıkları görmek için bir kategori seçin."
   }
 }

@@ -1,78 +1,76 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { reminderAPI } from '../api/reminderAPI';
 
-export const useReminderStore = create(
-    persist(
-        (set, get) => ({
-            reminders: [], // Central repository for all types of reminders
+export const useReminderStore = create((set, get) => ({
+    reminders: [],
+    loading: false,
+    error: null,
 
-            // Primary Actions
-            addReminder: (reminderData) => {
-                const newReminder = {
-                    id: reminderData.id || `${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-                    title: reminderData.title || '',
-                    note: reminderData.note || '',
-                    date: reminderData.date || new Date().toISOString().split('T')[0],
-                    time: reminderData.time || '09:00',
-                    statusId: reminderData.statusId || 'pending',
-                    categoryId: reminderData.categoryId || 'personal',
-                    subCategoryId: reminderData.subCategoryId || '',
-                    relationId: reminderData.relationId || reminderData.customerId || null,
-                    type: reminderData.type || (reminderData.categoryId === 'customer' || reminderData.categoryId === 'static_category_customer' ? 'customer' : 'personal'),
-                    isCompleted: reminderData.isCompleted || false,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString()
-                };
-
-                set((state) => ({
-                    reminders: [newReminder, ...state.reminders]
-                }));
-                return newReminder;
-            },
-
-            updateReminder: (id, updates) => {
-                set((state) => ({
-                    reminders: state.reminders.map((r) =>
-                        r.id === id ? { ...r, ...updates, updatedAt: new Date().toISOString() } : r
-                    )
-                }));
-            },
-
-            deleteReminder: (id) => {
-                set((state) => ({
-                    reminders: state.reminders.filter((r) => r.id !== id)
-                }));
-            },
-
-            deleteRemindersByRelation: (relationId) => {
-                set((state) => ({
-                    reminders: state.reminders.filter((r) => r.relationId !== relationId)
-                }));
-            },
-
-            toggleComplete: (id) => {
-                const reminder = get().reminders.find(r => r.id === id);
-                if (!reminder) return;
-
-                const nextStatus = !reminder.isCompleted ? 'completed' : 'pending';
-                get().updateReminder(id, {
-                    isCompleted: !reminder.isCompleted,
-                    statusId: nextStatus
-                });
-            },
-
-            // Utility to get reminders for a specific relation (generic, works with any entity)
-            getRemindersByRelation: (relationId) => {
-                return get().reminders.filter(r => r.relationId === relationId);
-            },
-
-            // Legacy method name for backward compatibility
-            getRemindersByCustomer: (customerId) => {
-                return get().reminders.filter(r => r.relationId === customerId || (r.categoryId === 'customer' && r.relationId === customerId));
-            }
-        }),
-        {
-            name: 'terra-central-reminders-v1', // New storage name for consistent data
+    fetchReminders: async () => {
+        set({ loading: true, error: null });
+        try {
+            const reminders = await reminderAPI.getAllReminders();
+            set({ reminders, loading: false });
+        } catch (error) {
+            console.error('Failed to fetch reminders:', error);
+            set({ error: error.message, loading: false });
         }
-    )
-);
+    },
+
+    fetchRemindersByCustomer: async (customerId) => {
+        if (!customerId) return [];
+        try {
+            const reminders = await reminderAPI.getRemindersByCustomerId(customerId);
+            // Update local state for these specific reminders
+            set(state => {
+                const otherReminders = state.reminders.filter(r => r.relationId !== customerId);
+                return { reminders: [...otherReminders, ...reminders] };
+            });
+            return reminders;
+        } catch (error) {
+            console.error('Failed to fetch customer reminders:', error);
+            return [];
+        }
+    },
+
+    addReminder: async (reminderData) => {
+        const newReminder = await reminderAPI.createReminder(reminderData);
+        set(state => ({
+            reminders: [newReminder, ...state.reminders]
+        }));
+        return newReminder;
+    },
+
+    updateReminder: async (id, updates) => {
+        const updated = await reminderAPI.updateReminder(id, updates);
+        set(state => ({
+            reminders: state.reminders.map(r => r.id === id ? updated : r)
+        }));
+        return updated;
+    },
+
+    deleteReminder: async (id) => {
+        await reminderAPI.deleteReminder(id);
+        set(state => ({
+            reminders: state.reminders.filter(r => r.id !== id)
+        }));
+    },
+
+    toggleComplete: async (id) => {
+        const updated = await reminderAPI.toggleComplete(id);
+        set(state => ({
+            reminders: state.reminders.map(r => r.id === id ? updated : r)
+        }));
+        return updated;
+    },
+
+    // Utility getters (synchronous from current state)
+    getRemindersByRelation: (relationId) => {
+        return get().reminders.filter(r => r.relationId === relationId);
+    },
+
+    // Legacy method name for backward compatibility
+    getRemindersByCustomer: (customerId) => {
+        return get().reminders.filter(r => r.relationId === customerId);
+    }
+}));

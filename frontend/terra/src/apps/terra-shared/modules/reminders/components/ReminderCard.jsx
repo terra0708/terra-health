@@ -52,23 +52,25 @@ export const ReminderCard = memo(({
     const isDateValid = dateObj && isValid(dateObj);
     const isOverdue = !reminder.isCompleted && isDateValid && isPast(dateObj);
 
-    // Resolve Category & SubCategory
     const category = categories.find(c => c.id === reminder.categoryId) ||
-        categories.find(c => c.id === 'customer') ||
-        { label_tr: 'Genel', color: theme.palette.grey[500] };
+        categories.find(c => c.labelEn === 'Customer' || c.label_en === 'Customer' || c.id === 'customer') ||
+        { labelTr: 'Genel', labelEn: 'General', color: theme.palette.grey[500] };
 
     const subCategory = reminder.subCategoryId ? subCategories.find(s => s.id === reminder.subCategoryId) : null;
 
     // Resolve Status
     let status = statuses.find(s => s.id === reminder.statusId);
     if (!status) {
-        status = reminder.isCompleted ? statuses.find(s => s.id === 'completed') : statuses.find(s => s.id === 'pending');
+        status = reminder.isCompleted
+            ? statuses.find(s => s.value === 'completed' || s.id === 'completed')
+            : statuses.find(s => s.value === 'pending' || s.id === 'pending');
     }
-    if (!status) status = { label_tr: '-', color: theme.palette.grey[400] };
+    if (!status) status = { labelTr: '-', labelEn: '-', color: theme.palette.grey[400] };
 
     const getDisplayName = (item) => {
         if (!item) return '';
-        return i18n.language === 'tr' ? item.label_tr : (item.label_en || item.label_tr);
+        if (i18n.language === 'tr') return item.labelTr || item.label_tr || '';
+        return item.labelEn || item.label_en || item.labelTr || item.label_tr || '';
     };
 
     const handleStatusMenuOpen = (event) => {
@@ -106,10 +108,10 @@ export const ReminderCard = memo(({
                 }}
             >
                 {/* Left Accent Strip - More subtle */}
-                <Box sx={{ 
-                    width: 4, 
-                    bgcolor: isOverdue 
-                        ? theme.palette.error.main 
+                <Box sx={{
+                    width: 4,
+                    bgcolor: isOverdue
+                        ? theme.palette.error.main
                         : alpha(status.color || category.color, 0.6),
                     transition: 'background-color 0.2s'
                 }} />
@@ -130,7 +132,7 @@ export const ReminderCard = memo(({
                                     cursor: onChangeStatus ? 'pointer' : 'default',
                                     transition: 'all 0.2s',
                                     bgcolor: reminder.isCompleted ? status.color : 'transparent',
-                                    '&:hover': { 
+                                    '&:hover': {
                                         bgcolor: onChangeStatus ? alpha(status.color, 0.1) : 'transparent',
                                         borderColor: status.color
                                     }
@@ -160,10 +162,10 @@ export const ReminderCard = memo(({
                                 </Typography>
 
                                 {/* Date & Time - More subtle styling */}
-                                <Box sx={{ 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    gap: compact ? 0.75 : 1.5, 
+                                <Box sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: compact ? 0.75 : 1.5,
                                     color: isOverdue ? 'error.main' : 'text.secondary',
                                     opacity: isOverdue ? 1 : 0.7,
                                     flexShrink: 0
@@ -190,28 +192,28 @@ export const ReminderCard = memo(({
                             {/* Chips Row - Improved styling for better visual harmony */}
                             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 0.5 }}>
                                 {isOverdue && (
-                                    <Chip 
-                                        label={t('common.overdue')} 
-                                        size="small" 
-                                        icon={<AlertCircle size={11} />} 
-                                        sx={{ 
-                                            height: 22, 
-                                            fontWeight: 600, 
+                                    <Chip
+                                        label={t('common.overdue')}
+                                        size="small"
+                                        icon={<AlertCircle size={11} />}
+                                        sx={{
+                                            height: 22,
+                                            fontWeight: 600,
                                             fontSize: '0.7rem',
                                             bgcolor: alpha(theme.palette.error.main, 0.1),
                                             color: theme.palette.error.main,
                                             border: `1px solid ${alpha(theme.palette.error.main, 0.2)}`
-                                        }} 
+                                        }}
                                     />
                                 )}
                                 <Chip
                                     label={getDisplayName(category)}
                                     size="small"
                                     sx={{
-                                        height: 22, 
-                                        fontSize: '0.7rem', 
+                                        height: 22,
+                                        fontSize: '0.7rem',
                                         fontWeight: 600,
-                                        bgcolor: alpha(category.color, 0.1), 
+                                        bgcolor: alpha(category.color, 0.1),
                                         color: category.color,
                                         border: `1px solid ${alpha(category.color, 0.15)}`
                                     }}
@@ -222,8 +224,8 @@ export const ReminderCard = memo(({
                                         label={getDisplayName(subCategory)}
                                         size="small"
                                         sx={{
-                                            height: 22, 
-                                            fontSize: '0.7rem', 
+                                            height: 22,
+                                            fontSize: '0.7rem',
                                             fontWeight: 600,
                                             bgcolor: alpha(subCategory.color || category.color, 0.1),
                                             color: subCategory.color || category.color,
@@ -235,10 +237,10 @@ export const ReminderCard = memo(({
                                     label={getDisplayName(status)}
                                     size="small"
                                     sx={{
-                                        height: 22, 
-                                        fontSize: '0.7rem', 
+                                        height: 22,
+                                        fontSize: '0.7rem',
                                         fontWeight: 600,
-                                        bgcolor: alpha(status.color, 0.1), 
+                                        bgcolor: alpha(status.color, 0.1),
                                         color: status.color,
                                         border: `1px solid ${alpha(status.color, 0.15)}`
                                     }}
@@ -247,16 +249,16 @@ export const ReminderCard = memo(({
 
                             {/* Note / Description */}
                             {reminder.note && (
-                                <Typography 
-                                    variant="body2" 
-                                    sx={{ 
-                                        color: 'text.secondary', 
-                                        lineHeight: 1.6, 
-                                        mb: 0.5, 
-                                        display: '-webkit-box', 
-                                        WebkitLineClamp: compact ? 1 : 2, 
-                                        WebkitBoxOrient: 'vertical', 
-                                        overflow: 'hidden', 
+                                <Typography
+                                    variant="body2"
+                                    sx={{
+                                        color: 'text.secondary',
+                                        lineHeight: 1.6,
+                                        mb: 0.5,
+                                        display: '-webkit-box',
+                                        WebkitLineClamp: compact ? 1 : 2,
+                                        WebkitBoxOrient: 'vertical',
+                                        overflow: 'hidden',
                                         fontSize: '0.8rem',
                                         opacity: 0.8
                                     }}
@@ -269,19 +271,19 @@ export const ReminderCard = memo(({
                     </Box>
 
                     {!compact && (
-                        <Divider 
-                            sx={{ 
+                        <Divider
+                            sx={{
                                 borderStyle: 'dashed',
                                 borderColor: alpha(theme.palette.divider, 0.5),
                                 my: 0.5
-                            }} 
+                            }}
                         />
                     )}
 
                     {/* Footer: Customer Info and Actions */}
-                    <Box sx={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
+                    <Box sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
                         alignItems: 'center',
                         pt: compact ? 0 : 0.5
                     }}>
@@ -291,17 +293,17 @@ export const ReminderCard = memo(({
                             <Box
                                 onClick={() => onShowInfo && onShowInfo(reminder.customer)}
                                 sx={{
-                                    display: 'flex', 
-                                    alignItems: 'center', 
+                                    display: 'flex',
+                                    alignItems: 'center',
                                     gap: 1.25,
                                     cursor: onShowInfo ? 'pointer' : 'default',
-                                    p: 0.75, 
-                                    pr: 1.5, 
+                                    p: 0.75,
+                                    pr: 1.5,
                                     borderRadius: 2,
                                     transition: 'all 0.2s',
                                     bgcolor: alpha(theme.palette.primary.main, 0.04),
                                     border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-                                    '&:hover': { 
+                                    '&:hover': {
                                         bgcolor: onShowInfo ? alpha(theme.palette.primary.main, 0.08) : alpha(theme.palette.primary.main, 0.04),
                                         borderColor: alpha(theme.palette.primary.main, 0.2)
                                     }
@@ -310,10 +312,10 @@ export const ReminderCard = memo(({
                                 <Avatar
                                     src={reminder.customer.avatar}
                                     sx={{
-                                        width: 28, 
+                                        width: 28,
                                         height: 28,
-                                        bgcolor: theme.palette.primary.main, 
-                                        fontSize: '0.8rem', 
+                                        bgcolor: theme.palette.primary.main,
+                                        fontSize: '0.8rem',
                                         fontWeight: 700,
                                         border: `2px solid ${alpha(theme.palette.primary.main, 0.1)}`
                                     }}
@@ -321,11 +323,11 @@ export const ReminderCard = memo(({
                                     {reminder.customer.name?.charAt(0)}
                                 </Avatar>
                                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                                    <Typography 
-                                        variant="caption" 
-                                        sx={{ 
-                                            fontWeight: 700, 
-                                            display: 'block', 
+                                    <Typography
+                                        variant="caption"
+                                        sx={{
+                                            fontWeight: 700,
+                                            display: 'block',
                                             lineHeight: 1.3,
                                             fontSize: '0.8rem',
                                             color: 'text.primary'
@@ -333,11 +335,11 @@ export const ReminderCard = memo(({
                                     >
                                         {reminder.customer.name}
                                     </Typography>
-                                    <Typography 
-                                        variant="caption" 
-                                        sx={{ 
-                                            color: 'text.secondary', 
-                                            fontWeight: 500, 
+                                    <Typography
+                                        variant="caption"
+                                        sx={{
+                                            color: 'text.secondary',
+                                            fontWeight: 500,
                                             fontSize: '0.7rem',
                                             opacity: 0.7
                                         }}
@@ -346,19 +348,19 @@ export const ReminderCard = memo(({
                                     </Typography>
                                 </Box>
                                 {onShowInfo && (
-                                    <Info 
-                                        size={14} 
-                                        color={theme.palette.primary.main} 
-                                        style={{ opacity: 0.5, flexShrink: 0 }} 
+                                    <Info
+                                        size={14}
+                                        color={theme.palette.primary.main}
+                                        style={{ opacity: 0.5, flexShrink: 0 }}
                                     />
                                 )}
                             </Box>
                         ) : (
                             !compact && (
-                                <Typography 
-                                    variant="caption" 
-                                    sx={{ 
-                                        fontStyle: 'italic', 
+                                <Typography
+                                    variant="caption"
+                                    sx={{
+                                        fontStyle: 'italic',
                                         opacity: 0.5,
                                         fontSize: '0.75rem'
                                     }}
@@ -369,26 +371,26 @@ export const ReminderCard = memo(({
                         )}
 
                         {/* Action Buttons - Improved styling */}
-                        <Box 
-                            className="action-buttons" 
-                            sx={{ 
-                                display: 'flex', 
-                                gap: 0.5, 
-                                opacity: compact ? 1 : 0.7, 
+                        <Box
+                            className="action-buttons"
+                            sx={{
+                                display: 'flex',
+                                gap: 0.5,
+                                opacity: compact ? 1 : 0.7,
                                 transition: 'all 0.2s',
                                 ml: 1
                             }}
                         >
                             {onEdit && (
                                 <Tooltip title={t('common.edit')}>
-                                    <IconButton 
-                                        size="small" 
-                                        onClick={() => onEdit(reminder)} 
-                                        sx={{ 
-                                            color: 'primary.main', 
+                                    <IconButton
+                                        size="small"
+                                        onClick={() => onEdit(reminder)}
+                                        sx={{
+                                            color: 'primary.main',
                                             bgcolor: alpha(theme.palette.primary.main, 0.08),
                                             border: `1px solid ${alpha(theme.palette.primary.main, 0.15)}`,
-                                            '&:hover': { 
+                                            '&:hover': {
                                                 bgcolor: alpha(theme.palette.primary.main, 0.15),
                                                 borderColor: alpha(theme.palette.primary.main, 0.3),
                                                 transform: 'scale(1.05)'
@@ -402,14 +404,14 @@ export const ReminderCard = memo(({
                             )}
                             {onDelete && (
                                 <Tooltip title={t('common.delete')}>
-                                    <IconButton 
-                                        size="small" 
-                                        onClick={() => onDelete(reminder)} 
-                                        sx={{ 
-                                            color: 'error.main', 
+                                    <IconButton
+                                        size="small"
+                                        onClick={() => onDelete(reminder)}
+                                        sx={{
+                                            color: 'error.main',
                                             bgcolor: alpha(theme.palette.error.main, 0.08),
                                             border: `1px solid ${alpha(theme.palette.error.main, 0.15)}`,
-                                            '&:hover': { 
+                                            '&:hover': {
                                                 bgcolor: alpha(theme.palette.error.main, 0.15),
                                                 borderColor: alpha(theme.palette.error.main, 0.3),
                                                 transform: 'scale(1.05)'

@@ -5,58 +5,69 @@ import {
 } from '@mui/material';
 import { AlertTriangle, Tag, Activity } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useReminderSettingsStore } from '../hooks/useReminderSettingsStore';
 
-const AddReminderDialog = ({ open, onClose, onAdd, customers = [], categories, subCategories, statuses, editingReminder, customParameterTypes = [] }) => {
+const AddReminderDialog = ({
+    open, onClose, onAdd, customers = [],
+    categories, subCategories, statuses, editingReminder,
+    initialCategoryId, initialCustomerId
+}) => {
     const { t, i18n } = useTranslation();
     const theme = useTheme();
 
-    const defaultStatus = statuses.find(s => s.id === 'pending') || statuses[0];
+    const { getCustomerCategory, getDefaultStatus } = useReminderSettingsStore();
+    const defaultStatus = getDefaultStatus() || statuses[0];
     const hasCustomers = customers && customers.length > 0;
-    
-    // Get customer category from customParameterTypes for subcategories (must be defined first)
-    const customerCategoryType = customParameterTypes?.find(pt => 
-        pt.id === 'static_category_customer' || 
-        (pt.isCategory && (pt.label_tr === 'Müşteri' || pt.label_en === 'Customer'))
-    );
-    
-    // Find customer category - can be 'customer' or 'static_category_customer'
-    // First check in categories, then in customParameterTypes
-    const customerCategory = categories.find(c => 
-        c.id === 'customer' || 
-        c.id === 'static_category_customer' ||
-        (c.label_tr === 'Müşteri' || c.label_en === 'Customer')
-    ) || (customerCategoryType ? {
-        id: customerCategoryType.id,
-        label_tr: customerCategoryType.label_tr,
-        label_en: customerCategoryType.label_en,
-        color: customerCategoryType.color
-    } : null);
-    const canUseCustomerCategory = hasCustomers && (customerCategory || customerCategoryType);
+
+    // Find customer category from backend data
+    const customerCategory = getCustomerCategory();
+    const canUseCustomerCategory = hasCustomers && !!customerCategory;
 
     const [formData, setFormData] = useState({
         title: '',
         date: new Date().toISOString().split('T')[0],
         time: '09:00',
         note: '',
-        categoryId: 'personal',
+        categoryId: '',
         subCategoryId: '',
-        statusId: defaultStatus?.id || '',
+        statusId: '',
         customerId: null,
         customerName: ''
     });
+
+    // Set initial category and status when loaded
+    useEffect(() => {
+        if (open && !editingReminder && categories.length > 0 && !formData.categoryId) {
+            let targetCategoryId;
+
+            if (initialCategoryId) {
+                targetCategoryId = initialCategoryId;
+            } else {
+                const customerCategory = categories.find(c => c.labelEn === 'Customer');
+                targetCategoryId = customerCategory ? customerCategory.id : categories[0].id;
+            }
+
+            setFormData(prev => ({
+                ...prev,
+                categoryId: targetCategoryId,
+                customerId: initialCustomerId || null,
+                statusId: defaultStatus?.id || (statuses.length > 0 ? statuses[0].id : '')
+            }));
+        }
+    }, [open, editingReminder, categories, defaultStatus, statuses, initialCategoryId, initialCustomerId]);
 
     useEffect(() => {
         if (open) {
             if (editingReminder) {
                 setFormData({
-                    title: editingReminder.title || editingReminder.text,
+                    title: editingReminder.title,
                     date: editingReminder.date,
-                    time: editingReminder.time,
+                    time: editingReminder.time || '09:00',
                     note: editingReminder.note,
-                    categoryId: editingReminder.categoryId || 'personal',
-                    subCategoryId: editingReminder.subCategoryId || '',
-                    statusId: editingReminder.statusId || defaultStatus?.id,
-                    customerId: editingReminder.customer?.id || null,
+                    categoryId: editingReminder.categoryId,
+                    subCategoryId: editingReminder.subCategoryId,
+                    statusId: editingReminder.statusId,
+                    customerId: editingReminder.relationId || null,
                     customerName: editingReminder.customer?.name || ''
                 });
             } else {
@@ -65,15 +76,22 @@ const AddReminderDialog = ({ open, onClose, onAdd, customers = [], categories, s
                     date: new Date().toISOString().split('T')[0],
                     time: '09:00',
                     note: '',
-                    categoryId: 'personal',
+                    categoryId: '',
                     subCategoryId: '',
-                    statusId: defaultStatus?.id || '',
+                    statusId: defaultStatus?.id || (statuses.length > 0 ? statuses[0].id : ''),
                     customerId: null,
                     customerName: ''
                 });
             }
         }
-    }, [open, editingReminder, defaultStatus]);
+    }, [open, editingReminder, defaultStatus, statuses]);
+
+    // Locked/Initial Context
+    const lockedCategoryId = initialCategoryId || (editingReminder?.categoryId);
+    const lockedCustomerId = initialCustomerId || (editingReminder?.relationId);
+
+    // Determine if current category is customer category
+    const isCustomerCategory = customerCategory && formData.categoryId === customerCategory.id;
 
     const handleChange = (field, value) => {
         setFormData(prev => ({ ...prev, [field]: value }));
@@ -81,87 +99,37 @@ const AddReminderDialog = ({ open, onClose, onAdd, customers = [], categories, s
 
     const handleSubmit = () => {
         if (!formData.title) return;
-        if (isCustomerCategory && !formData.subCategoryId) {
+
+        const isCustomer = customerCategory && formData.categoryId === customerCategory.id;
+
+        if (isCustomer && !formData.subCategoryId) {
             alert(t('reminders.select_subcategory_error', 'Lütfen bir alt kategori seçiniz'));
             return;
         }
-        if (isCustomerCategory && !formData.customerId && hasCustomers) {
+        if (isCustomer && !formData.customerId && hasCustomers && !lockedCustomerId) {
             alert(t('reminders.select_customer_error', 'Lütfen bir müşteri seçiniz'));
             return;
         }
 
         const selectedStatus = statuses.find(s => s.id === formData.statusId);
 
-        // Determine type: customer category should have type 'customer'
-        const reminderType = editingReminder?.type || (isCustomerCategory ? 'customer' : 'personal');
-
         onAdd({
             ...formData,
             id: editingReminder?.id,
-            type: reminderType,
             isCompleted: selectedStatus ? selectedStatus.isCompleted : false,
-            relationId: formData.customerId || formData.relationId || null,
-            categoryId: formData.categoryId === 'static_category_customer' ? 'customer' : formData.categoryId
+            relationId: formData.customerId,
+            relationType: isCustomer ? 'customer' : null
         });
         onClose();
     };
 
-    const getDisplayName = (item) => i18n.language === 'tr' ? item.label_tr : (item.label_en || item.label_tr);
-    
-    // Determine if current category is customer category
-    const isCustomerCategory = formData.categoryId === 'customer' || formData.categoryId === 'static_category_customer';
-    
-    // Get subcategories: for customer category, use customParameterTypes.data; for others, use legacy subCategories
-    const availableSubCategories = isCustomerCategory && customerCategoryType
-        ? (customerCategoryType.data || []).map(item => ({
-            id: item.id,
-            label_tr: item.label_tr,
-            label_en: item.label_en,
-            categoryId: formData.categoryId,
-            color: item.color || customerCategoryType.color
-        }))
-        : subCategories.filter(s => s.categoryId === formData.categoryId);
-    
-    const selectedCategory = categories.find(c => 
-        c.id === formData.categoryId || 
-        (formData.categoryId === 'customer' && c.id === 'static_category_customer')
-    );
+    const getDisplayName = (item) => item ? (i18n.language === 'tr' ? item.labelTr || item.label_tr : (item.labelEn || item.label_en || item.labelTr || item.label_tr)) : '';
 
-    // Build available categories from both legacy categories and customParameterTypes
-    // This ensures all categories are available, including customer category
-    let availableCategories = [...categories];
-    
-    // Add categories from customParameterTypes that might not be in legacy categories
-    if (customParameterTypes && customParameterTypes.length > 0) {
-        customParameterTypes
-            .filter(pt => pt.isCategory === true)
-            .forEach(pt => {
-                // Check if this category already exists in availableCategories
-                const exists = availableCategories.find(c => 
-                    c.id === pt.id || 
-                    (c.label_tr === pt.label_tr && c.label_en === pt.label_en)
-                );
-                if (!exists) {
-                    availableCategories.push({
-                        id: pt.id,
-                        label_tr: pt.label_tr,
-                        label_en: pt.label_en,
-                        color: pt.color || '#6366f1',
-                        type: pt.type || 'custom',
-                        isDefault: pt.isDefault || false
-                    });
-                }
-            });
-    }
-    
-    // Filter: if no customers AND no customer category type, hide customer category
-    // But if customerCategoryType exists in customParameterTypes, show it even without customers
-    // (user can still see the category, but won't be able to select a customer)
-    if (!canUseCustomerCategory && !customerCategoryType) {
-        availableCategories = availableCategories.filter(c => 
-            c.id !== 'customer' && c.id !== 'static_category_customer'
-        );
-    }
+    // Get subcategories for currently selected category
+    const availableSubCategories = subCategories.filter(s => s.categoryId === formData.categoryId);
+
+    const selectedCategory = categories.find(c => c.id === formData.categoryId);
+    const availableCategories = categories;
 
     return (
         <Dialog
@@ -173,42 +141,34 @@ const AddReminderDialog = ({ open, onClose, onAdd, customers = [], categories, s
             </DialogTitle>
             <DialogContent>
                 <Stack spacing={3} sx={{ mt: 1 }}>
-                    {editingReminder && editingReminder.type === 'customer' && (
+                    {editingReminder && editingReminder.customer && (
                         <Alert severity="info" icon={<AlertTriangle size={20} />} sx={{ borderRadius: 2 }}>
-                            {t('reminders.editing_customer_record')}
+                            {t('reminders.editing_customer_record', 'Bu müşteri ile ilişkili bir kayıttır')}
                         </Alert>
                     )}
 
                     <TextField
                         select fullWidth label={t('common.category')}
-                        value={formData.categoryId === 'static_category_customer' ? 'customer' : formData.categoryId}
-                        onChange={(e) => { 
-                            const selectedId = e.target.value;
-                            // Map 'customer' selection to 'customer' ID (for consistency)
-                            // If category has 'static_category_customer' ID, map it to 'customer'
-                            const mappedId = (selectedId === 'customer' || selectedId === 'static_category_customer')
-                                ? 'customer'
-                                : selectedId;
-                            handleChange('categoryId', mappedId);
+                        value={formData.categoryId}
+                        onChange={(e) => {
+                            handleChange('categoryId', e.target.value);
                             handleChange('subCategoryId', '');
-                            handleChange('customerId', null);
-                            handleChange('customerName', '');
+                            if (!lockedCustomerId) {
+                                handleChange('customerId', null);
+                                handleChange('customerName', '');
+                            }
                         }}
                         variant="outlined"
-                        disabled={!!editingReminder && editingReminder.type === 'customer'}
+                        disabled={!!lockedCategoryId || !!(editingReminder && editingReminder.relationId)}
                     >
-                        {availableCategories.map((cat) => {
-                            // Map static_category_customer to 'customer' for display and value
-                            const displayValue = cat.id === 'static_category_customer' ? 'customer' : cat.id;
-                            return (
-                                <MenuItem key={cat.id} value={displayValue}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: cat.color }} />
-                                        {getDisplayName(cat)}
-                                    </Box>
-                                </MenuItem>
-                            );
-                        })}
+                        {availableCategories.map((cat) => (
+                            <MenuItem key={cat.id} value={cat.id}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: cat.color }} />
+                                    {getDisplayName(cat)}
+                                </Box>
+                            </MenuItem>
+                        ))}
                     </TextField>
 
                     {availableSubCategories.length > 0 && (
@@ -256,11 +216,11 @@ const AddReminderDialog = ({ open, onClose, onAdd, customers = [], categories, s
                                 handleChange('customerId', newValue ? newValue.id : null);
                                 handleChange('customerName', newValue ? newValue.name : '');
                                 if (newValue && !editingReminder) {
-                                    handleChange('title', `${t('reminders.meeting_with')}: ${newValue.name}`);
+                                    handleChange('title', `${t('reminders.meeting_with', 'Görüşme')}: ${newValue.name}`);
                                 }
                             }}
                             renderInput={(params) => <TextField {...params} label={t('customers.customer')} variant="outlined" placeholder={t('common.search')} />}
-                            disabled={!!(editingReminder && editingReminder.type === 'customer')}
+                            disabled={!!(editingReminder && editingReminder.relationId)}
                         />
                     )}
 
@@ -271,7 +231,7 @@ const AddReminderDialog = ({ open, onClose, onAdd, customers = [], categories, s
                     />
 
                     <TextField
-                        fullWidth multiline rows={3} label={t('common.note')}
+                        fullWidth multiline rows={3} label={t('common.note', 'Not')}
                         value={formData.note} onChange={(e) => handleChange('note', e.target.value)}
                         variant="outlined" InputLabelProps={{ shrink: true }}
                     />

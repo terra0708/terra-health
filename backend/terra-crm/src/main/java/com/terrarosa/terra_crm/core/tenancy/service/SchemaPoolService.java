@@ -41,6 +41,7 @@ public class SchemaPoolService {
     private final JdbcTemplate jdbcTemplate;
     private final TenantService tenantService; // For reusing createTenantSchema and runTenantMigrations
     private final com.terrarosa.terra_crm.modules.health.service.CustomerParametersService customerParametersService;
+    private final com.terrarosa.terra_crm.modules.health.service.ReminderSettingsService reminderSettingsService;
 
     @Value("${schema-pool.min-ready-count:3}")
     private int minReadyCount;
@@ -112,6 +113,7 @@ public class SchemaPoolService {
             TenantContext.setCurrentTenant(null, schemaName);
             try {
                 customerParametersService.ensureSystemDefaults();
+                reminderSettingsService.ensureSystemDefaults();
             } finally {
                 TenantContext.clear();
             }

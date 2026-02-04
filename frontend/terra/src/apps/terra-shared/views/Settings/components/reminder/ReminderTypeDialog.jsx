@@ -40,7 +40,7 @@ export const ReminderTypeDialog = ({
             disableAutoFocus={false}
         >
             <DialogTitle sx={{ fontWeight: 900, px: 4, pt: 4, pb: 1 }}>
-                {selectedParamType 
+                {selectedParamType
                     ? t('settings.edit_reminder_type', 'Hatırlatıcı Türü Düzenle')
                     : t('settings.add_reminder_type', 'Yeni Hatırlatıcı Türü Ekle')
                 }
@@ -50,8 +50,8 @@ export const ReminderTypeDialog = ({
                     <TextField
                         fullWidth
                         label={t('settings.category_name', 'Kategori Adı') + ' (TR)'}
-                        value={newParamType.label_tr}
-                        onChange={(e) => setNewParamType({ ...newParamType, label_tr: e.target.value })}
+                        value={newParamType.labelTr || ''}
+                        onChange={(e) => setNewParamType({ ...newParamType, labelTr: e.target.value })}
                         InputProps={{
                             startAdornment: <Languages size={18} style={{ marginRight: 12, opacity: 0.5 }} />,
                             sx: { borderRadius: '16px', fontWeight: 700 }
@@ -60,8 +60,8 @@ export const ReminderTypeDialog = ({
                     <TextField
                         fullWidth
                         label={t('settings.category_name', 'Kategori Adı') + ' (EN)'}
-                        value={newParamType.label_en}
-                        onChange={(e) => setNewParamType({ ...newParamType, label_en: e.target.value })}
+                        value={newParamType.labelEn || ''}
+                        onChange={(e) => setNewParamType({ ...newParamType, labelEn: e.target.value })}
                         InputProps={{
                             startAdornment: <Languages size={18} style={{ marginRight: 12, opacity: 0.5 }} />,
                             sx: { borderRadius: '16px', fontWeight: 700 }
@@ -72,12 +72,12 @@ export const ReminderTypeDialog = ({
                         <Typography variant="body2" sx={{ fontWeight: 700, mb: 1.5, color: 'text.secondary' }}>
                             {t('common.icon', 'İkon')}
                         </Typography>
-                        <Box sx={{ 
-                            display: 'grid', 
-                            gridTemplateColumns: { 
-                                xs: 'repeat(5, 1fr)', 
-                                sm: 'repeat(6, 1fr)', 
-                                md: 'repeat(6, 1fr)' 
+                        <Box sx={{
+                            display: 'grid',
+                            gridTemplateColumns: {
+                                xs: 'repeat(5, 1fr)',
+                                sm: 'repeat(6, 1fr)',
+                                md: 'repeat(6, 1fr)'
                             },
                             gap: 0.75,
                             p: 1.5,
@@ -114,8 +114,8 @@ export const ReminderTypeDialog = ({
                                             }
                                         }}
                                     >
-                                        <IconComponent 
-                                            size={20} 
+                                        <IconComponent
+                                            size={20}
                                             color={isSelected ? theme.palette.primary.main : theme.palette.text.secondary}
                                         />
                                     </Box>
@@ -142,7 +142,7 @@ export const ReminderTypeDialog = ({
                     fullWidth
                     onClick={onSave}
                     variant="contained"
-                    disabled={!newParamType.label_tr}
+                    disabled={!newParamType.labelTr}
                     sx={{
                         borderRadius: '14px',
                         py: 1.5,
