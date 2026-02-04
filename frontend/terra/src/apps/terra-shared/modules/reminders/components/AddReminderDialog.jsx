@@ -190,6 +190,33 @@ const AddReminderDialog = ({
                         </TextField>
                     )}
 
+                    {/* Show customer list only if customer category is selected AND subcategory is selected */}
+                    {isCustomerCategory && formData.subCategoryId && (
+                        <Autocomplete
+                            options={customers}
+                            getOptionLabel={(option) => option.name}
+                            value={customers.find(c => c.id === formData.customerId) || null}
+                            onChange={(event, newValue) => {
+                                handleChange('customerId', newValue ? newValue.id : null);
+                                handleChange('customerName', newValue ? newValue.name : '');
+                                if (newValue && !editingReminder) {
+                                    handleChange('title', `${t('reminders.meeting_with', 'Görüşme')}: ${newValue.name}`);
+                                }
+                            }}
+                            renderInput={(params) => (
+                                <TextField
+                                    {...params}
+                                    label={t('customers.customer')}
+                                    variant="outlined"
+                                    placeholder={t('common.search')}
+                                    error={isCustomerCategory && !formData.customerId && !lockedCustomerId}
+                                />
+                            )}
+                            disabled={!!(editingReminder && editingReminder.relationId)}
+                            noOptionsText={t('common.no_data', 'Veri bulunamadı')}
+                        />
+                    )}
+
                     <TextField
                         select fullWidth label={t('common.status')}
                         value={formData.statusId}
@@ -205,24 +232,6 @@ const AddReminderDialog = ({
                             </MenuItem>
                         ))}
                     </TextField>
-
-                    {/* Show customer list only if customer category is selected AND subcategory is selected */}
-                    {isCustomerCategory && formData.subCategoryId && hasCustomers && (
-                        <Autocomplete
-                            options={customers}
-                            getOptionLabel={(option) => option.name}
-                            value={customers.find(c => c.id === formData.customerId) || null}
-                            onChange={(event, newValue) => {
-                                handleChange('customerId', newValue ? newValue.id : null);
-                                handleChange('customerName', newValue ? newValue.name : '');
-                                if (newValue && !editingReminder) {
-                                    handleChange('title', `${t('reminders.meeting_with', 'Görüşme')}: ${newValue.name}`);
-                                }
-                            }}
-                            renderInput={(params) => <TextField {...params} label={t('customers.customer')} variant="outlined" placeholder={t('common.search')} />}
-                            disabled={!!(editingReminder && editingReminder.relationId)}
-                        />
-                    )}
 
                     <TextField
                         fullWidth label={t('common.title')}
