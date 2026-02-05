@@ -91,7 +91,13 @@ export const useReminderSettingsStore = create((set, get) => ({
 
     // Helper to get Customer Category
     getCustomerCategory: () => {
-        return get().categories.find(c => c.labelEn === 'Customer');
+        return get().categories.find(c =>
+            c.id === 'customer' ||
+            c.id === 'static_category_customer' ||
+            c.labelEn === 'Customer' ||
+            c.labelEn === 'Customers' ||
+            c.labelTr?.toLowerCase() === 'müşteri'
+        );
     },
 
     // Helper to get Status Category (which is used for subcategories in some views)

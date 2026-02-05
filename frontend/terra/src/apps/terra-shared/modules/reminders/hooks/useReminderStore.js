@@ -64,6 +64,45 @@ export const useReminderStore = create((set, get) => ({
         return updated;
     },
 
+    deleteRemindersByRelation: async (relationId) => {
+        const toDelete = get().reminders.filter(r => r.relationId === relationId);
+        for (const r of toDelete) {
+            await reminderAPI.deleteReminder(r.id);
+        }
+        set(state => ({
+            reminders: state.reminders.filter(r => r.relationId !== relationId)
+        }));
+    },
+
+    syncCustomerReminders: async (customerId, reminders) => {
+        if (!customerId) return;
+
+        const currentReminders = get().reminders.filter(r => r.relationId === customerId);
+        const newReminders = reminders || [];
+
+        // 1. Identify Deletions: In current but NOT in new (by ID)
+        const toDelete = currentReminders.filter(c => !newReminders.find(n => n.id === c.id));
+        for (const r of toDelete) {
+            await reminderAPI.deleteReminder(r.id);
+        }
+
+        // 2. Identify Updates: In both (preserve ID)
+        const toUpdate = newReminders.filter(n => n.id && !String(n.id).startsWith('temp-') && currentReminders.find(c => c.id === n.id));
+        for (const r of toUpdate) {
+            await reminderAPI.updateReminder(r.id, r);
+        }
+
+        // 3. Identify Additions: In new but NOT in current (or has temp ID)
+        const toAdd = newReminders.filter(n => !n.id || String(n.id).startsWith('temp-') || !currentReminders.find(c => c.id === n.id));
+        for (const r of toAdd) {
+            const { id, ...data } = r; // Exclude temp ID
+            await reminderAPI.createReminder({ ...data, relationId: customerId, relationType: 'customer' });
+        }
+
+        // 4. Refresh local state
+        await get().fetchRemindersByCustomer(customerId);
+    },
+
     // Utility getters (synchronous from current state)
     getRemindersByRelation: (relationId) => {
         return get().reminders.filter(r => r.relationId === relationId);

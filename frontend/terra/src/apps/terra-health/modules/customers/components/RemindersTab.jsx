@@ -70,15 +70,16 @@ export const RemindersTab = ({ control, t, i18n, customerId, customerName }) => 
         }
     };
 
-    const handleToggleComplete = (reminder) => {
+    const handleChangeStatus = (reminder, newStatusId) => {
         const currentReminders = notesField.value || [];
+        const newStatus = statuses.find(s => s.id === newStatusId);
         const updated = currentReminders.map(r => {
             if (r.id === reminder.id) {
-                // Toggle Logic: Find 'Completed' status or just toggle boolean?
-                // Ideally, flip to 'Completed' status or back. 
-                // For simplicity here, we toggle isCompleted boolean. 
-                // A better approach would be to find the "Completed" status ID from settings.
-                return { ...r, isCompleted: !r.isCompleted };
+                return {
+                    ...r,
+                    statusId: newStatusId,
+                    isCompleted: newStatus ? newStatus.isCompleted : !!(newStatus && newStatus.value === 'completed')
+                };
             }
             return r;
         });
@@ -125,10 +126,12 @@ export const RemindersTab = ({ control, t, i18n, customerId, customerName }) => 
                             reminder={reminder}
                             onEdit={() => openEditDialog(reminder)}
                             onDelete={() => handleDelete(reminder)}
-                            onToggleComplete={() => handleToggleComplete(reminder)}
+                            onChangeStatus={(r, statusId) => handleChangeStatus(r, statusId)}
                             t={t} i18n={i18n}
                             categories={categories}
+                            subCategories={subCategories}
                             statuses={statuses}
+                            compact
                         />
                     ))
                 ) : (

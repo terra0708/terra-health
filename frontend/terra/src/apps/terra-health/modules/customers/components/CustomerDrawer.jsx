@@ -26,7 +26,7 @@ export const CustomerDrawer = ({ open, onClose, customer, client, t: tProp }) =>
     const activeCustomer = customer || client;
     const settings = useCustomerSettingsStore();
     const { addClient, updateClient } = useClientStore();
-    const { addReminder, deleteRemindersByRelation } = useReminderStore();
+    const { syncCustomerReminders } = useReminderStore();
     const [tabValue, setTabValue] = React.useState(0);
     const [snackbar, setSnackbar] = React.useState({ open: false, message: '', severity: 'success' });
 
@@ -49,14 +49,23 @@ export const CustomerDrawer = ({ open, onClose, customer, client, t: tProp }) =>
     });
 
     useEffect(() => {
-        if (open) {
+        const initForm = async () => {
+            if (!open) return;
+
             if (activeCustomer) {
-                // Fetch reminders from central store for this customer
-                const centralReminders = useReminderStore.getState().reminders
-                    .filter(r =>
-                        r.relationId === activeCustomer.id &&
-                        (r.categoryId === 'customer' || r.categoryId === 'static_category_customer' || r.type === 'customer')
+                // Fetch fresh reminders from backend to ensure synchronization
+                let centralReminders = [];
+                try {
+                    centralReminders = await useReminderStore.getState().fetchRemindersByCustomer(activeCustomer.id);
+                    // Filter reminders belonging to this customer
+                    centralReminders = centralReminders.filter(r =>
+                        r.relationType === 'customer' || r.relationId === activeCustomer.id
                     );
+                } catch (err) {
+                    console.error("Failed to sync reminders for drawer:", err);
+                    // Fallback to what's already in state
+                    centralReminders = useReminderStore.getState().reminders.filter(r => r.relationId === activeCustomer.id);
+                }
 
                 reset({
                     ...activeCustomer,
@@ -86,7 +95,9 @@ export const CustomerDrawer = ({ open, onClose, customer, client, t: tProp }) =>
                 });
             }
             setTabValue(0);
-        }
+        };
+
+        initForm();
     }, [activeCustomer, open, reset, settings]);
 
     const onInvalid = (formErrors) => {
@@ -149,11 +160,8 @@ export const CustomerDrawer = ({ open, onClose, customer, client, t: tProp }) =>
             const clientId = activeCustomer.id;
 
             updateClient(clientId, payload).then(() => {
-                // Sync Reminders
-                deleteRemindersByRelation(clientId);
-                reminderNotes.forEach(rn => {
-                    addReminder({ ...rn, relationId: clientId, categoryId: 'customer' });
-                });
+                // Sync Reminders (Intelligent sync instead of wipe-recreate)
+                syncCustomerReminders(clientId, reminderNotes);
                 setSnackbar({ open: true, message: t('common.success_update', 'Güncellendi'), severity: 'success' });
                 onClose();
             }).catch(err => {
@@ -165,10 +173,8 @@ export const CustomerDrawer = ({ open, onClose, customer, client, t: tProp }) =>
             addClient(payload).then((newCustomer) => {
                 const newId = newCustomer?.id;
 
-                // Add reminders
-                reminderNotes.forEach(rn => {
-                    addReminder({ ...rn, relationId: newId, categoryId: 'customer' });
-                });
+                // Add reminders (Sync also works for new customers)
+                syncCustomerReminders(newId, reminderNotes);
 
                 useNotificationStore.getState().addNotification({
                     title: t('notifications.new_leads'),

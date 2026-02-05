@@ -36,7 +36,7 @@ export const CustomerDetailsDialog = ({ open, onClose, customer, client, t: tPro
         // Check both relationId and categoryId to ensure we catch all customer-related reminders
         return reminders.filter(r =>
             r.relationId === customerData.id &&
-            (r.categoryId === 'customer' || r.categoryId === 'static_category_customer' || r.type === 'customer')
+            (r.relationType === 'customer' || r.relationId === customerData.id)
         );
     }, [reminders, customerData?.id]);
 
@@ -49,6 +49,14 @@ export const CustomerDetailsDialog = ({ open, onClose, customer, client, t: tPro
     useEffect(() => {
         setPage(0);
     }, [activeTab, open]);
+
+    // Fetch fresh reminders and settings when customer changes or dialog opens
+    useEffect(() => {
+        if (open && customerData?.id) {
+            useReminderStore.getState().fetchRemindersByCustomer(customerData.id);
+            useReminderSettingsStore.getState().fetchSettings();
+        }
+    }, [open, customerData?.id]);
 
     if (!customerData) return null;
 
