@@ -70,8 +70,8 @@ const ReminderSettingsPage = () => {
 
         // 1. Each Category becomes a "Parameter Type" with its subcategories as "data"
         categories.forEach(cat => {
-            // Only include 'Customer' category, hide 'Personal' and raw 'Status'
-            if (cat.labelEn === 'Customer') {
+            // Include all categories except the internal 'Status' category which is handled separately
+            if (cat.labelEn !== 'Status') {
                 types.push({
                     ...cat,
                     id: cat.id,

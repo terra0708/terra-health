@@ -23,26 +23,26 @@ const mapToBackend = (r) => {
 
 export const reminderAPI = {
     getAllReminders: () =>
-        apiClient.get(BASE_URL).then(res => (res.data.data || []).map(mapToFrontend)),
+        apiClient.get(BASE_URL).then(res => (res || []).map(mapToFrontend)),
 
     getReminderById: (id) =>
-        apiClient.get(`${BASE_URL}/${id}`).then(res => mapToFrontend(res.data.data)),
+        apiClient.get(`${BASE_URL}/${id}`).then(res => mapToFrontend(res)),
 
     getRemindersByCustomerId: (customerId) =>
-        apiClient.get(`${BASE_URL}/customer/${customerId}`).then(res => (res.data.data || []).map(mapToFrontend)),
+        apiClient.get(`${BASE_URL}/customer/${customerId}`).then(res => (res || []).map(mapToFrontend)),
 
     getRemindersByDateRange: (startDate, endDate) =>
-        apiClient.get(`${BASE_URL}/date-range`, { params: { startDate, endDate } }).then(res => (res.data.data || []).map(mapToFrontend)),
+        apiClient.get(`${BASE_URL}/date-range`, { params: { startDate, endDate } }).then(res => (res || []).map(mapToFrontend)),
 
     createReminder: (data) =>
-        apiClient.post(BASE_URL, mapToBackend(data)).then(res => mapToFrontend(res.data.data)),
+        apiClient.post(BASE_URL, mapToBackend(data)).then(res => mapToFrontend(res)),
 
     updateReminder: (id, data) =>
-        apiClient.put(`${BASE_URL}/${id}`, mapToBackend(data)).then(res => mapToFrontend(res.data.data)),
+        apiClient.put(`${BASE_URL}/${id}`, mapToBackend(data)).then(res => mapToFrontend(res)),
 
     deleteReminder: (id) =>
-        apiClient.delete(`${BASE_URL}/${id}`).then(res => res.data.data),
+        apiClient.delete(`${BASE_URL}/${id}`),
 
     toggleComplete: (id) =>
-        apiClient.patch(`${BASE_URL}/${id}/toggle-complete`).then(res => mapToFrontend(res.data.data)),
+        apiClient.patch(`${BASE_URL}/${id}/toggle-complete`).then(res => mapToFrontend(res)),
 };

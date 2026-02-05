@@ -106,7 +106,9 @@ const ReminderFilters = ({
                                         </Box>
                                     )}
                                 >
-                                    {categories.map(c => <MenuItem key={c.id} value={c.id}>{getDisplayName(c)}</MenuItem>)}
+                                    {categories.filter(c => c.labelEn !== 'Status').map(c => (
+                                        <MenuItem key={c.id} value={c.id}>{getDisplayName(c)}</MenuItem>
+                                    ))}
                                 </Select>
                             </FormControl>
                         </Grid>

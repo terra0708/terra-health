@@ -129,7 +129,7 @@ const AddReminderDialog = ({
     const availableSubCategories = subCategories.filter(s => s.categoryId === formData.categoryId);
 
     const selectedCategory = categories.find(c => c.id === formData.categoryId);
-    const availableCategories = categories;
+    const availableCategories = categories.filter(c => c.labelEn !== 'Status');
 
     return (
         <Dialog
