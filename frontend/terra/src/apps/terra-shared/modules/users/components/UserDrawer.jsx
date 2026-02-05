@@ -32,9 +32,13 @@ import { fieldStyles, menuItemStyles } from '../styles';
 import apiClient from '../../../core/api';
 import { useTranslation } from 'react-i18next';
 import { usePermissionStore } from '../../permissions/hooks/usePermissionStore';
+import useAuthStore from '@shared/store/authStore';
 
 export const UserDrawer = ({ open, onClose, onSave, user, t }) => {
     const theme = useTheme();
+    const currentUser = useAuthStore(state => state.user);
+    const tenantDomain = currentUser?.email?.split('@')[1] || 'terra.com.tr';
+
     const { i18n } = useTranslation();
     const lang = i18n.language;
     const isDark = theme.palette.mode === 'dark';
@@ -44,7 +48,7 @@ export const UserDrawer = ({ open, onClose, onSave, user, t }) => {
         name: '',
         surname: '',
         personal_email: '',
-        corporate_email: '',
+        terra_id: '',
         phone: '',
         tc_no: '',
         birth_date: '',
@@ -76,11 +80,15 @@ export const UserDrawer = ({ open, onClose, onSave, user, t }) => {
         if (lastUserId === currentId) return;
 
         if (user) {
+            // Split corporate email to get ID
+            const emailParts = (user.corporate_email || user.email || '').split('@');
+            const terra_id = emailParts[0] || '';
+
             setFormData({
                 name: user.firstName || '',
                 surname: user.lastName || '',
                 personal_email: user.personal_email || '',
-                corporate_email: user.corporate_email || user.email || '',
+                terra_id: terra_id,
                 phone: user.phone || '',
                 tc_no: user.tc_no || '',
                 birth_date: user.birth_date || '',
@@ -94,7 +102,7 @@ export const UserDrawer = ({ open, onClose, onSave, user, t }) => {
                 name: '',
                 surname: '',
                 personal_email: '',
-                corporate_email: '',
+                terra_id: '',
                 phone: '',
                 tc_no: '',
                 birth_date: '',
@@ -132,6 +140,12 @@ export const UserDrawer = ({ open, onClose, onSave, user, t }) => {
 
     const handleChange = (e) => {
         const { name, value } = e.target;
+        if (name === 'terra_id') {
+            // Only allow lowercase English letters and numbers, strip everything else
+            const sanitizedValue = value.toLowerCase().replace(/[^a-z0-9.]/g, '');
+            setFormData(prev => ({ ...prev, [name]: sanitizedValue }));
+            return;
+        }
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
@@ -147,10 +161,13 @@ export const UserDrawer = ({ open, onClose, onSave, user, t }) => {
     const handleSave = () => {
         if (!onSave) return;
 
+        // Reconstruct corporate email
+        const corporate_email = formData.terra_id ? `${formData.terra_id}@${tenantDomain}` : '';
+
         const authPayload = {
             firstName: formData.name,
             lastName: formData.surname,
-            email: formData.corporate_email,
+            email: corporate_email,
             bundleId: formData.bundleId || null,
         };
 
@@ -204,7 +221,19 @@ export const UserDrawer = ({ open, onClose, onSave, user, t }) => {
                             <TextField fullWidth label={t('common.surname')} name="surname" value={formData.surname} onChange={handleChange} sx={fieldStyles} InputProps={{ startAdornment: <InputAdornment position="start"><UsersIcon size={18} /></InputAdornment> }} />
                         </Grid>
                         <Grid item xs={12} sm={6}>
-                            <TextField fullWidth label={t('common.corporate_email')} name="corporate_email" value={formData.corporate_email} onChange={handleChange} sx={fieldStyles} InputProps={{ startAdornment: <InputAdornment position="start"><Mail size={18} /></InputAdornment> }} />
+                            <TextField
+                                fullWidth
+                                label="TERRA ID"
+                                name="terra_id"
+                                value={formData.terra_id}
+                                onChange={handleChange}
+                                sx={fieldStyles}
+                                helperText={formData.terra_id ? `${formData.terra_id}@${tenantDomain}` : ''}
+                                InputProps={{
+                                    startAdornment: <InputAdornment position="start"><Mail size={18} /></InputAdornment>,
+                                    endAdornment: <InputAdornment position="end"><Typography variant="caption" sx={{ fontWeight: 700, color: 'text.disabled' }}>@{tenantDomain}</Typography></InputAdornment>
+                                }}
+                            />
                         </Grid>
                         <Grid item xs={12} sm={6}>
                             <TextField fullWidth label={t('common.personal_email')} name="personal_email" value={formData.personal_email} onChange={handleChange} sx={fieldStyles} InputProps={{ startAdornment: <InputAdornment position="start"><Mail size={18} /></InputAdornment> }} />

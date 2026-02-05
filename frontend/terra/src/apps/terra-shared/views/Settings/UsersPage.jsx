@@ -104,29 +104,17 @@ const UsersPage = () => {
 
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
+    const isProtectedUser = (user) => {
+        if (!user) return false;
+        return user.roles?.some(role => role === 'ROLE_ADMIN' || role === 'ROLE_SUPER_ADMIN');
+    };
+
     const handleSaveUser = async (payload) => {
         try {
             if (editUser) {
+                // The store.updateUser now accepts the full payload (auth + profile)
                 await store.updateUser(editUser.id, payload);
-                const profilePayload = payload.profile || {};
-                try {
-                    await apiClient.put(
-                        `/v1/tenant-admin/users/${editUser.id}/profile`,
-                        {
-                            tcNo: profilePayload.tcNo ?? null,
-                            birthDate: profilePayload.birthDate || null,
-                            address: profilePayload.address ?? null,
-                            emergencyPerson: profilePayload.emergencyPerson ?? null,
-                            emergencyPhone: profilePayload.emergencyPhone ?? null,
-                            phoneNumber: profilePayload.phoneNumber ?? null,
-                            personalEmail: profilePayload.personalEmail ?? null,
-                        }
-                    );
-                } catch (error) {
-                    console.error('Failed to save user profile:', error);
-                }
             } else {
-                // 1) Create user with profile in one shot
                 // The store.addUser now accepts the full payload (auth + profile)
                 await store.addUser(payload);
             }
@@ -135,7 +123,8 @@ const UsersPage = () => {
             setSnackbar({ open: true, message: t('common.success_save'), severity: 'success' });
         } catch (error) {
             console.error('Failed to save user:', error);
-            setSnackbar({ open: true, message: t('common.error_save') || 'Kayıt başarısız', severity: 'error' });
+            const errorMessage = error.message || t('common.error_save') || 'Kayıt başarısız';
+            setSnackbar({ open: true, message: errorMessage, severity: 'error' });
         }
     };
 
@@ -252,8 +241,8 @@ const UsersPage = () => {
                                     user={user}
                                     t={t}
                                     theme={theme}
-                                    onEdit={(u) => handleOpenDrawer(u)}
-                                    onAssignBundles={(u) => handleOpenBundleDrawer(u)}
+                                    onEdit={isProtectedUser(user) ? null : (u) => handleOpenDrawer(u)}
+                                    onAssignBundles={isProtectedUser(user) ? null : (u) => handleOpenBundleDrawer(u)}
                                     getRoleChip={getRoleChip}
                                 />
                             ))}
@@ -329,19 +318,23 @@ const UsersPage = () => {
                                                                 <Info size={18} />
                                                             </IconButton>
                                                         </Tooltip>
-                                                        <Tooltip title={t('users.assign_bundles') || 'Assign Bundles'}>
-                                                            <IconButton onClick={() => handleOpenBundleDrawer(user)} size="small" sx={{ color: 'secondary.main', bgcolor: alpha(theme.palette.secondary.main, 0.04), borderRadius: '12px', width: 38, height: 38 }}>
-                                                                <Shield size={18} />
-                                                            </IconButton>
-                                                        </Tooltip>
-                                                        <Tooltip title={t('common.edit')}>
-                                                            <IconButton onClick={(e) => { handleOpenDrawer(user); e.currentTarget.blur(); }} size="small" sx={{ color: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.04), borderRadius: '12px', width: 38, height: 38 }}>
-                                                                <Edit3 size={18} />
-                                                            </IconButton>
-                                                        </Tooltip>
-                                                        <IconButton onClick={() => handleOpenTermination(user)} size="small" sx={{ color: 'error.main', bgcolor: alpha(theme.palette.error.main, 0.04), borderRadius: '12px', width: 38, height: 38 }}>
-                                                            <Trash2 size={18} />
-                                                        </IconButton>
+                                                        {!isProtectedUser(user) && (
+                                                            <>
+                                                                <Tooltip title={t('users.assign_bundles') || 'Assign Bundles'}>
+                                                                    <IconButton onClick={() => handleOpenBundleDrawer(user)} size="small" sx={{ color: 'secondary.main', bgcolor: alpha(theme.palette.secondary.main, 0.04), borderRadius: '12px', width: 38, height: 38 }}>
+                                                                        <Shield size={18} />
+                                                                    </IconButton>
+                                                                </Tooltip>
+                                                                <Tooltip title={t('common.edit')}>
+                                                                    <IconButton onClick={(e) => { handleOpenDrawer(user); e.currentTarget.blur(); }} size="small" sx={{ color: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.04), borderRadius: '12px', width: 38, height: 38 }}>
+                                                                        <Edit3 size={18} />
+                                                                    </IconButton>
+                                                                </Tooltip>
+                                                                <IconButton onClick={() => handleOpenTermination(user)} size="small" sx={{ color: 'error.main', bgcolor: alpha(theme.palette.error.main, 0.04), borderRadius: '12px', width: 38, height: 38 }}>
+                                                                    <Trash2 size={18} />
+                                                                </IconButton>
+                                                            </>
+                                                        )}
                                                     </Box>
                                                 </TableCell>
                                             </TableRow>

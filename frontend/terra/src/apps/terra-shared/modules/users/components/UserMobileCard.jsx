@@ -4,7 +4,7 @@ import { Phone, Calendar, Edit3, Trash2, Shield } from 'lucide-react';
 
 export const UserMobileCard = ({ user, t, theme, onEdit, onAssignBundles, getRoleChip }) => {
     const isDark = theme.palette.mode === 'dark';
-    
+
     if (!user) return null;
 
     const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
@@ -53,15 +53,17 @@ export const UserMobileCard = ({ user, t, theme, onEdit, onAssignBundles, getRol
                         {t('users.assign_bundles') || 'Assign Bundles'}
                     </Button>
                 )}
-                <Button
-                    fullWidth
-                    variant="outlined"
-                    startIcon={<Edit3 size={16} />}
-                    onClick={() => onEdit(user)}
-                    sx={{ borderRadius: '12px', fontWeight: 700, textTransform: 'none', fontSize: '0.875rem' }}
-                >
-                    {t('common.edit')}
-                </Button>
+                {onEdit && (
+                    <Button
+                        fullWidth
+                        variant="outlined"
+                        startIcon={<Edit3 size={16} />}
+                        onClick={() => onEdit(user)}
+                        sx={{ borderRadius: '12px', fontWeight: 700, textTransform: 'none', fontSize: '0.875rem' }}
+                    >
+                        {t('common.edit')}
+                    </Button>
+                )}
             </Box>
         </Paper>
     );

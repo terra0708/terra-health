@@ -28,14 +28,16 @@ import java.util.stream.Collectors;
 
 /**
  * Controller for tenant admin operations.
- * Endpoints use permission-based access control (not role-based) to allow granular control.
+ * Endpoints use permission-based access control (not role-based) to allow
+ * granular control.
  * 
  * CRITICAL: This controller ensures that tenant admins can only access
  * resources (users, bundles, permissions) from their own tenant.
  * Super Admin users have access to all tenant resources.
  * 
  * NOTE: We use permission-based @PreAuthorize instead of role-based to allow
- * any user with appropriate permissions (e.g., SETTINGS_PERMISSIONS_CREATE) to manage bundles,
+ * any user with appropriate permissions (e.g., SETTINGS_PERMISSIONS_CREATE) to
+ * manage bundles,
  * regardless of their role (ROLE_ADMIN, ROLE_AGENT, etc.).
  */
 @Slf4j
@@ -58,9 +60,9 @@ public class TenantAdminController {
     @PreAuthorize("hasAnyAuthority('SETTINGS_USERS', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<List<UserDto>>> getTenantUsers() {
         UUID tenantId = tenantSecurityService.getCurrentUserTenantId();
-        
+
         List<User> users = userRepository.findByTenantId(tenantId);
-        
+
         List<UserDto> userDtos = users.stream()
                 .map(user -> UserDto.builder()
                         .id(user.getId())
@@ -77,7 +79,7 @@ public class TenantAdminController {
                                 .collect(Collectors.toList()))
                         .build())
                 .collect(Collectors.toList());
-        
+
         log.debug("Retrieved {} users for tenant {}", userDtos.size(), tenantId);
         return ResponseEntity.ok(ApiResponse.success(userDtos));
     }
@@ -99,6 +101,25 @@ public class TenantAdminController {
     }
 
     /**
+     * Update an existing user's basic info for the current tenant.
+     * Validates that the user belongs to the current tenant.
+     */
+    @PutMapping("/users/{userId}")
+    @PreAuthorize("hasAnyAuthority('SETTINGS_USERS', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> updateTenantUser(
+            @PathVariable UUID userId,
+            @RequestBody TenantUserCreateRequest request) {
+        UUID tenantId = tenantSecurityService.getCurrentUserTenantId();
+
+        // CRITICAL: Validate user belongs to current tenant
+        tenantSecurityService.validateUserBelongsToTenant(userId);
+
+        tenantUserService.updateTenantUser(tenantId, userId, request);
+
+        return ResponseEntity.ok(ApiResponse.success(null, "User updated successfully"));
+    }
+
+    /**
      * Get user details by ID.
      * Validates that the user belongs to the current tenant.
      */
@@ -106,10 +127,10 @@ public class TenantAdminController {
     public ResponseEntity<ApiResponse<UserDto>> getUserDetails(@PathVariable UUID userId) {
         // CRITICAL: Validate user belongs to current tenant
         tenantSecurityService.validateUserBelongsToTenant(userId);
-        
+
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + userId));
-        
+
         UserDto userDto = UserDto.builder()
                 .id(user.getId())
                 .email(user.getEmail())
@@ -124,7 +145,7 @@ public class TenantAdminController {
                         .map(PermissionBundle::getName)
                         .collect(Collectors.toList()))
                 .build();
-        
+
         return ResponseEntity.ok(ApiResponse.success(userDto));
     }
 
@@ -136,14 +157,15 @@ public class TenantAdminController {
     public ResponseEntity<ApiResponse<List<String>>> getUserPermissions(@PathVariable UUID userId) {
         // CRITICAL: Validate user belongs to current tenant
         tenantSecurityService.validateUserBelongsToTenant(userId);
-        
+
         List<String> permissions = permissionService.getUserPermissions(userId);
         return ResponseEntity.ok(ApiResponse.success(permissions));
     }
 
     /**
      * Assign a permission to a user.
-     * CRITICAL: Validates user belongs to tenant AND permission is in tenant's module pool.
+     * CRITICAL: Validates user belongs to tenant AND permission is in tenant's
+     * module pool.
      */
     @PostMapping("/users/{userId}/permissions")
     public ResponseEntity<ApiResponse<Void>> assignPermissionToUser(
@@ -151,10 +173,11 @@ public class TenantAdminController {
             @RequestBody AssignPermissionRequest request) {
         // CRITICAL: JWT + DB validation for user
         tenantSecurityService.validateUserActiveAndBelongsToTenant(userId);
-        
-        // PermissionService.assignPermissionToUser already validates permission is in tenant's module pool
+
+        // PermissionService.assignPermissionToUser already validates permission is in
+        // tenant's module pool
         permissionService.assignPermissionToUser(userId, request.getPermissionId());
-        
+
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(null, "Permission assigned successfully"));
     }
@@ -169,7 +192,7 @@ public class TenantAdminController {
             @PathVariable UUID permissionId) {
         // CRITICAL: JWT + DB validation for user
         tenantSecurityService.validateUserActiveAndBelongsToTenant(userId);
-        
+
         permissionService.removePermissionFromUser(userId, permissionId);
         return ResponseEntity.ok(ApiResponse.success(null, "Permission removed successfully"));
     }
@@ -201,7 +224,7 @@ public class TenantAdminController {
     @PreAuthorize("hasAnyAuthority('SETTINGS_PERMISSIONS_VIEW', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<List<BundleDto>>> getTenantBundles() {
         UUID tenantId = tenantSecurityService.getCurrentUserTenantId();
-        
+
         // CRITICAL: DTO mapping service'de yapılıyor (@Transactional context'i içinde)
         List<BundleDto> bundleDtos = permissionService.getTenantBundlesAsDto(tenantId);
         return ResponseEntity.ok(ApiResponse.success(bundleDtos));
@@ -221,33 +244,33 @@ public class TenantAdminController {
 
     /**
      * Create a new bundle for the current tenant.
-     * CRITICAL: tenantId is automatically set from current user's tenant (not from request body).
+     * CRITICAL: tenantId is automatically set from current user's tenant (not from
+     * request body).
      */
     @PostMapping("/bundles")
     @PreAuthorize("hasAnyAuthority('SETTINGS_PERMISSIONS_CREATE', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<BundleDto>> createBundle(@RequestBody CreateBundleRequest request) {
         // DEBUG: Log authorities at @PreAuthorize evaluation point
-        org.springframework.security.core.Authentication authentication = 
-                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        org.springframework.security.core.Authentication authentication = org.springframework.security.core.context.SecurityContextHolder
+                .getContext().getAuthentication();
         if (authentication != null) {
             String authorities = authentication.getAuthorities().stream()
                     .map(org.springframework.security.core.GrantedAuthority::getAuthority)
                     .collect(java.util.stream.Collectors.joining(", "));
-            log.debug("createBundle() called by user '{}' with authorities: [{}]", 
+            log.debug("createBundle() called by user '{}' with authorities: [{}]",
                     authentication.getName(), authorities);
         } else {
             log.warn("createBundle() called but no authentication found in SecurityContext");
         }
-        
+
         UUID tenantId = tenantSecurityService.getCurrentUserTenantId();
-        
+
         PermissionBundle bundle = permissionService.createBundle(
                 tenantId,
                 request.getName(),
                 request.getDescription(),
-                request.getPermissionIds()
-        );
-        
+                request.getPermissionIds());
+
         BundleDto dto = permissionService.getBundleByIdAsDto(tenantId, bundle.getId());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(dto, "Bundle created successfully"));
@@ -263,13 +286,13 @@ public class TenantAdminController {
             @PathVariable UUID bundleId,
             @RequestBody UpdateBundleRequest request) {
         UUID tenantId = tenantSecurityService.getCurrentUserTenantId();
-        
+
         // Validate bundle belongs to tenant
         permissionService.getTenantBundles(tenantId).stream()
                 .filter(b -> b.getId().equals(bundleId))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Bundle not found with id: " + bundleId));
-        
+
         permissionService.updateBundle(bundleId, request.getPermissionIds());
         BundleDto dto = permissionService.getBundleByIdAsDto(tenantId, bundleId);
         return ResponseEntity.ok(ApiResponse.success(dto, "Bundle updated successfully"));
@@ -283,17 +306,18 @@ public class TenantAdminController {
     @PreAuthorize("hasAnyAuthority('SETTINGS_PERMISSIONS_DELETE', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deleteBundle(@PathVariable UUID bundleId) {
         UUID tenantId = tenantSecurityService.getCurrentUserTenantId();
-        
+
         // Validate bundle belongs to tenant
         permissionService.getTenantBundles(tenantId).stream()
                 .filter(b -> b.getId().equals(bundleId))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Bundle not found with id: " + bundleId));
-        
+
         // CRITICAL: Cascade cleanup - removes permissions from all users
         permissionService.deleteBundle(bundleId);
-        
-        return ResponseEntity.ok(ApiResponse.success(null, "Bundle deleted successfully. All permissions removed from users."));
+
+        return ResponseEntity
+                .ok(ApiResponse.success(null, "Bundle deleted successfully. All permissions removed from users."));
     }
 
     /**
@@ -305,16 +329,16 @@ public class TenantAdminController {
             @PathVariable UUID bundleId,
             @PathVariable UUID userId) {
         UUID tenantId = tenantSecurityService.getCurrentUserTenantId();
-        
+
         // Validate bundle belongs to tenant
         permissionService.getTenantBundles(tenantId).stream()
                 .filter(b -> b.getId().equals(bundleId))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Bundle not found with id: " + bundleId));
-        
+
         // CRITICAL: JWT + DB validation for user
         tenantSecurityService.validateUserActiveAndBelongsToTenant(userId);
-        
+
         permissionService.assignBundleToUser(userId, bundleId);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(null, "Bundle assigned successfully. Permissions copied to user."));
@@ -329,19 +353,21 @@ public class TenantAdminController {
             @PathVariable UUID bundleId,
             @PathVariable UUID userId) {
         UUID tenantId = tenantSecurityService.getCurrentUserTenantId();
-        
+
         // Validate bundle belongs to tenant
         permissionService.getTenantBundles(tenantId).stream()
                 .filter(b -> b.getId().equals(bundleId))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Bundle not found with id: " + bundleId));
-        
+
         // CRITICAL: JWT + DB validation for user
         tenantSecurityService.validateUserActiveAndBelongsToTenant(userId);
-        
-        // CRITICAL: This method now removes bundle permissions from user_permissions table
+
+        // CRITICAL: This method now removes bundle permissions from user_permissions
+        // table
         permissionService.removeBundleFromUser(userId, bundleId);
-        return ResponseEntity.ok(ApiResponse.success(null, "Bundle removed successfully. Permissions removed from user."));
+        return ResponseEntity
+                .ok(ApiResponse.success(null, "Bundle removed successfully. Permissions removed from user."));
     }
 
     // ========== Permission Management Endpoints ==========
@@ -350,8 +376,10 @@ public class TenantAdminController {
      * Get all available ACTION-level permissions for the current tenant.
      * Returns only permissions from modules assigned to the tenant.
      * 
-     * CRITICAL: Returns List<PermissionResponseDTO> with UUID, name, parentId for frontend.
-     * Frontend needs UUIDs for bundle creation and parentId for hierarchical grouping.
+     * CRITICAL: Returns List<PermissionResponseDTO> with UUID, name, parentId for
+     * frontend.
+     * Frontend needs UUIDs for bundle creation and parentId for hierarchical
+     * grouping.
      * 
      * Super Admin: Returns all ACTION permissions in the system.
      * Tenant Admin: Returns only ACTION permissions from tenant's assigned modules.
@@ -360,43 +388,48 @@ public class TenantAdminController {
     @PreAuthorize("hasAnyAuthority('SETTINGS_PERMISSIONS_VIEW', 'SETTINGS_PERMISSIONS', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<List<PermissionResponseDTO>>> getTenantAvailablePermissions() {
         // Check if Super Admin
-        org.springframework.security.core.Authentication auth = 
-            org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder
+                .getContext().getAuthentication();
         boolean isSuperAdmin = auth != null && auth.getAuthorities().stream()
-            .anyMatch(a -> a.getAuthority().equals("ROLE_SUPER_ADMIN"));
-        
+                .anyMatch(a -> a.getAuthority().equals("ROLE_SUPER_ADMIN"));
+
         List<PermissionResponseDTO> permissions;
-        
+
         if (isSuperAdmin) {
             // Super Admin: Return all ACTION permissions in system
             log.debug("Super Admin detected - returning all ACTION permissions");
             permissions = permissionService.getAllPermissions().stream()
-                .filter(p -> p.getType() == com.terrarosa.terra_crm.modules.auth.entity.Permission.PermissionType.ACTION)
-                .map(p -> PermissionResponseDTO.builder()
-                    .id(p.getId())
-                    .name(p.getName())
-                    .description(p.getDescription())
-                    .type(p.getType())
-                    .parentPermissionId(p.getParentPermission() != null ? p.getParentPermission().getId() : null)
-                    .parentPermissionName(p.getParentPermission() != null ? p.getParentPermission().getName() : null)
-                    .build())
-                .collect(Collectors.toList());
+                    .filter(p -> p
+                            .getType() == com.terrarosa.terra_crm.modules.auth.entity.Permission.PermissionType.ACTION)
+                    .map(p -> PermissionResponseDTO.builder()
+                            .id(p.getId())
+                            .name(p.getName())
+                            .description(p.getDescription())
+                            .type(p.getType())
+                            .parentPermissionId(
+                                    p.getParentPermission() != null ? p.getParentPermission().getId() : null)
+                            .parentPermissionName(
+                                    p.getParentPermission() != null ? p.getParentPermission().getName() : null)
+                            .build())
+                    .collect(Collectors.toList());
         } else {
             // Tenant Admin: Return only tenant's available permissions
             UUID tenantId = tenantSecurityService.getCurrentUserTenantId();
             List<Permission> permissionEntities = permissionService.getTenantAvailablePermissions(tenantId);
             permissions = permissionEntities.stream()
-                .map(p -> PermissionResponseDTO.builder()
-                    .id(p.getId())
-                    .name(p.getName())
-                    .description(p.getDescription())
-                    .type(p.getType())
-                    .parentPermissionId(p.getParentPermission() != null ? p.getParentPermission().getId() : null)
-                    .parentPermissionName(p.getParentPermission() != null ? p.getParentPermission().getName() : null)
-                    .build())
-                .collect(Collectors.toList());
+                    .map(p -> PermissionResponseDTO.builder()
+                            .id(p.getId())
+                            .name(p.getName())
+                            .description(p.getDescription())
+                            .type(p.getType())
+                            .parentPermissionId(
+                                    p.getParentPermission() != null ? p.getParentPermission().getId() : null)
+                            .parentPermissionName(
+                                    p.getParentPermission() != null ? p.getParentPermission().getName() : null)
+                            .build())
+                    .collect(Collectors.toList());
         }
-        
+
         log.debug("Returning {} ACTION permissions for user", permissions.size());
         return ResponseEntity.ok(ApiResponse.success(permissions));
     }
@@ -405,13 +438,14 @@ public class TenantAdminController {
      * Get all MODULE-level permissions (modules) assigned to the current tenant.
      * Frontend uses this to know which modules are active.
      * 
-     * CRITICAL: Returns DTOs to avoid circular reference issues during JSON serialization.
+     * CRITICAL: Returns DTOs to avoid circular reference issues during JSON
+     * serialization.
      */
     @GetMapping("/modules")
     @PreAuthorize("hasAnyAuthority('SETTINGS_PERMISSIONS_VIEW', 'SETTINGS_PERMISSIONS', 'ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<List<ModuleDTO>>> getTenantModules() {
         UUID tenantId = tenantSecurityService.getCurrentUserTenantId();
-        
+
         List<ModuleDTO> modules = permissionService.getTenantModulesAsDto(tenantId);
         return ResponseEntity.ok(ApiResponse.success(modules));
     }
@@ -428,10 +462,10 @@ public class TenantAdminController {
     public ResponseEntity<ApiResponse<List<BundleDto>>> getUserBundles(@PathVariable UUID userId) {
         // CRITICAL: Validate user belongs to current tenant
         tenantSecurityService.validateUserBelongsToTenant(userId);
-        
+
         // CRITICAL: DTO mapping service'de yapılıyor (@Transactional context'i içinde)
         List<BundleDto> bundleDtos = permissionService.getUserBundlesAsDto(userId);
-        
+
         return ResponseEntity.ok(ApiResponse.success(bundleDtos));
     }
 
@@ -439,53 +473,53 @@ public class TenantAdminController {
 
     public static class AssignPermissionRequest {
         private UUID permissionId;
-        
+
         public UUID getPermissionId() {
             return permissionId;
         }
-        
+
         public void setPermissionId(UUID permissionId) {
             this.permissionId = permissionId;
         }
     }
-    
+
     public static class CreateBundleRequest {
         private String name;
         private String description;
         private List<UUID> permissionIds;
-        
+
         public String getName() {
             return name;
         }
-        
+
         public void setName(String name) {
             this.name = name;
         }
-        
+
         public String getDescription() {
             return description;
         }
-        
+
         public void setDescription(String description) {
             this.description = description;
         }
-        
+
         public List<UUID> getPermissionIds() {
             return permissionIds;
         }
-        
+
         public void setPermissionIds(List<UUID> permissionIds) {
             this.permissionIds = permissionIds;
         }
     }
-    
+
     public static class UpdateBundleRequest {
         private List<UUID> permissionIds;
-        
+
         public List<UUID> getPermissionIds() {
             return permissionIds;
         }
-        
+
         public void setPermissionIds(List<UUID> permissionIds) {
             this.permissionIds = permissionIds;
         }

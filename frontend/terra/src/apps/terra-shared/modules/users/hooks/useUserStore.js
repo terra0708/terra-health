@@ -111,14 +111,48 @@ export const useUserStore = create((set, get) => ({
     },
 
     /**
-     * Update user (placeholder - backend endpoint may need to be created).
+     * Update user.
+     * Uses two backend endpoints to ensure both auth and profile are updated.
      */
     updateUser: async (userId, userData) => {
         set({ loading: true, error: null });
         try {
-            // TODO: Backend endpoint needed: PUT /v1/tenant-admin/users/{userId}
-            // For now, just refresh the list
+            const profile = userData.profile || {};
+            const auth = userData.auth || userData;
+
+            // 1. Update basic info (auth)
+            // Uses: PUT /v1/tenant-admin/users/${userId}
+            const authPayload = {
+                firstName: auth.firstName || userData.firstName,
+                lastName: auth.lastName || userData.lastName,
+                email: auth.email || auth.corporate_email || userData.email,
+                bundleId: auth.bundleId || userData.bundleId || null,
+            };
+
+            await apiClient.put(`/v1/tenant-admin/users/${userId}`, authPayload);
+
+            // 2. Update profile info
+            // Uses: PUT /v1/tenant-admin/users/{userId}/profile
+            const profilePayload = {
+                tcNo: profile.tcNo || userData.tcNo || null,
+                birthDate: profile.birthDate || userData.birthDate || null,
+                address: profile.address || userData.address || null,
+                emergencyPerson: profile.emergencyPerson || userData.emergencyPerson || null,
+                emergencyPhone: profile.emergencyPhone || userData.emergencyPhone || null,
+                phoneNumber: profile.phoneNumber || userData.phoneNumber || null,
+                personalEmail: profile.personalEmail || userData.personalEmail || null,
+            };
+
+            try {
+                await apiClient.put(`/v1/tenant-admin/users/${userId}/profile`, profilePayload);
+            } catch (profileError) {
+                console.error('Failed to update user profile, but personal info might have saved:', profileError);
+                // We don't throw here so that at least personal info is updated if that worked
+            }
+
+            // Refresh user list
             await get().fetchUsers();
+
             set({ loading: false });
         } catch (error) {
             console.error('Failed to update user:', error);
@@ -128,14 +162,17 @@ export const useUserStore = create((set, get) => ({
     },
 
     /**
-     * Delete user (placeholder - backend endpoint may need to be created).
+     * Delete user.
+     * Uses backend endpoint: DELETE /v1/tenant-admin/users/{userId}
      */
     deleteUser: async (userId) => {
         set({ loading: true, error: null });
         try {
-            // TODO: Backend endpoint needed: DELETE /v1/tenant-admin/users/{userId}
-            // For now, just refresh the list
+            await apiClient.delete(`/v1/tenant-admin/users/${userId}`);
+
+            // Refresh user list from backend to keep store in sync
             await get().fetchUsers();
+
             set({ loading: false });
         } catch (error) {
             console.error('Failed to delete user:', error);

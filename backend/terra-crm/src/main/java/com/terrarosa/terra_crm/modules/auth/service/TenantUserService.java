@@ -44,146 +44,207 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TenantUserService {
 
-    private static final int DEFAULT_PASSWORD_LENGTH = 16;
+        private static final int DEFAULT_PASSWORD_LENGTH = 16;
 
-    private final UserRepository userRepository;
-    private final TenantRepository tenantRepository;
-    private final RoleRepository roleRepository;
-    private final PermissionBundleRepository permissionBundleRepository;
-    private final PermissionService permissionService;
-    private final PasswordEncoder passwordEncoder;
-    private final QuotaService quotaService;
-    private final RefreshTokenRepository refreshTokenRepository;
-    private final UserProfileService userProfileService;
+        private final UserRepository userRepository;
+        private final TenantRepository tenantRepository;
+        private final RoleRepository roleRepository;
+        private final PermissionBundleRepository permissionBundleRepository;
+        private final PermissionService permissionService;
+        private final PasswordEncoder passwordEncoder;
+        private final QuotaService quotaService;
+        private final RefreshTokenRepository refreshTokenRepository;
+        private final UserProfileService userProfileService;
 
-    /**
-     * Create a new user for the given tenant with an auto-generated password.
-     *
-     * @param tenantId the tenant ID resolved from the authenticated context
-     * @param request  user creation request
-     * @return response containing created user info and generated password
-     */
-    @AuditLog(action = "TENANT_USER_CREATED", resourceType = "USER")
-    @Transactional
-    public TenantUserCreateResponse createUserForTenant(UUID tenantId, TenantUserCreateRequest request) {
-        String email = normalizeEmail(request.getEmail());
+        /**
+         * Update an existing user in the given tenant.
+         *
+         * @param tenantId the tenant ID resolved from context
+         * @param userId   the user to update
+         * @param request  the update request containing new names/email/bundle
+         */
+        @AuditLog(action = "TENANT_USER_UPDATED", resourceType = "USER")
+        @Transactional
+        public void updateTenantUser(UUID tenantId, UUID userId, TenantUserCreateRequest request) {
+                User user = userRepository.findById(userId)
+                                .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + userId));
 
-        Tenant tenant = tenantRepository.findById(tenantId)
-                .orElseThrow(() -> new IllegalArgumentException("Tenant not found with id: " + tenantId));
+                // Security check: ensure user belongs to tenant
+                if (!user.getTenant().getId().equals(tenantId)) {
+                        throw new IllegalArgumentException("User does not belong to current tenant");
+                }
 
-        // Enforce domain restriction if tenant has a configured domain
-        if (tenant.getDomain() != null && !email.endsWith("@" + tenant.getDomain())) {
-            throw new IllegalArgumentException("Email must end with @" + tenant.getDomain());
+                if (request.getFirstName() != null)
+                        user.setFirstName(request.getFirstName());
+                if (request.getLastName() != null)
+                        user.setLastName(request.getLastName());
+
+                if (request.getEmail() != null) {
+                        String email = normalizeEmail(request.getEmail());
+                        Tenant tenant = user.getTenant();
+
+                        // Enforce domain restriction
+                        if (tenant.getDomain() != null && !email.endsWith("@" + tenant.getDomain())) {
+                                throw new IllegalArgumentException("Email must end with @" + tenant.getDomain());
+                        }
+
+                        // Check uniqueness if email changed
+                        if (!user.getEmail().equalsIgnoreCase(email)
+                                        && userRepository.existsByEmailAndNotDeleted(email)) {
+                                throw new IllegalArgumentException("User with this email already exists");
+                        }
+                        user.setEmail(email);
+                }
+
+                userRepository.save(user);
+
+                // Update bundle assignment if provided
+                if (request.getBundleId() != null) {
+                        PermissionBundle bundle = permissionBundleRepository.findById(request.getBundleId())
+                                        .orElseThrow(() -> new IllegalArgumentException(
+                                                        "Bundle not found with id: " + request.getBundleId()));
+
+                        if (!bundle.getTenant().getId().equals(tenantId)) {
+                                throw new IllegalArgumentException("Bundle does not belong to current tenant");
+                        }
+
+                        // Remove existing bundles first? Or just add?
+                        // In most cases, we replace local permissions for simplicity
+                        permissionService.assignBundleToUser(userId, request.getBundleId());
+                }
         }
 
-        // Check if user already exists (excluding deleted)
-        if (userRepository.existsByEmailAndNotDeleted(email)) {
-            throw new IllegalArgumentException("User with this email already exists");
+        /**
+         * Create a new user for the given tenant with an auto-generated password.
+         *
+         * @param tenantId the tenant ID resolved from the authenticated context
+         * @param request  user creation request
+         * @return response containing created user info and generated password
+         */
+        @AuditLog(action = "TENANT_USER_CREATED", resourceType = "USER")
+        @Transactional
+        public TenantUserCreateResponse createUserForTenant(UUID tenantId, TenantUserCreateRequest request) {
+                String email = normalizeEmail(request.getEmail());
+
+                Tenant tenant = tenantRepository.findById(tenantId)
+                                .orElseThrow(() -> new IllegalArgumentException(
+                                                "Tenant not found with id: " + tenantId));
+
+                // Enforce domain restriction if tenant has a configured domain
+                if (tenant.getDomain() != null && !email.endsWith("@" + tenant.getDomain())) {
+                        throw new IllegalArgumentException("Email must end with @" + tenant.getDomain());
+                }
+
+                // Check if user already exists (excluding deleted)
+                if (userRepository.existsByEmailAndNotDeleted(email)) {
+                        throw new IllegalArgumentException("User with this email already exists");
+                }
+
+                // Quota enforcement for number of users
+                long userCount = userRepository.countByTenantId(tenantId);
+                quotaService.validateQuota(tenantId, "users", userCount);
+
+                // Generate secure random password
+                String rawPassword = RandomPasswordGenerator.generateSecurePassword(DEFAULT_PASSWORD_LENGTH);
+                String encodedPassword = passwordEncoder.encode(rawPassword);
+
+                // Default role is ROLE_AGENT for tenant-created users
+                Role agentRole = roleRepository.findByName("ROLE_AGENT")
+                                .orElseThrow(() -> new IllegalStateException(
+                                                "Default role ROLE_AGENT not found. Run migrations."));
+
+                User user = User.builder()
+                                .firstName(request.getFirstName())
+                                .lastName(request.getLastName())
+                                .email(email)
+                                .password(encodedPassword)
+                                .tenant(tenant)
+                                .enabled(true)
+                                .build();
+                user.getRoles().add(agentRole);
+
+                User savedUser = userRepository.save(user);
+
+                // Create user profile in tenant schema
+                UserProfileDto profileDto = UserProfileDto.builder()
+                                .userId(savedUser.getId())
+                                .tcNo(request.getTcNo())
+                                .birthDate(request.getBirthDate())
+                                .address(request.getAddress())
+                                .emergencyPerson(request.getEmergencyPerson())
+                                .emergencyPhone(request.getEmergencyPhone())
+                                .phoneNumber(request.getPhoneNumber())
+                                .personalEmail(request.getPersonalEmail())
+                                .build();
+                userProfileService.upsertProfile(savedUser.getId(), profileDto);
+
+                UUID bundleId = request.getBundleId();
+                String bundleName = null;
+
+                if (bundleId != null) {
+                        PermissionBundle bundle = permissionBundleRepository.findById(bundleId)
+                                        .orElseThrow(() -> new IllegalArgumentException(
+                                                        "Bundle not found with id: " + bundleId));
+
+                        if (!bundle.getTenant().getId().equals(tenantId)) {
+                                throw new IllegalArgumentException("Bundle does not belong to current tenant");
+                        }
+
+                        permissionService.assignBundleToUser(savedUser.getId(), bundleId);
+                        bundleName = bundle.getName();
+                }
+
+                log.info("Created tenant user {} for tenant {}", email, tenant.getName());
+
+                return TenantUserCreateResponse.builder()
+                                .id(savedUser.getId())
+                                .email(savedUser.getEmail())
+                                .firstName(savedUser.getFirstName())
+                                .lastName(savedUser.getLastName())
+                                .tenantId(tenant.getId())
+                                .bundleId(bundleId)
+                                .bundleName(bundleName)
+                                .generatedPassword(rawPassword)
+                                .build();
         }
 
-        // Quota enforcement for number of users
-        long userCount = userRepository.countByTenantId(tenantId);
-        quotaService.validateQuota(tenantId, "users", userCount);
+        /**
+         * Reset a user's password for the given tenant.
+         *
+         * <p>
+         * Tenant membership is validated at controller layer using
+         * {@code TenantSecurityService.validateUserActiveAndBelongsToTenant}.
+         *
+         * @param userId user ID
+         * @return response containing the new generated password
+         */
+        @AuditLog(action = "PASSWORD_RESET", resourceType = "USER")
+        @Transactional
+        public PasswordResetResponse resetUserPassword(UUID userId) {
+                User user = userRepository.findById(userId)
+                                .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + userId));
 
-        // Generate secure random password
-        String rawPassword = RandomPasswordGenerator.generateSecurePassword(DEFAULT_PASSWORD_LENGTH);
-        String encodedPassword = passwordEncoder.encode(rawPassword);
+                String rawPassword = RandomPasswordGenerator.generateSecurePassword(DEFAULT_PASSWORD_LENGTH);
+                String encodedPassword = passwordEncoder.encode(rawPassword);
 
-        // Default role is ROLE_AGENT for tenant-created users
-        Role agentRole = roleRepository.findByName("ROLE_AGENT")
-                .orElseThrow(() -> new IllegalStateException("Default role ROLE_AGENT not found. Run migrations."));
+                user.setPassword(encodedPassword);
+                userRepository.save(user);
 
-        User user = User.builder()
-                .firstName(request.getFirstName())
-                .lastName(request.getLastName())
-                .email(email)
-                .password(encodedPassword)
-                .tenant(tenant)
-                .enabled(true)
-                .build();
-        user.getRoles().add(agentRole);
+                // Revoke all refresh tokens so that the user must log in again with the new
+                // password
+                refreshTokenRepository.revokeAllUserTokens(userId, LocalDateTime.now());
 
-        User savedUser = userRepository.save(user);
+                log.info("Reset password for user {}", user.getEmail());
 
-        // Create user profile in tenant schema
-        UserProfileDto profileDto = UserProfileDto.builder()
-                .userId(savedUser.getId())
-                .tcNo(request.getTcNo())
-                .birthDate(request.getBirthDate())
-                .address(request.getAddress())
-                .emergencyPerson(request.getEmergencyPerson())
-                .emergencyPhone(request.getEmergencyPhone())
-                .phoneNumber(request.getPhoneNumber())
-                .personalEmail(request.getPersonalEmail())
-                .build();
-        userProfileService.upsertProfile(savedUser.getId(), profileDto);
-
-        UUID bundleId = request.getBundleId();
-        String bundleName = null;
-
-        if (bundleId != null) {
-            PermissionBundle bundle = permissionBundleRepository.findById(bundleId)
-                    .orElseThrow(() -> new IllegalArgumentException("Bundle not found with id: " + bundleId));
-
-            if (!bundle.getTenant().getId().equals(tenantId)) {
-                throw new IllegalArgumentException("Bundle does not belong to current tenant");
-            }
-
-            permissionService.assignBundleToUser(savedUser.getId(), bundleId);
-            bundleName = bundle.getName();
+                return PasswordResetResponse.builder()
+                                .userId(user.getId())
+                                .generatedPassword(rawPassword)
+                                .build();
         }
 
-        log.info("Created tenant user {} for tenant {}", email, tenant.getName());
-
-        return TenantUserCreateResponse.builder()
-                .id(savedUser.getId())
-                .email(savedUser.getEmail())
-                .firstName(savedUser.getFirstName())
-                .lastName(savedUser.getLastName())
-                .tenantId(tenant.getId())
-                .bundleId(bundleId)
-                .bundleName(bundleName)
-                .generatedPassword(rawPassword)
-                .build();
-    }
-
-    /**
-     * Reset a user's password for the given tenant.
-     *
-     * <p>
-     * Tenant membership is validated at controller layer using
-     * {@code TenantSecurityService.validateUserActiveAndBelongsToTenant}.
-     *
-     * @param userId user ID
-     * @return response containing the new generated password
-     */
-    @AuditLog(action = "PASSWORD_RESET", resourceType = "USER")
-    @Transactional
-    public PasswordResetResponse resetUserPassword(UUID userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + userId));
-
-        String rawPassword = RandomPasswordGenerator.generateSecurePassword(DEFAULT_PASSWORD_LENGTH);
-        String encodedPassword = passwordEncoder.encode(rawPassword);
-
-        user.setPassword(encodedPassword);
-        userRepository.save(user);
-
-        // Revoke all refresh tokens so that the user must log in again with the new
-        // password
-        refreshTokenRepository.revokeAllUserTokens(userId, LocalDateTime.now());
-
-        log.info("Reset password for user {}", user.getEmail());
-
-        return PasswordResetResponse.builder()
-                .userId(user.getId())
-                .generatedPassword(rawPassword)
-                .build();
-    }
-
-    private String normalizeEmail(String email) {
-        return Optional.ofNullable(email)
-                .map(e -> e.toLowerCase().trim())
-                .orElseThrow(() -> new IllegalArgumentException("Email is required"));
-    }
+        private String normalizeEmail(String email) {
+                return Optional.ofNullable(email)
+                                .map(e -> e.toLowerCase().trim())
+                                .orElseThrow(() -> new IllegalArgumentException("Email is required"));
+        }
 }
