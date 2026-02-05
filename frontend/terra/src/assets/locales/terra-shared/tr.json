@@ -9,6 +9,7 @@
         "actions": "İşlemler",
         "status": "Durum",
         "name": "İsim",
+        "surname": "Soyisim",
         "email": "E-posta",
         "phone": "Telefon",
         "role": "Rol",

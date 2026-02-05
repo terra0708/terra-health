@@ -59,7 +59,7 @@ export const StatusTab = ({ register, control, t, lang, errors, watch }) => {
                         <MenuItem value=""><em>{t('customers.drawer.no_assignment')}</em></MenuItem>
                         {settings.consultants.map((user) => (
                             <MenuItem key={user.id} value={user.id}>
-                                {user.name} ({user.email})
+                                {user.name}
                             </MenuItem>
                         ))}
                     </TextField>

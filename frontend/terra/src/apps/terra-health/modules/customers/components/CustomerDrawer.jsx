@@ -49,6 +49,12 @@ export const CustomerDrawer = ({ open, onClose, customer, client, t: tProp }) =>
     });
 
     useEffect(() => {
+        if (open) {
+            settings.fetchAll().catch(() => { });
+        }
+    }, [open]);
+
+    useEffect(() => {
         const initForm = async () => {
             if (!open) return;
 

@@ -55,11 +55,25 @@ export const UserDrawer = ({ open, onClose, onSave, user, t }) => {
     });
 
     const { bundles, fetchBundles } = usePermissionStore();
+    const [lastUserId, setLastUserId] = useState(null);
 
+    // Fetch bundles once when open
     useEffect(() => {
         if (open && (!bundles || bundles.length === 0)) {
             fetchBundles().catch(() => { });
         }
+    }, [open, bundles, fetchBundles]);
+
+    // Initialize form only when open or user changes
+    useEffect(() => {
+        if (!open) {
+            setLastUserId(null); // Reset when closed
+            return;
+        }
+
+        // Only initialize if we haven't for this user (or if switching from 'new' to a specific user)
+        const currentId = user?.id || 'new';
+        if (lastUserId === currentId) return;
 
         if (user) {
             setFormData({
@@ -73,9 +87,7 @@ export const UserDrawer = ({ open, onClose, onSave, user, t }) => {
                 address: user.address || '',
                 emergency_person: user.emergency_person || '',
                 emergency_phone: user.emergency_phone || '',
-                bundleId: Array.isArray(user.bundleNames) && user.bundleNames.length > 0
-                    ? null
-                    : null,
+                bundleId: null,
             });
         } else {
             setFormData({
@@ -92,7 +104,8 @@ export const UserDrawer = ({ open, onClose, onSave, user, t }) => {
                 bundleId: null,
             });
         }
-    }, [user, open, bundles, fetchBundles]);
+        setLastUserId(currentId);
+    }, [open, user, lastUserId]);
 
     // When editing, load profile from tenant schema so form shows existing data
     useEffect(() => {

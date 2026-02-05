@@ -186,7 +186,8 @@ export const useCustomerSettingsStore = create((set, get) => ({
         set(state => ({ loading: { ...state.loading, consultants: true } }));
         try {
             const response = await parametersAPI.getTenantUsers();
-            const users = response.data || [];
+            // Backend returns ApiResponse<List<UserDto>> or List<UserDto> if unwrapped
+            const users = Array.isArray(response) ? response : (response?.data || []);
             set({ consultants: users.map(dto => convertDtoToFrontend(dto, 'consultant')) });
         } catch (error) {
             console.error('Failed to fetch consultants:', error);
