@@ -151,16 +151,6 @@ const UsersPage = () => {
         setTerminationOpen(false);
     };
 
-    const getRoleChip = (role) => {
-        const configs = {
-            admin: { color: theme.palette.error.main, label: t('users.roles.admin'), icon: <ShieldCheck size={14} /> },
-            super_admin: { color: theme.palette.warning.main, label: t('users.roles.super_admin') || 'Super Admin', icon: <Shield size={14} /> },
-            doctor: { color: theme.palette.secondary.main, label: t('users.roles.doctor'), icon: <UserCheck size={14} /> },
-            staff: { color: theme.palette.primary.main, label: t('users.roles.staff'), icon: <UsersIcon size={14} /> },
-        };
-        const config = configs[role] || configs.staff;
-        return <Chip icon={config.icon} label={config.label} size="small" sx={{ fontWeight: 700, borderRadius: '10px', bgcolor: alpha(config.color, 0.05), color: config.color, border: `1px solid ${alpha(config.color, 0.12)}`, fontSize: '0.75rem', '& .MuiChip-icon': { color: 'inherit' } }} />;
-    };
 
     return (
         <ModulePageWrapper moduleName="Settings" aria-label="Users Management">
@@ -243,7 +233,6 @@ const UsersPage = () => {
                                     theme={theme}
                                     onEdit={isProtectedUser(user) ? null : (u) => handleOpenDrawer(u)}
                                     onAssignBundles={isProtectedUser(user) ? null : (u) => handleOpenBundleDrawer(u)}
-                                    getRoleChip={getRoleChip}
                                 />
                             ))}
                             {totalCount > rowsPerPage && (
@@ -264,81 +253,119 @@ const UsersPage = () => {
                                 <Table sx={{ minWidth: 900 }}>
                                     <TableHead>
                                         <TableRow sx={{ bgcolor: alpha(theme.palette.primary.main, 0.015) }}>
-                                            <TableCell sx={{ py: 2.5, pl: 4, fontWeight: 800, color: 'text.secondary', fontSize: '0.75rem', textTransform: 'uppercase' }}>{t('common.name')}</TableCell>
-                                            <TableCell sx={{ py: 2.5, fontWeight: 800, color: 'text.secondary', fontSize: '0.75rem', textTransform: 'uppercase' }}>{t('common.phone')}</TableCell>
-                                            <TableCell sx={{ py: 2.5, fontWeight: 800, color: 'text.secondary', fontSize: '0.75rem', textTransform: 'uppercase' }}>{t('common.role')}</TableCell>
-                                            <TableCell sx={{ py: 2.5, fontWeight: 800, color: 'text.secondary', fontSize: '0.75rem', textTransform: 'uppercase' }}>{t('common.joining_date')}</TableCell>
-                                            <TableCell sx={{ py: 2.5, fontWeight: 800, color: 'text.secondary', fontSize: '0.75rem', textTransform: 'uppercase' }}>{t('common.leaving_date')}</TableCell>
+                                            <TableCell sx={{ py: 2.5, pl: 4, fontWeight: 800, color: 'text.secondary', fontSize: '0.75rem', textTransform: 'uppercase' }}>{t('users.table.user') || 'KULLANICI'}</TableCell>
+                                            <TableCell sx={{ py: 2.5, fontWeight: 800, color: 'text.secondary', fontSize: '0.75rem', textTransform: 'uppercase' }}>{t('users.table.terra_id') || 'TERRA ID'}</TableCell>
+                                            <TableCell sx={{ py: 2.5, fontWeight: 800, color: 'text.secondary', fontSize: '0.75rem', textTransform: 'uppercase' }}>{t('users.table.bundles') || 'YETKİ PAKETİ'}</TableCell>
+                                            <TableCell sx={{ py: 2.5, fontWeight: 800, color: 'text.secondary', fontSize: '0.75rem', textTransform: 'uppercase' }}>{t('users.table.contact') || 'İLETİŞİM'}</TableCell>
                                             <TableCell align="right" sx={{ py: 2.5, pr: 4, fontWeight: 800, color: 'text.secondary', fontSize: '0.75rem', textTransform: 'uppercase' }}>{t('common.actions')}</TableCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
-                                        {filteredUsers.map((user) => (
-                                            <TableRow key={user.id} sx={{ '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.01) } }}>
-                                                <TableCell sx={{ py: 2.5, pl: 4 }}>
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                                        <Avatar sx={{ width: 48, height: 48, borderRadius: '14px', border: `2px solid ${theme.palette.background.paper}`, bgcolor: theme.palette.primary.main }}>
-                                                            {user.firstName?.[0]}{user.lastName?.[0]}
-                                                        </Avatar>
-                                                        <Box>
-                                                            <Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'text.primary' }}>
-                                                                {user.firstName} {user.lastName}
-                                                            </Typography>
-                                                            <Typography variant="caption" sx={{ color: 'text.disabled', fontWeight: 600 }}>
-                                                                {user.email}
+                                        {filteredUsers.map((user) => {
+                                            const isAdmin = isProtectedUser(user);
+                                            return (
+                                                <TableRow key={user.id} sx={{ '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.01) } }}>
+                                                    <TableCell sx={{ py: 2.5, pl: 4 }}>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                                            <Avatar sx={{
+                                                                width: 44, height: 44, borderRadius: '12px',
+                                                                bgcolor: isAdmin ? theme.palette.error.main : theme.palette.primary.main,
+                                                                color: '#fff', fontWeight: 800, fontSize: '1rem'
+                                                            }}>
+                                                                {user.firstName?.[0]}{user.lastName?.[0]}
+                                                            </Avatar>
+                                                            <Box>
+                                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                                    <Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'text.primary' }}>
+                                                                        {user.firstName} {user.lastName}
+                                                                    </Typography>
+                                                                    {isAdmin && (
+                                                                        <Chip
+                                                                            label="Yönetici"
+                                                                            size="small"
+                                                                            color="error"
+                                                                            sx={{
+                                                                                height: 18, fontSize: '0.65rem', fontWeight: 900,
+                                                                                borderRadius: '6px', textTransform: 'uppercase'
+                                                                            }}
+                                                                        />
+                                                                    )}
+                                                                </Box>
+                                                                {!isAdmin && user.roles?.length > 0 && (
+                                                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+                                                                        {user.roles[0].replace('ROLE_', '').toLowerCase()}
+                                                                    </Typography>
+                                                                )}
+                                                            </Box>
+                                                        </Box>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Typography variant="body2" sx={{ fontWeight: 700, color: 'primary.main', opacity: 0.8 }}>
+                                                            {user.email?.split('@')[0]}
+                                                        </Typography>
+                                                        <Typography variant="caption" sx={{ color: 'text.disabled', display: 'block' }}>
+                                                            @{user.email?.split('@')[1]}
+                                                        </Typography>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                                            {user.bundleNames && user.bundleNames.length > 0 ? (
+                                                                user.bundleNames.map(bundle => (
+                                                                    <Chip
+                                                                        key={bundle}
+                                                                        label={bundle}
+                                                                        size="small"
+                                                                        variant="outlined"
+                                                                        sx={{
+                                                                            borderRadius: '8px', fontWeight: 700, fontSize: '0.65rem',
+                                                                            bgcolor: alpha(theme.palette.primary.main, 0.03)
+                                                                        }}
+                                                                    />
+                                                                ))
+                                                            ) : (
+                                                                <Typography variant="caption" sx={{ color: 'text.disabled', fontStyle: 'italic' }}>
+                                                                    {t('users.no_bundle') || 'Paket Tanımsız'}
+                                                                </Typography>
+                                                            )}
+                                                        </Box>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                            <Phone size={14} style={{ opacity: 0.5 }} />
+                                                            <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                                                                {user.phoneNumber || '-'}
                                                             </Typography>
                                                         </Box>
-                                                    </Box>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-                                                        -
-                                                    </Typography>
-                                                </TableCell>
-                                                <TableCell>
-                                                    {user.roles?.map(role => {
-                                                        const roleName = role.replace('ROLE_', '').toLowerCase();
-                                                        return <Box key={role} sx={{ mb: 0.5 }}>{getRoleChip(roleName)}</Box>;
-                                                    })}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-                                                        -
-                                                    </Typography>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-                                                        -
-                                                    </Typography>
-                                                </TableCell>
-                                                <TableCell align="right" sx={{ pr: 4 }}>
-                                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.2 }}>
-                                                        <Tooltip title={t('common.user_info')}>
-                                                            <IconButton onClick={() => handleViewDetails(user)} size="small" sx={{ color: 'info.main', bgcolor: alpha(theme.palette.info.main, 0.04), borderRadius: '12px', width: 38, height: 38 }}>
-                                                                <Info size={18} />
-                                                            </IconButton>
-                                                        </Tooltip>
-                                                        {!isProtectedUser(user) && (
-                                                            <>
-                                                                <Tooltip title={t('users.assign_bundles') || 'Assign Bundles'}>
-                                                                    <IconButton onClick={() => handleOpenBundleDrawer(user)} size="small" sx={{ color: 'secondary.main', bgcolor: alpha(theme.palette.secondary.main, 0.04), borderRadius: '12px', width: 38, height: 38 }}>
-                                                                        <Shield size={18} />
-                                                                    </IconButton>
-                                                                </Tooltip>
-                                                                <Tooltip title={t('common.edit')}>
-                                                                    <IconButton onClick={(e) => { handleOpenDrawer(user); e.currentTarget.blur(); }} size="small" sx={{ color: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.04), borderRadius: '12px', width: 38, height: 38 }}>
-                                                                        <Edit3 size={18} />
-                                                                    </IconButton>
-                                                                </Tooltip>
-                                                                <IconButton onClick={() => handleOpenTermination(user)} size="small" sx={{ color: 'error.main', bgcolor: alpha(theme.palette.error.main, 0.04), borderRadius: '12px', width: 38, height: 38 }}>
-                                                                    <Trash2 size={18} />
+                                                    </TableCell>
+                                                    <TableCell align="right" sx={{ pr: 4 }}>
+                                                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.2 }}>
+                                                            <Tooltip title={t('common.user_info')}>
+                                                                <IconButton onClick={() => handleViewDetails(user)} size="small" sx={{ color: 'info.main', bgcolor: alpha(theme.palette.info.main, 0.04), borderRadius: '12px', width: 38, height: 38 }}>
+                                                                    <Info size={18} />
                                                                 </IconButton>
-                                                            </>
-                                                        )}
-                                                    </Box>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
+                                                            </Tooltip>
+                                                            {!isProtectedUser(user) && (
+                                                                <>
+                                                                    <Tooltip title={t('users.assign_bundles') || 'Assign Bundles'}>
+                                                                        <IconButton onClick={() => handleOpenBundleDrawer(user)} size="small" sx={{ color: 'secondary.main', bgcolor: alpha(theme.palette.secondary.main, 0.04), borderRadius: '12px', width: 38, height: 38 }}>
+                                                                            <Shield size={18} />
+                                                                        </IconButton>
+                                                                    </Tooltip>
+                                                                    <Tooltip title={t('common.edit')}>
+                                                                        <IconButton onClick={(e) => { handleOpenDrawer(user); e.currentTarget.blur(); }} size="small" sx={{ color: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.04), borderRadius: '12px', width: 38, height: 38 }}>
+                                                                            <Edit3 size={18} />
+                                                                        </IconButton>
+                                                                    </Tooltip>
+                                                                    <IconButton onClick={() => handleOpenTermination(user)} size="small" sx={{ color: 'error.main', bgcolor: alpha(theme.palette.error.main, 0.04), borderRadius: '12px', width: 38, height: 38 }}>
+                                                                        <Trash2 size={18} />
+                                                                    </IconButton>
+                                                                </>
+                                                            )}
+                                                        </Box>
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        })}
                                     </TableBody>
                                 </Table>
                             </TableContainer>

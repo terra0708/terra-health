@@ -8,7 +8,7 @@ export const UserMobileCard = ({ user, t, theme, onEdit, onAssignBundles, getRol
     if (!user) return null;
 
     const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
-    const primaryRole = user.roles?.[0]?.replace('ROLE_', '').toLowerCase() || 'staff';
+    const isAdmin = user.roles?.some(role => role === 'ROLE_ADMIN' || role === 'ROLE_SUPER_ADMIN');
 
     return (
         <Paper elevation={0} sx={{
@@ -17,27 +17,44 @@ export const UserMobileCard = ({ user, t, theme, onEdit, onAssignBundles, getRol
         }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Avatar sx={{ width: 50, height: 50, borderRadius: '14px', bgcolor: theme.palette.primary.main }}>
+                    <Avatar sx={{
+                        width: 50, height: 50, borderRadius: '14px',
+                        bgcolor: isAdmin ? theme.palette.error.main : theme.palette.primary.main,
+                        fontWeight: 800
+                    }}>
                         {user.firstName?.[0]}{user.lastName?.[0]}
                     </Avatar>
                     <Box>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>{fullName}</Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>{fullName}</Typography>
+                            {isAdmin && (
+                                <Chip
+                                    label="Yönetici"
+                                    size="small"
+                                    color="error"
+                                    sx={{ height: 18, fontSize: '0.6rem', fontWeight: 900, borderRadius: '6px' }}
+                                />
+                            )}
+                        </Box>
                         <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>{user.email}</Typography>
                     </Box>
                 </Box>
-                <Box>{getRoleChip(primaryRole)}</Box>
             </Box>
 
             <Divider sx={{ mb: 2, opacity: 0.5 }} />
 
             <Grid container spacing={2} sx={{ mb: 2 }}>
                 <Grid item xs={6}>
-                    <Typography variant="caption" sx={{ color: 'text.disabled', fontWeight: 700, display: 'block', mb: 0.5 }}>{t('common.phone')}</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>-</Typography>
+                    <Typography variant="caption" sx={{ color: 'text.disabled', fontWeight: 700, display: 'block', mb: 0.5 }}>{t('users.table.contact') || 'İLETİŞİM'}</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>{user.phoneNumber || '-'}</Typography>
                 </Grid>
                 <Grid item xs={6}>
-                    <Typography variant="caption" sx={{ color: 'text.disabled', fontWeight: 700, display: 'block', mb: 0.5 }}>{t('common.joining_date')}</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>-</Typography>
+                    <Typography variant="caption" sx={{ color: 'text.disabled', fontWeight: 700, display: 'block', mb: 0.5 }}>{t('users.table.bundles') || 'YETKİ PAKETİ'}</Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {user.bundleNames?.slice(0, 2).map(b => (
+                            <Chip key={b} label={b} size="small" variant="outlined" sx={{ height: 20, fontSize: '0.65rem', borderRadius: '6px' }} />
+                        ))}
+                    </Box>
                 </Grid>
             </Grid>
 

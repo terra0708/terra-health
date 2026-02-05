@@ -28,4 +28,6 @@ public class UserDto {
      * a user belongs to.
      */
     private List<String> bundleNames;
+
+    private String phoneNumber;
 }

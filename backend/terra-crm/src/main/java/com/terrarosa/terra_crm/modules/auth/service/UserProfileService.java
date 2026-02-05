@@ -8,7 +8,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Service for managing tenant-specific user profiles.
@@ -36,6 +40,16 @@ public class UserProfileService {
                 .orElseGet(() -> UserProfileDto.builder()
                         .userId(userId)
                         .build());
+    }
+
+    /**
+     * Get profiles for multiple users within current tenant schema.
+     */
+    @Transactional(readOnly = true)
+    public List<UserProfileDto> getProfilesByUserIds(Collection<UUID> userIds) {
+        return userProfileRepository.findByUserIdIn(userIds).stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
     }
 
     /**
