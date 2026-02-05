@@ -57,6 +57,7 @@ public class SuperAdminInitializer implements CommandLineRunner {
     private final PermissionService permissionService;
 
     @Override
+    @Transactional
     public void run(String... args) {
         try {
             // Check if SYSTEM tenant exists

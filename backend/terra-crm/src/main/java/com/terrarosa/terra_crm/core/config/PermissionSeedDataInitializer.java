@@ -70,6 +70,7 @@ public class PermissionSeedDataInitializer implements CommandLineRunner {
     private final PermissionService permissionService;
 
     @Override
+    @Transactional
     public void run(String... args) {
         try {
             log.info("Starting Permission Seed Data Initialization...");
