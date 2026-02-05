@@ -16,6 +16,7 @@ export const customerSchema = z.object({
     registrationDate: z.string(),
     consultantId: z.string().optional(),
     categories: z.array(z.string()).default([]),
+    category: z.string().optional(),
     services: z.array(z.string()).default([]),
     status: z.string().min(1),
     source: z.string().min(1),
@@ -27,5 +28,9 @@ export const customerSchema = z.object({
     job: z.string().optional(),
     medicalHistory: z.string().optional(),
     operationType: z.string().optional(),
-    passportNumber: z.string().optional()
+    passportNumber: z.string().optional(),
+    reminder: z.object({
+        active: z.boolean().default(false),
+        notes: z.array(z.any()).default([])
+    }).optional()
 });

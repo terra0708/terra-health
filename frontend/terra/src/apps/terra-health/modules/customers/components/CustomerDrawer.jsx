@@ -73,7 +73,7 @@ export const CustomerDrawer = ({ open, onClose, customer, client, t: tProp }) =>
                     status: activeCustomer.status || settings.statuses[0]?.value || 'new',
                     source: activeCustomer.source || settings.sources[0]?.value || 'manual',
                     consultantId: activeCustomer.consultantId || '',
-                    category: activeCustomer.category || '',
+                    categories: activeCustomer.categories || [],
                     notes: activeCustomer.notes || [],
                     files: activeCustomer.files || [],
                     payments: activeCustomer.payments || [],
@@ -108,7 +108,7 @@ export const CustomerDrawer = ({ open, onClose, customer, client, t: tProp }) =>
 
         // Tab mapping
         const personalInfoFields = ['name', 'phone', 'email', 'country', 'city', 'job', 'passportNumber', 'operationType', 'medicalHistory', 'registrationDate'];
-        const statusFields = ['consultantId', 'category', 'services', 'status', 'source'];
+        const statusFields = ['consultantId', 'categories', 'services', 'status', 'source'];
 
         if (personalInfoFields.includes(firstErrorPath)) {
             setTabValue(0);
@@ -159,9 +159,9 @@ export const CustomerDrawer = ({ open, onClose, customer, client, t: tProp }) =>
             // Update existing
             const clientId = activeCustomer.id;
 
-            updateClient(clientId, payload).then(() => {
+            updateClient(clientId, payload).then(async () => {
                 // Sync Reminders (Intelligent sync instead of wipe-recreate)
-                syncCustomerReminders(clientId, reminderNotes);
+                await syncCustomerReminders(clientId, reminderNotes);
                 setSnackbar({ open: true, message: t('common.success_update', 'Güncellendi'), severity: 'success' });
                 onClose();
             }).catch(err => {
@@ -170,19 +170,24 @@ export const CustomerDrawer = ({ open, onClose, customer, client, t: tProp }) =>
             });
         } else {
             // New Customer
-            addClient(payload).then((newCustomer) => {
+            addClient(payload).then(async (newCustomer) => {
                 const newId = newCustomer?.id;
 
                 // Add reminders (Sync also works for new customers)
-                syncCustomerReminders(newId, reminderNotes);
+                if (newId) {
+                    await syncCustomerReminders(newId, reminderNotes);
+                }
 
+                // Add notification
                 useNotificationStore.getState().addNotification({
                     title: t('notifications.new_leads'),
                     message: `${data.name} yeni müşteri kaydı.`,
-                    type: 'system', priority: 'high', link: '/customers'
+                    type: 'system',
+                    priority: 'high',
+                    link: '/customers'
                 });
 
-                setSnackbar({ open: true, message: t('common.success_save', 'Kaydedildi'), severity: 'success' });
+                setSnackbar({ open: true, message: t('common.success_add', 'Eklendi'), severity: 'success' });
                 onClose();
             }).catch(err => {
                 console.error('Save failed:', err);

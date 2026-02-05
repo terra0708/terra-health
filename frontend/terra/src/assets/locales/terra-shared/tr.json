@@ -78,7 +78,8 @@
         "editing_customer_record": "Bir Müşteri Kaydını Düzenliyorsunuz. Değişiklikler müşteri profiline de yansıyacaktır.",
         "meeting_with": "Görüşme",
         "delete_confirm": "Bu hatırlatıcıyı silmek istediğinize emin misiniz?",
-        "empty_state_desc": "Henüz herhangi bir hatırlatıcı planlanmamış. Yeni bir tane ekleyerek başlayabilirsiniz."
+        "empty_state_desc": "Henüz herhangi bir hatırlatıcı planlanmamış. Yeni bir tane ekleyerek başlayabilirsiniz.",
+        "sub_category_required": "Lütfen bir alt kategori seçiniz"
     },
     "settings": {
         "reminder_settings": "Hatırlatıcı Ayarları",

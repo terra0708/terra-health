@@ -35,56 +35,45 @@ const AddReminderDialog = ({
         customerName: ''
     });
 
-    // Set initial category and status when loaded
+    // Initialize form when opened or editingReminder changes
     useEffect(() => {
-        if (open && !editingReminder && categories.length > 0 && !formData.categoryId) {
-            let targetCategoryId;
+        if (!open) return;
 
+        if (editingReminder) {
+            setFormData({
+                title: editingReminder.title || '',
+                date: editingReminder.date || new Date().toISOString().split('T')[0],
+                time: editingReminder.time || '09:00',
+                note: editingReminder.note || '',
+                categoryId: editingReminder.categoryId || '',
+                subCategoryId: editingReminder.subCategoryId || '',
+                statusId: editingReminder.statusId || defaultStatus?.id || '',
+                customerId: editingReminder.relationId || null,
+                customerName: editingReminder.customer?.name || ''
+            });
+        } else {
+            // New Reminder
+            let targetCategoryId = '';
             if (initialCategoryId) {
                 targetCategoryId = initialCategoryId;
-            } else {
-                const customerCategory = categories.find(c => c.labelEn === 'Customer');
-                targetCategoryId = customerCategory ? customerCategory.id : categories[0].id;
+            } else if (categories.length > 0) {
+                const customerCat = getCustomerCategory();
+                targetCategoryId = customerCat ? customerCat.id : categories[0].id;
             }
 
-            setFormData(prev => ({
-                ...prev,
+            setFormData({
+                title: '',
+                date: new Date().toISOString().split('T')[0],
+                time: '09:00',
+                note: '',
                 categoryId: targetCategoryId,
+                subCategoryId: '',
+                statusId: defaultStatus?.id || (statuses.length > 0 ? statuses[0].id : ''),
                 customerId: initialCustomerId || null,
-                statusId: defaultStatus?.id || (statuses.length > 0 ? statuses[0].id : '')
-            }));
+                customerName: ''
+            });
         }
-    }, [open, editingReminder, categories, defaultStatus, statuses, initialCategoryId, initialCustomerId]);
-
-    useEffect(() => {
-        if (open) {
-            if (editingReminder) {
-                setFormData({
-                    title: editingReminder.title,
-                    date: editingReminder.date,
-                    time: editingReminder.time || '09:00',
-                    note: editingReminder.note,
-                    categoryId: editingReminder.categoryId,
-                    subCategoryId: editingReminder.subCategoryId,
-                    statusId: editingReminder.statusId,
-                    customerId: editingReminder.relationId || null,
-                    customerName: editingReminder.customer?.name || ''
-                });
-            } else {
-                setFormData({
-                    title: '',
-                    date: new Date().toISOString().split('T')[0],
-                    time: '09:00',
-                    note: '',
-                    categoryId: '',
-                    subCategoryId: '',
-                    statusId: defaultStatus?.id || (statuses.length > 0 ? statuses[0].id : ''),
-                    customerId: null,
-                    customerName: ''
-                });
-            }
-        }
-    }, [open, editingReminder, defaultStatus, statuses]);
+    }, [open, editingReminder, categories, statuses, defaultStatus, initialCategoryId, initialCustomerId, getCustomerCategory]);
 
     // Locked/Initial Context
     const lockedCategoryId = initialCategoryId || (editingReminder?.categoryId);
@@ -177,6 +166,8 @@ const AddReminderDialog = ({
                             value={formData.subCategoryId}
                             onChange={(e) => handleChange('subCategoryId', e.target.value)}
                             variant="outlined"
+                            error={isCustomerCategory && !formData.subCategoryId}
+                            helperText={isCustomerCategory && !formData.subCategoryId ? t('reminders.sub_category_required', 'Lütfen bir alt kategori seçiniz') : ''}
                         >
                             <MenuItem value=""><em>{t('common.none')}</em></MenuItem>
                             {availableSubCategories.map((sub) => (
@@ -190,8 +181,8 @@ const AddReminderDialog = ({
                         </TextField>
                     )}
 
-                    {/* Show customer list only if customer category is selected AND subcategory is selected */}
-                    {isCustomerCategory && formData.subCategoryId && (
+                    {/* Show customer list only if customer category is selected AND subcategory is selected, but HIDE if customer is already provided in context */}
+                    {isCustomerCategory && formData.subCategoryId && !lockedCustomerId && (
                         <Autocomplete
                             options={customers}
                             getOptionLabel={(option) => option.name}
