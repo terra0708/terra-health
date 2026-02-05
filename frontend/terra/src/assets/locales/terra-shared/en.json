@@ -65,7 +65,18 @@
         "pending": "Pending",
         "all": "All",
         "title": "Title",
-        "note": "Note"
+        "note": "Note",
+        "validation_error": "Please check for missing or incorrect fields",
+        "security": "Security",
+        "change_password": "Change Password",
+        "language": "Language",
+        "theme": "Theme",
+        "items": "items",
+        "enabled": "Enabled",
+        "disabled": "Disabled",
+        "enable": "Enable",
+        "disable": "Disable",
+        "creating": "Creating..."
     },
     "reminders": {
         "title": "Reminders",
@@ -86,7 +97,24 @@
         "sub_categories": "Sub-Categories",
         "statuses": "Statuses",
         "mark_as_completed": "Mark as Completed",
-        "mark_as_completed_desc": "When this status is selected, the reminder will be marked as 'Completed'."
+        "mark_as_completed_desc": "When this status is selected, the reminder will be marked as 'Completed'.",
+        "system_desc": "Manage system-wide configurations and preferences here.",
+        "general_settings": "General Settings",
+        "lang_helper": "Default language to be used across the application",
+        "theme_helper": "Choose between dark or light mode",
+        "push_notif": "Browser Notifications",
+        "push_desc": "Receive instant notifications through the web browser",
+        "email_notif": "Email Notifications",
+        "email_desc": "Report important events via email",
+        "sound_notif": "Notification Sounds",
+        "sound_desc": "Play a sound when a new notification arrives",
+        "company_info": "Company Information",
+        "company_name": "Company Name",
+        "tax_id": "Tax ID",
+        "backup_data": "Backup Data",
+        "last_backup": "Last backup: {{date}}",
+        "reminder_types": "Reminder Types",
+        "initializing_parameters": "Initializing parameters..."
     },
     "menu": {
         "dashboard": "Dashboard",
@@ -219,7 +247,14 @@
             "admin": "Admin",
             "doctor": "Doctor",
             "staff": "Staff"
-        }
+        },
+        "table": {
+            "user": "User",
+            "terra_id": "TERRA ID",
+            "bundles": "Permission Package",
+            "contact": "Contact"
+        },
+        "no_bundle": "No permission package"
     },
     "customers": {
         "title": "Customer Management",
@@ -415,5 +450,53 @@
         "access_denied": "Access Denied",
         "access_denied_message": "This area can only be accessed through the System Management Center",
         "access_denied_subtitle": "Please contact the system administrator"
+    },
+    "clients": {
+        "total_clients": "Total Customers",
+        "active_clients": "Active Customers",
+        "pending_clients": "Pending Customers",
+        "completed_clients": "Completed Customers"
+    },
+    "super_admin": {
+        "user_search": {
+            "title": "Global User Search",
+            "subtitle": "Search and manage users across the entire system by email",
+            "email": "Email",
+            "email_placeholder": "Enter email to search...",
+            "name": "Name",
+            "tenant": "Organization",
+            "status": "Status",
+            "error": "Failed to search users",
+            "loading": "Searching users...",
+            "reset_password": "Reset Password",
+            "impersonate": "Impersonate",
+            "confirm_impersonate": "Are you sure you want to start an impersonation session?",
+            "no_results": "No users found",
+            "enter_new_password": "Enter new password:"
+        },
+        "tenants": {
+            "title": "Organization Management",
+            "subtitle": "Manage tenants, modules, and quotas",
+            "create": "Create New Organization",
+            "create_title": "New Organization Registry",
+            "error": "Failed to load organizations",
+            "loading": "Loading organizations...",
+            "name": "Organization Name",
+            "schema": "Database Schema",
+            "status": "Status",
+            "modules": "Modules",
+            "modules_count": "modules",
+            "settings": "Settings",
+            "confirm_suspend": "Are you sure you want to suspend this organization?",
+            "confirm_delete": "Are you sure you want to permanently delete this organization? This action cannot be undone.",
+            "tenant_name": "Organization Name",
+            "domain": "Domain Name",
+            "max_users": "Maximum Users",
+            "admin_first_name": "Admin First Name",
+            "admin_last_name": "Admin Last Name",
+            "admin_email": "Admin Email",
+            "admin_password": "Admin Password",
+            "select_modules": "Select Modules"
+        }
     }
 }

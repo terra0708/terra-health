@@ -67,7 +67,17 @@
         "all": "Tümü",
         "title": "Başlık",
         "note": "Not",
-        "validation_error": "Lütfen eksik veya hatalı alanları kontrol ediniz"
+        "validation_error": "Lütfen eksik veya hatalı alanları kontrol ediniz",
+        "security": "Güvenlik",
+        "change_password": "Şifre Değiştir",
+        "language": "Dil",
+        "theme": "Tema",
+        "items": "öğe",
+        "enabled": "Aktif",
+        "disabled": "Pasif",
+        "enable": "Aktifleştir",
+        "disable": "Devre Dışı Bırak",
+        "creating": "Oluşturuluyor..."
     },
     "reminders": {
         "title": "Hatırlatıcılar",
@@ -89,7 +99,24 @@
         "sub_categories": "Alt Başlıklar",
         "statuses": "Durumlar",
         "mark_as_completed": "İşlemi Tamamlar",
-        "mark_as_completed_desc": "Bu durum seçildiğinde hatırlatıcı 'Tamamlandı' olarak işaretlenir."
+        "mark_as_completed_desc": "Bu durum seçildiğinde hatırlatıcı 'Tamamlandı' olarak işaretlenir.",
+        "system_desc": "Sistem genelindeki yapılandırmaları ve tercihleri buradan yönetin.",
+        "general_settings": "Genel Ayarlar",
+        "lang_helper": "Uygulama genelinde kullanılacak varsayılan dil",
+        "theme_helper": "Koyu veya açık mod seçimi",
+        "push_notif": "Tarayıcı Bildirimleri",
+        "push_desc": "Web tarayıcısı üzerinden anlık bildirim al",
+        "email_notif": "E-posta Bildirimleri",
+        "email_desc": "Önemli olayları e-posta ile raporla",
+        "sound_notif": "Bildirim Sesleri",
+        "sound_desc": "Yeni bir bildirim geldiğinde ses çal",
+        "company_info": "Firma Bilgileri",
+        "company_name": "Firma Adı",
+        "tax_id": "Vergi Numarası",
+        "backup_data": "Verileri Yedekle",
+        "last_backup": "Son yedekleme: {{date}}",
+        "reminder_types": "Hatırlatıcı Türleri",
+        "initializing_parameters": "Parametreler yükleniyor..."
     },
     "menu": {
         "dashboard": "Dashboard",
@@ -222,7 +249,14 @@
             "admin": "Yönetici",
             "doctor": "Doktor",
             "staff": "Personel"
-        }
+        },
+        "table": {
+            "user": "Kullanıcı",
+            "terra_id": "TERRA ID",
+            "bundles": "Yetki Paketi",
+            "contact": "İletişim"
+        },
+        "no_bundle": "Yetki paketi yok"
     },
     "customers": {
         "title": "Müşteri Yönetimi",
@@ -435,5 +469,53 @@
         "access_denied": "Erişim Reddedildi",
         "access_denied_message": "Bu alan sadece Sistem Yönetim Merkezi üzerinden erişilebilirdir",
         "access_denied_subtitle": "Lütfen sistem yöneticisi ile iletişime geçin"
+    },
+    "clients": {
+        "total_clients": "Toplam Müşteri",
+        "active_clients": "Aktif Müşteri",
+        "pending_clients": "Bekleyen Müşteri",
+        "completed_clients": "Tamamlanan Müşteri"
+    },
+    "super_admin": {
+        "user_search": {
+            "title": "Global Kullanıcı Arama",
+            "subtitle": "Tüm sistemdeki kullanıcıları e-posta ile arayın ve yönetin",
+            "email": "E-posta",
+            "email_placeholder": "Aramak için e-posta girin...",
+            "name": "İsim",
+            "tenant": "Organizasyon",
+            "status": "Durum",
+            "error": "Kullanıcı arama başarısız oldu",
+            "loading": "Kullanıcılar aranıyor...",
+            "reset_password": "Şifre Sıfırla",
+            "impersonate": "Kullanıcı Yerine Geç",
+            "confirm_impersonate": "Kullanıcı oturumunu başlatmak istediğinize emin misiniz?",
+            "no_results": "Kullanıcı bulunamadı",
+            "enter_new_password": "Yeni şifreyi girin:"
+        },
+        "tenants": {
+            "title": "Organizasyon Yönetimi",
+            "subtitle": "Kiracıları, modülleri ve kotaları yönetin",
+            "create": "Yeni Organizasyon Oluştur",
+            "create_title": "Yeni Organizasyon Kaydı",
+            "error": "Organizasyonlar yüklenemedi",
+            "loading": "Organizasyonlar yükleniyor...",
+            "name": "Organizasyon Adı",
+            "schema": "Veritabanı Şeması",
+            "status": "Durum",
+            "modules": "Modüller",
+            "modules_count": "modül",
+            "settings": "Ayarlar",
+            "confirm_suspend": "Bu organizasyonu askıya almak istediğinize emin misiniz?",
+            "confirm_delete": "Bu organizasyonu kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.",
+            "tenant_name": "Organizasyon Adı",
+            "domain": "Alan Adı (Domain)",
+            "max_users": "Maksimum Kullanıcı",
+            "admin_first_name": "Yönetici Adı",
+            "admin_last_name": "Yönetici Soyadı",
+            "admin_email": "Yönetici E-postası",
+            "admin_password": "Yönetici Şifresi",
+            "select_modules": "Modülleri Seçin"
+        }
     }
 }
