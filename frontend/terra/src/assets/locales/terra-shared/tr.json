@@ -476,6 +476,36 @@
         "pending_clients": "Bekleyen Müşteri",
         "completed_clients": "Tamamlanan Müşteri"
     },
+    "files": {
+        "title": "Dosya Yönetimi",
+        "all_files": "Tüm Dosyalar",
+        "file_name": "Dosya Adı",
+        "file_category": "Dosya Kategorisi",
+        "edit_file": "Dosyayı Düzenle",
+        "delete_category": "Kategoriyi Sil",
+        "migrate_to_category": "Dosyalar Nereye Taşınsın?",
+        "migrate_and_delete": "Taşı ve Sil",
+        "no_files_safe_delete": "Bu kategoride dosya yok, güvenle silebilirsiniz.",
+        "download": "İndir",
+        "uploading": "Yükleniyor...",
+        "upload_complete": "Yükleme Tamamlandı",
+        "upload_failed": "Yükleme Başarısız"
+    },
+    "trash": {
+        "title": "Çöp Kutusu",
+        "subtitle": "Silinmiş dosyaları buradan geri yükleyebilir veya kalıcı olarak silebilirsiniz.",
+        "empty_trash": "Çöp Kutusu Boş",
+        "empty_trash_desc": "Silinmiş dosya bulunmamaktadır.",
+        "restore": "Geri Yükle",
+        "permanent_delete": "Kalıcı Sil",
+        "confirm_permanent_delete": "Bu dosyayı kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.",
+        "deleted_at": "Silinme Tarihi",
+        "original_category": "Orijinal Kategori",
+        "customer_name": "Müşteri",
+        "restore_success": "Dosya başarıyla geri yüklendi",
+        "delete_success": "Dosya kalıcı olarak silindi",
+        "auto_delete_info": "30 gün sonra otomatik olarak silinecek"
+    },
     "super_admin": {
         "user_search": {
             "title": "Global Kullanıcı Arama",

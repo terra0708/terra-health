@@ -255,7 +255,7 @@ export const CustomerDrawer = ({ open, onClose, customer, client, t: tProp }) =>
                                 i18n={i18n}
                                 lang={i18n.language}
                                 errors={errors}
-                                customerId={customer?.id}
+                                customerId={activeCustomer?.id}
                                 watch={watch}
                                 customerName={watch('name')}
                             />

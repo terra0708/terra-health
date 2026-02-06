@@ -18,7 +18,8 @@ public class FileCategoryDto {
     private String labelEn;
     private String color;
     private String icon;
-    private Boolean isSystem;
+    private Boolean isSystemDefault;
+    private Boolean isDeletable;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

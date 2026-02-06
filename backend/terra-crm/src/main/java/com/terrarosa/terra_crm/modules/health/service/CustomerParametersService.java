@@ -90,16 +90,8 @@ public class CustomerParametersService {
                     .build());
         }
 
-        // System File Category
-        if (fileCategoryRepository.findByLabelEn("system").isEmpty()) {
-            fileCategoryRepository.save(FileCategory.builder()
-                    .labelTr("Sistem Dosya Kategorisi")
-                    .labelEn("system")
-                    .color("#9e9e9e")
-                    .icon("Settings")
-                    .isSystem(true)
-                    .build());
-        }
+        // System File Categories (Genel and Arşiv are created by migration)
+        // No need to create them here as they are in V17 migration
     }
 
     // ==================== CATEGORIES ====================
@@ -471,7 +463,8 @@ public class CustomerParametersService {
                 .labelEn(request.getLabelEn())
                 .color(request.getColor())
                 .icon(request.getIcon())
-                .isSystem(false)
+                .isSystemDefault(false)
+                .isDeletable(true)
                 .build();
 
         FileCategory saved = fileCategoryRepository.save(fileCategory);
@@ -484,7 +477,7 @@ public class CustomerParametersService {
         FileCategory fileCategory = fileCategoryRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("File category not found with id: " + id));
 
-        if (Boolean.TRUE.equals(fileCategory.getIsSystem())) {
+        if (Boolean.FALSE.equals(fileCategory.getIsDeletable())) {
             throw new RuntimeException("Cannot update system file category");
         }
 
@@ -499,15 +492,18 @@ public class CustomerParametersService {
     }
 
     @Transactional
-    public void deleteFileCategory(UUID id) {
+    public void deleteFileCategory(UUID id, UUID targetCategoryId) {
         FileCategory fileCategory = fileCategoryRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("File category not found with id: " + id));
 
-        if (Boolean.TRUE.equals(fileCategory.getIsSystem())) {
+        if (Boolean.FALSE.equals(fileCategory.getIsDeletable())) {
             throw new RuntimeException("Cannot delete system file category");
         }
 
-        fileCategoryRepository.deleteById(id);
+        // This will be handled by CustomerFileController with migration logic
+        // For now, just mark as deleted (soft delete)
+        fileCategory.setDeleted(true);
+        fileCategoryRepository.save(fileCategory);
         log.info("Deleted file category: {}", fileCategory.getLabelEn());
     }
 
@@ -603,7 +599,8 @@ public class CustomerParametersService {
                 .labelEn(fileCategory.getLabelEn())
                 .color(fileCategory.getColor())
                 .icon(fileCategory.getIcon())
-                .isSystem(fileCategory.getIsSystem())
+                .isSystemDefault(fileCategory.getIsSystemDefault())
+                .isDeletable(fileCategory.getIsDeletable())
                 .createdAt(fileCategory.getCreatedAt())
                 .updatedAt(fileCategory.getUpdatedAt())
                 .build();

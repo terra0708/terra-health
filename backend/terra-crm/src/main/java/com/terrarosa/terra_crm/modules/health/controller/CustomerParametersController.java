@@ -287,9 +287,11 @@ public class CustomerParametersController {
 
     @DeleteMapping("/file-categories/{id}")
     @PreAuthorize("@permissionEvaluator.hasPermission(authentication, 'SETTINGS_CUSTOMERS_P') or @permissionEvaluator.hasPermission(authentication, 'SETTINGS_DELETE')")
-    public ResponseEntity<ApiResponse<Void>> deleteFileCategory(@PathVariable UUID id) {
-        log.info("Deleting file category id: {}", id);
-        parametersService.deleteFileCategory(id);
+    public ResponseEntity<ApiResponse<Void>> deleteFileCategory(
+            @PathVariable UUID id,
+            @RequestParam(required = false) UUID targetCategoryId) {
+        log.info("Deleting file category id: {}, target category: {}", id, targetCategoryId);
+        parametersService.deleteFileCategory(id, targetCategoryId);
         return ResponseEntity.ok(ApiResponse.success(null, "File category deleted successfully"));
     }
 }

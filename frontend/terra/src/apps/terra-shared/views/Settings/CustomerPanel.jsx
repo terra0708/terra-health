@@ -28,6 +28,7 @@ import { CustomColorPicker } from './components/shared/CustomColorPicker';
 import { CustomerItemGrid } from './components/customer/CustomerItemGrid';
 import { CustomerEditDialog } from './components/customer/CustomerEditDialog';
 import { CustomerDeleteDialog } from './components/customer/CustomerDeleteDialog';
+import { FileCategoryDeleteDialog } from './components/customer/FileCategoryDeleteDialog';
 import { ModulePageWrapper } from '@common/ui';
 import { usePerformance } from '@common/hooks';
 
@@ -47,6 +48,11 @@ const CustomerPanel = () => {
     const [editMode, setEditMode] = useState(false);
     const [currentItem, setCurrentItem] = useState(null);
     const [itemToDelete, setItemToDelete] = useState(null);
+    const [fileCategoryDeleteDialog, setFileCategoryDeleteDialog] = useState({
+        open: false,
+        category: null,
+        fileCount: 0
+    });
 
     const settings = useCustomerSettingsStore();
     const { customers } = useCustomers();
@@ -191,9 +197,25 @@ const CustomerPanel = () => {
     };
 
 
-    const confirmDelete = (item) => {
-        setItemToDelete(item);
-        setDeleteConfirm({ open: true, item: item });
+    const confirmDelete = async (item) => {
+        // Special handling for file categories
+        if (activeTab?.type === 'file_category') {
+            try {
+                const fileCount = await settings.getFileCategoryFileCount(item.id);
+                setFileCategoryDeleteDialog({
+                    open: true,
+                    category: item,
+                    fileCount: fileCount
+                });
+            } catch (error) {
+                console.error('Failed to get file count:', error);
+                setSnackbar({ open: true, message: t('common.error'), severity: 'error' });
+            }
+        } else {
+            // Regular delete for other types
+            setItemToDelete(item);
+            setDeleteConfirm({ open: true, item: item });
+        }
     };
 
     const executeDelete = async () => {
@@ -227,6 +249,19 @@ const CustomerPanel = () => {
             setSnackbar({ open: true, message: t('common.success_delete'), severity: 'success' });
         } catch (error) {
             console.error('Delete failed:', error);
+            setSnackbar({ open: true, message: error.message || t('common.error'), severity: 'error' });
+        }
+    };
+
+    const executeFileCategoryDelete = async (targetCategoryId) => {
+        if (!fileCategoryDeleteDialog.category) return;
+
+        try {
+            await settings.deleteFileCategory(fileCategoryDeleteDialog.category.id, targetCategoryId);
+            setFileCategoryDeleteDialog({ open: false, category: null, fileCount: 0 });
+            setSnackbar({ open: true, message: t('common.success_delete'), severity: 'success' });
+        } catch (error) {
+            console.error('Failed to delete file category:', error);
             setSnackbar({ open: true, message: error.message || t('common.error'), severity: 'error' });
         }
     };
@@ -340,6 +375,18 @@ const CustomerPanel = () => {
                     onConfirm={executeDelete}
                     itemToDelete={itemToDelete}
                     getDisplayName={getDisplayName}
+                />
+
+                {/* File Category Delete Dialog (with migration) */}
+                <FileCategoryDeleteDialog
+                    open={fileCategoryDeleteDialog.open}
+                    onClose={() => setFileCategoryDeleteDialog({ open: false, category: null, fileCount: 0 })}
+                    onConfirm={executeFileCategoryDelete}
+                    category={fileCategoryDeleteDialog.category}
+                    fileCount={fileCategoryDeleteDialog.fileCount}
+                    availableCategories={settings.fileCategories}
+                    getDisplayName={getDisplayName}
+                    t={t}
                 />
 
                 {/* Add/Edit Dialog */}

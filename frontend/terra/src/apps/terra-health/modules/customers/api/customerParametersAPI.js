@@ -130,8 +130,17 @@ export const updateFileCategory = async (id, data) => {
     return await api.put(`${BASE_URL}/file-categories/${id}`, data);
 };
 
-export const deleteFileCategory = async (id) => {
-    await api.delete(`${BASE_URL}/file-categories/${id}`);
+export const deleteFileCategory = async (id, targetCategoryId = null) => {
+    const params = targetCategoryId ? { targetCategoryId } : {};
+    await api.delete(`${BASE_URL}/file-categories/${id}`, { params });
+};
+
+/**
+ * Get file count for a category
+ * Backend should return: { categoryId, fileCount }
+ */
+export const getFileCategoryFileCount = async (id) => {
+    return await api.get(`${BASE_URL}/file-categories/${id}/file-count`);
 };
 
 // ==================== TENANT USERS ====================

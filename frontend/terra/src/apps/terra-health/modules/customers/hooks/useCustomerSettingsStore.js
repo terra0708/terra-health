@@ -427,13 +427,27 @@ export const useCustomerSettingsStore = create((set, get) => ({
         }
     },
 
-    deleteFileCategory: async (id) => {
+    deleteFileCategory: async (id, targetCategoryId = null) => {
         try {
-            await parametersAPI.deleteFileCategory(id);
+            await parametersAPI.deleteFileCategory(id, targetCategoryId);
             set(state => ({ fileCategories: state.fileCategories.filter(c => c.id !== id) }));
         } catch (error) {
             console.error('Failed to delete file category:', error);
             throw error;
+        }
+    },
+
+    /**
+     * Get file count for a category
+     * Returns: { categoryId, fileCount }
+     */
+    getFileCategoryFileCount: async (id) => {
+        try {
+            const result = await parametersAPI.getFileCategoryFileCount(id);
+            return result?.fileCount || 0;
+        } catch (error) {
+            console.error('Failed to get file category file count:', error);
+            return 0;
         }
     }
 }));

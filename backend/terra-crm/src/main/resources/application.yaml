@@ -45,6 +45,8 @@ app:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:https://localhost:5173,https://localhost:3000}
   csrf:
     cookie-name: XSRF-TOKEN
+  storage:
+    base-path: ${STORAGE_BASE_PATH:./storage} # Local storage path for development
   seed: # Seed verileri app altına birleştirildi
     superadmin:
       email: ${SUPERADMIN_EMAIL:admin@terra.com}
