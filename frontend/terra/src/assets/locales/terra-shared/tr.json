@@ -546,6 +546,10 @@
             "admin_email": "Yönetici E-postası",
             "admin_password": "Yönetici Şifresi",
             "select_modules": "Modülleri Seçin"
+        },
+        "files": {
+            "confirm_delete": "Bu dosyayı silmek istediğinize emin misiniz?",
+            "upload_first_file": "İlk dosyanızı yüklemek için yukarıdaki yükleme butonuna tıklayın"
         }
     }
 }

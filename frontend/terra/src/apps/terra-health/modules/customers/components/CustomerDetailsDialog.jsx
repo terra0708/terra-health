@@ -13,6 +13,8 @@ import { useTranslation } from 'react-i18next';
 import { UserCheck } from 'lucide-react';
 import { useLookup } from '@common/hooks/useLookup';
 import { ReminderCard, useReminderSettingsStore, useReminderStore } from '@shared/modules/reminders';
+import { useFileStore } from '@shared/modules/files';
+import { Trash2 } from 'lucide-react';
 // CustomerDetailsDialog uses merged customer object from useCustomers hook
 // No direct store import needed
 
@@ -26,6 +28,11 @@ export const CustomerDetailsDialog = ({ open, onClose, customer, client, t: tPro
     const statuses = useReminderSettingsStore(state => state.statuses);
     const updateReminder = useReminderStore(state => state.updateReminder);
     const reminders = useReminderStore(state => state.reminders);
+
+    // File store
+    const files = useFileStore(state => state.files);
+    const deleteFile = useFileStore(state => state.deleteFile);
+    const fetchCustomerFiles = useFileStore(state => state.fetchCustomerFiles);
 
     // Support both 'customer' and 'client' prop names for compatibility
     const customerData = customer || client;
@@ -55,8 +62,9 @@ export const CustomerDetailsDialog = ({ open, onClose, customer, client, t: tPro
         if (open && customerData?.id) {
             useReminderStore.getState().fetchRemindersByCustomer(customerData.id);
             useReminderSettingsStore.getState().fetchSettings();
+            fetchCustomerFiles(customerData.id);
         }
-    }, [open, customerData?.id]);
+    }, [open, customerData?.id, fetchCustomerFiles]);
 
     if (!customerData) return null;
 
@@ -336,30 +344,123 @@ export const CustomerDetailsDialog = ({ open, onClose, customer, client, t: tPro
                 )}
 
                 {activeTab === 3 && (
-                    <Stack spacing={2} sx={{ flex: 1 }}>
-                        <SectionTitle icon={File} title={t('customers.files_info')} count={Array.isArray(customerData.files) ? customerData.files.length : 0} />
+                    <Stack spacing={3} sx={{ flex: 1 }}>
+                        <SectionTitle icon={File} title={t('customers.files_info')} count={files.length} />
+
                         <Box sx={{ flex: 1, minHeight: 0 }}>
-                            {Array.isArray(customerData.files) && customerData.files.length > 0 ? (
+                            {files.length > 0 ? (
                                 <>
                                     <Stack spacing={2}>
-                                        {customerData.files
+                                        {files
                                             .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                                             .map((file) => (
-                                                <Paper key={file.id} elevation={0} sx={{ p: 2, borderRadius: '16px', border: `1px solid ${theme.palette.divider}`, display: 'flex', alignItems: 'center', gap: 2, '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.02) } }}>
-                                                    <Box sx={{ width: 40, height: 40, borderRadius: '10px', bgcolor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                        <FileText size={20} />
+                                                <Paper
+                                                    key={file.id}
+                                                    elevation={0}
+                                                    sx={{
+                                                        p: 2.5,
+                                                        borderRadius: '16px',
+                                                        border: `1px solid ${theme.palette.divider}`,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: 2,
+                                                        transition: 'all 0.2s',
+                                                        '&:hover': {
+                                                            bgcolor: alpha(theme.palette.primary.main, 0.02),
+                                                            borderColor: alpha(theme.palette.primary.main, 0.3),
+                                                            transform: 'translateY(-2px)',
+                                                            boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.1)}`
+                                                        }
+                                                    }}
+                                                >
+                                                    <Box
+                                                        sx={{
+                                                            width: 48,
+                                                            height: 48,
+                                                            borderRadius: '12px',
+                                                            bgcolor: alpha(theme.palette.primary.main, 0.1),
+                                                            color: 'primary.main',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center'
+                                                        }}
+                                                    >
+                                                        <FileText size={24} />
                                                     </Box>
-                                                    <Box sx={{ flex: 1 }}>
-                                                        <Typography variant="body2" sx={{ fontWeight: 800 }}>{file.name}</Typography>
-                                                        <Typography variant="caption" color="text.secondary">{file.category} • {file.size} • {file.date}</Typography>
+                                                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                                                        <Typography
+                                                            variant="body2"
+                                                            sx={{
+                                                                fontWeight: 800,
+                                                                mb: 0.5,
+                                                                overflow: 'hidden',
+                                                                textOverflow: 'ellipsis',
+                                                                whiteSpace: 'nowrap'
+                                                            }}
+                                                        >
+                                                            {file.originalFilename}
+                                                        </Typography>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                                                            {file.category && (
+                                                                <Chip
+                                                                    label={file.category.labelTr || file.category.labelEn}
+                                                                    size="small"
+                                                                    sx={{
+                                                                        height: 20,
+                                                                        fontSize: '0.7rem',
+                                                                        fontWeight: 700,
+                                                                        bgcolor: alpha(theme.palette.primary.main, 0.1),
+                                                                        color: 'primary.main'
+                                                                    }}
+                                                                />
+                                                            )}
+                                                            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                                                {(file.fileSize / 1024).toFixed(1)} KB
+                                                            </Typography>
+                                                            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                                                •
+                                                            </Typography>
+                                                            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                                                {formatLocaleDate(file.uploadedAt, lang)}
+                                                            </Typography>
+                                                        </Box>
                                                     </Box>
-                                                    <IconButton size="small"><Download size={18} /></IconButton>
+                                                    <Box sx={{ display: 'flex', gap: 1 }}>
+                                                        <IconButton
+                                                            size="small"
+                                                            onClick={() => {
+                                                                window.open(`/api/v1/health/customers/${customerData.id}/files/${file.id}/download`, '_blank');
+                                                            }}
+                                                            sx={{
+                                                                bgcolor: alpha(theme.palette.info.main, 0.1),
+                                                                color: 'info.main',
+                                                                '&:hover': { bgcolor: alpha(theme.palette.info.main, 0.2) }
+                                                            }}
+                                                        >
+                                                            <Download size={18} />
+                                                        </IconButton>
+                                                        <IconButton
+                                                            size="small"
+                                                            onClick={async () => {
+                                                                if (window.confirm(t('files.confirm_delete'))) {
+                                                                    await deleteFile(file.id);
+                                                                }
+                                                            }}
+                                                            sx={{
+                                                                bgcolor: alpha(theme.palette.error.main, 0.1),
+                                                                color: 'error.main',
+                                                                '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.2) }
+                                                            }}
+                                                        >
+                                                            <Trash2 size={18} />
+                                                        </IconButton>
+                                                    </Box>
                                                 </Paper>
                                             ))}
                                     </Stack>
                                     <TablePagination
                                         component="div"
-                                        count={customerData.files.length}
+                                        count={files.length}
                                         page={page}
                                         onPageChange={handleChangePage}
                                         rowsPerPage={rowsPerPage}
