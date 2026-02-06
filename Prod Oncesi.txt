@@ -30,3 +30,47 @@ Teknik: Düşük. Mevcut Axios ve Zustand altyapısı bu ID'nin "nasıl" geldiğ
 Email Discovery: Kullanıcı e-postasını girdiğinde sistemin arka planda ilgili Tenant ID'yi otomatik bulması.
 
 Subdomain Mapping: URL üzerindeki alt alan adından (örn: hastane.terra.com) ID'nin otomatik çözülmesi.
+
+
+
+TEKNİK BORÇ ( ÇOK ÖNEMLİ)
+--------------------------------------------------------------------------
+
+1. Dosya Tipi Doğrulaması (MIME Type Check)
+Dosya uzantısına (.jpg, .pdf) güvenmek en büyük amatörlüktür. Saldırgan, bir PHP scriptinin adını resim.jpg yaparak sistemine sızabilir.
+
+Önlem: Uzantıyı değil, dosyanın Magic Bytes (içerik imzası) değerini kontrol et. Java'da Apache Tika kütüphanesi bu iş için standarttır.
+
+Kısıtlama: Sadece gerçekten ihtiyacın olan tiplere (application/pdf, image/jpeg, image/png) izin ver.
+
+2. Dosya Adı Sanitizasyonu ve Rastgeleleştirme
+Saldırgan, dosya adını ../../etc/passwd yaparak "Path Traversal" saldırısı deneyebilir veya aynı isimde dosya yükleyerek mevcut dosyaların üzerine yazabilir.
+
+Önlem: Kullanıcının verdiği dosya ismini asla sunucuda kullanma. Dosyayı kaydederken UUID.randomUUID() gibi rastgele bir isim ver ve orijinal ismi sadece veritabanında meta veri olarak sakla.
+
+3. Dosya Boyutu Sınırı
+Sunucunun disk alanını veya belleğini (RAM) şişirerek sistemi kilitleyebilirler (DoS saldırısı).
+
+Önlem: Hem uygulama seviyesinde (Spring MultipartFile ayarları) hem de Nginx seviyesinde (client_max_body_size) katı sınırlar koy. Sağlık belgeleri için 5-10 MB genelde yeterlidir.
+
+4. Dosyayı Uygulama Dizini Dışında Saklama
+En kritik kural: Yüklenen dosyalar, uygulamanın çalıştığı dizinin altında olmamalı.
+
+Neden? Eğer dosyalar /src/main/resources/static gibi bir yere giderse, saldırgan yüklediği bir .jsp veya .exe dosyasını URL üzerinden doğrudan çalıştırabilir.
+
+Önlem: Dosyaları sunucuda izole bir dizinde (örn: /var/terra-uploads/) veya tercihen AWS S3 gibi bir Object Storage servisinde sakla. S3 kullanman, Meta denetçilerine "ölçeklenebilir ve güvenli mimari" mesajı verir.
+
+5. Virüs Taraması (Malware Scanning)
+Meta, sistemine yüklenen bir belgenin başka bir kullanıcıya virüs bulaştırmayacağından emin olmak ister.
+
+Önlem: Dosyayı sisteme kabul etmeden önce arka planda bir antivirüs taramasından geçir. Açık kaynaklı ClamAV bu iş için idealdir. Java üzerinden bir stream ile dosyayı ClamAV'ye gönderip "OK" almadan veritabanına kaydetme.
+
+6. Erişim Kontrolü (Multi-tenancy Security)
+Senin sistemin multi-tenant. A firmasının yüklediği röntgen sonucunu, B firması URL'yi tahmin ederek görememeli.
+
+Önlem: Dosyalara doğrudan link verme. Dosyayı indirmek isteyen kullanıcı önce bir API endpoint'ine gitmeli (/api/files/download/{id}), burada JwtService ile kullanıcının o dosyaya erişim yetkisi (tenant ID kontrolü) doğrulanmalı ve dosya stream olarak dönülmelidir.
+
+7. Metadata Temizleme (EXIF Data)
+Resim dosyaları, çekilen yerin GPS koordinatlarını ve cihaz bilgilerini içerir.
+
+Önlem: Kişisel verilerin korunması (KVKK/GDPR) kapsamında, resim yüklenirken EXIF verilerini temizleyen bir kütüphane kullan.

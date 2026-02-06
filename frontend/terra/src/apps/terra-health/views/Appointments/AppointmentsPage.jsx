@@ -9,7 +9,7 @@ import {
     AppointmentCalendar,
     AppointmentDrawer
 } from '@terra-health/modules/appointments';
-import { useCustomerStore } from '@terra-health/modules/customers/hooks/useCustomerStore';
+import { useCustomers } from '@terra-health/modules/customers';
 import { ModulePageWrapper } from '@common/ui';
 import { usePerformance } from '@common/hooks';
 
@@ -26,7 +26,7 @@ const AppointmentsPage = () => {
     }, [userStore.users]);
 
     const { appointments, addAppointment, updateAppointment, deleteAppointment } = useAppointments();
-    const { customers } = useCustomerStore();
+    const { customers } = useCustomers();
 
     // --- STATE ---
     const [selectedDoctorId, setSelectedDoctorId] = useState(doctors[0]?.id || null);

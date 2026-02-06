@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import RemindersPageBase from '@shared/views/Reminders/RemindersPage';
 import { CustomerDetailsDialog } from '@terra-health/modules/customers';
 import { useCustomers } from '@terra-health/modules/customers';
-import { useCustomerStore } from '@terra-health/modules/customers/hooks/useCustomerStore';
 import { useReminderStore } from '@shared/modules/reminders';
 import { ModulePageWrapper } from '@common/ui';
 import { usePerformance } from '@common/hooks';
@@ -18,9 +17,8 @@ const RemindersPage = () => {
     usePerformance('RemindersPage');
     const { t } = useTranslation(['terra-health', 'translation']);
     const { customers } = useCustomers();
-    const { syncWithMockData, clearNestedReminders } = useCustomerStore();
 
-    // Migration helper function - useCallback ile memoize et
+    // Migration helper function - No longer needed for mock data, but kept if you still have legacy manual records in customers
     const syncFromCustomerStore = useCallback((customers) => {
         const currentReminders = useReminderStore.getState().reminders;
         const newFromCustomers = [];
@@ -52,13 +50,11 @@ const RemindersPage = () => {
         return customers.find(c => c.id === id) || null;
     }, [customers]);
 
-    // Migration config - useMemo ile memoize et (sonsuz döngüyü önlemek için)
+    // Migration config - Removed syncWithMockData
     const migrationConfig = useMemo(() => ({
         customers,
-        syncWithMockData,
-        clearNestedReminders,
         syncFromCustomerStore
-    }), [customers, syncWithMockData, clearNestedReminders, syncFromCustomerStore]);
+    }), [customers, syncFromCustomerStore]);
 
     return (
         <ModulePageWrapper moduleName="Reminders" aria-label="Reminders Management">
