@@ -87,6 +87,7 @@ const ICON_DATA = {
     user_search: 'https://cdn.lordicon.com/ntfaoelc.json',
     schema_pool: 'https://cdn.lordicon.com/wyaqzesp.json',
     audit_logs: 'https://cdn.lordicon.com/ojgowmvw.json',
+    trash: 'https://cdn.lordicon.com/skypigvl.json',
 };
 
 const NavItem = ({ icon, text, open, active, path, onClick }) => {
@@ -344,6 +345,7 @@ const Sidebar = () => {
         { key: 'reminders', icon: 'reminders', label: t('menu.reminders'), path: '/reminders', requiredPermission: ['REMINDERS_VIEW', 'MODULE_REMINDERS'] },
         { key: 'statistics', icon: 'statistics', label: t('menu.statistics'), path: '/statistics', requiredPermission: ['STATISTICS_VIEW', 'MODULE_STATISTICS'] },
         { key: 'notifications', icon: 'notifications', label: t('menu.notifications'), path: '/notifications', requiredPermission: ['NOTIFICATIONS_VIEW', 'MODULE_NOTIFICATIONS'] },
+        { key: 'trash', icon: 'trash', label: t('menu.trash', 'Çöp Kutusu'), path: '/trash', requiredPermission: ['CUSTOMERS_UPDATE', 'MODULE_CUSTOMERS'] },
     ];
 
     // Super Admin menu items with granular permissions

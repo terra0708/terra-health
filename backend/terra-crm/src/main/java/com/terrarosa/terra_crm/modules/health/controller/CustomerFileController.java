@@ -11,6 +11,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -36,6 +37,7 @@ public class CustomerFileController {
      * POST /v1/health/customers/{customerId}/files
      */
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("@permissionEvaluator.hasPermission(authentication, 'CUSTOMERS_UPDATE') or @permissionEvaluator.hasRole(authentication, 'ROLE_SUPER_ADMIN')")
     public ResponseEntity<CustomerFileDto> uploadFile(
             @PathVariable UUID customerId,
             @RequestParam("file") MultipartFile file,
@@ -55,6 +57,7 @@ public class CustomerFileController {
      * GET /v1/health/customers/{customerId}/files?includeDeleted=false
      */
     @GetMapping
+    @PreAuthorize("@permissionEvaluator.hasPermission(authentication, 'CUSTOMERS_VIEW') or @permissionEvaluator.hasRole(authentication, 'ROLE_SUPER_ADMIN')")
     public ResponseEntity<List<CustomerFileDto>> getCustomerFiles(
             @PathVariable UUID customerId,
             @RequestParam(value = "includeDeleted", defaultValue = "false") boolean includeDeleted) {
@@ -67,6 +70,7 @@ public class CustomerFileController {
      * PUT /v1/health/customers/{customerId}/files/{fileId}
      */
     @PutMapping("/{fileId}")
+    @PreAuthorize("@permissionEvaluator.hasPermission(authentication, 'CUSTOMERS_UPDATE') or @permissionEvaluator.hasRole(authentication, 'ROLE_SUPER_ADMIN')")
     public ResponseEntity<CustomerFileDto> updateFile(
             @PathVariable UUID customerId,
             @PathVariable UUID fileId,
@@ -80,6 +84,7 @@ public class CustomerFileController {
      * DELETE /v1/health/customers/{customerId}/files/{fileId}
      */
     @DeleteMapping("/{fileId}")
+    @PreAuthorize("@permissionEvaluator.hasPermission(authentication, 'CUSTOMERS_UPDATE') or @permissionEvaluator.hasRole(authentication, 'ROLE_SUPER_ADMIN')")
     public ResponseEntity<Void> deleteFile(
             @PathVariable UUID customerId,
             @PathVariable UUID fileId) {
@@ -92,6 +97,7 @@ public class CustomerFileController {
      * POST /v1/health/customers/{customerId}/files/{fileId}/restore
      */
     @PostMapping("/{fileId}/restore")
+    @PreAuthorize("@permissionEvaluator.hasPermission(authentication, 'CUSTOMERS_UPDATE') or @permissionEvaluator.hasRole(authentication, 'ROLE_SUPER_ADMIN')")
     public ResponseEntity<CustomerFileDto> restoreFile(
             @PathVariable UUID customerId,
             @PathVariable UUID fileId) {
@@ -104,6 +110,7 @@ public class CustomerFileController {
      * GET /v1/health/customers/{customerId}/files/{fileId}/download
      */
     @GetMapping("/{fileId}/download")
+    @PreAuthorize("@permissionEvaluator.hasPermission(authentication, 'CUSTOMERS_VIEW') or @permissionEvaluator.hasRole(authentication, 'ROLE_SUPER_ADMIN')")
     public ResponseEntity<Resource> downloadFile(
             @PathVariable UUID customerId,
             @PathVariable UUID fileId) {

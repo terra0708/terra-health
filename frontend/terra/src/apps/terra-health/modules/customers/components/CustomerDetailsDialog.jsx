@@ -32,6 +32,7 @@ export const CustomerDetailsDialog = ({ open, onClose, customer, client, t: tPro
     // File store
     const files = useFileStore(state => state.files);
     const deleteFile = useFileStore(state => state.deleteFile);
+    const downloadFileFromStore = useFileStore(state => state.downloadFile);
     const fetchCustomerFiles = useFileStore(state => state.fetchCustomerFiles);
 
     // Support both 'customer' and 'client' prop names for compatibility
@@ -428,8 +429,12 @@ export const CustomerDetailsDialog = ({ open, onClose, customer, client, t: tPro
                                                     <Box sx={{ display: 'flex', gap: 1 }}>
                                                         <IconButton
                                                             size="small"
-                                                            onClick={() => {
-                                                                window.open(`/api/v1/health/customers/${customerData.id}/files/${file.id}/download`, '_blank');
+                                                            onClick={async () => {
+                                                                try {
+                                                                    await downloadFileFromStore(customerData.id, file.id, file.originalFilename || file.displayName);
+                                                                } catch (error) {
+                                                                    console.error('Download failed:', error);
+                                                                }
                                                             }}
                                                             sx={{
                                                                 bgcolor: alpha(theme.palette.info.main, 0.1),
@@ -438,21 +443,6 @@ export const CustomerDetailsDialog = ({ open, onClose, customer, client, t: tPro
                                                             }}
                                                         >
                                                             <Download size={18} />
-                                                        </IconButton>
-                                                        <IconButton
-                                                            size="small"
-                                                            onClick={async () => {
-                                                                if (window.confirm(t('files.confirm_delete'))) {
-                                                                    await deleteFile(file.id);
-                                                                }
-                                                            }}
-                                                            sx={{
-                                                                bgcolor: alpha(theme.palette.error.main, 0.1),
-                                                                color: 'error.main',
-                                                                '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.2) }
-                                                            }}
-                                                        >
-                                                            <Trash2 size={18} />
                                                         </IconButton>
                                                     </Box>
                                                 </Paper>
@@ -519,6 +509,6 @@ export const CustomerDetailsDialog = ({ open, onClose, customer, client, t: tPro
                     </Stack>
                 )}
             </DialogContent>
-        </Dialog>
+        </Dialog >
     );
 };

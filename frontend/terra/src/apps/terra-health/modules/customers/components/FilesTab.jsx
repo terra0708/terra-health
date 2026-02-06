@@ -12,7 +12,7 @@ import { useLookup } from '@common/hooks/useLookup';
 import { useCustomerSettingsStore } from '../hooks/useCustomerSettingsStore';
 import { useFileStore } from '@shared/modules/files';
 
-export const FilesTab = ({ customerId, t }) => {
+export const FilesTab = ({ customerId, t, pendingFiles, setPendingFiles }) => {
     const theme = useTheme();
     const settings = useCustomerSettingsStore();
     const fileStore = useFileStore();
@@ -20,7 +20,6 @@ export const FilesTab = ({ customerId, t }) => {
     const fileInputRef = useRef(null);
 
     const [selectedCategoryId, setSelectedCategoryId] = useState(null);
-    const [pendingFiles, setPendingFiles] = useState([]);
     const [isDragging, setIsDragging] = useState(false);
     const [anchorEl, setAnchorEl] = useState(null);
     const [selectedFile, setSelectedFile] = useState(null);
@@ -77,27 +76,6 @@ export const FilesTab = ({ customerId, t }) => {
         setPendingFiles(prev => [...prev, ...selected]);
     };
 
-    const confirmUpload = async () => {
-        if (!customerId) {
-            console.error('No customer ID provided');
-            return;
-        }
-
-        try {
-            // Upload all pending files
-            for (const pf of pendingFiles) {
-                await fileStore.uploadFile(
-                    customerId,
-                    pf.file,
-                    pf.categoryId,
-                    pf.displayName + (pf.extension ? '.' + pf.extension : '')
-                );
-            }
-            setPendingFiles([]);
-        } catch (error) {
-            console.error('Failed to upload files:', error);
-        }
-    };
 
     const handleFileMenu = (event, file) => {
         setAnchorEl(event.currentTarget);
@@ -301,15 +279,6 @@ export const FilesTab = ({ customerId, t }) => {
                             </IconButton>
                         </Paper>
                     ))}
-                    <Button
-                        variant="contained"
-                        fullWidth
-                        onClick={confirmUpload}
-                        startIcon={<CheckCircle2 size={18} />}
-                        disabled={fileStore.loading}
-                    >
-                        {t('customers.drawer.add_multiple_to_system', { count: pendingFiles.length })}
-                    </Button>
                 </Stack>
             )}
 
@@ -398,15 +367,6 @@ export const FilesTab = ({ customerId, t }) => {
                 <MenuItem onClick={handleDownload}>
                     <Download size={16} style={{ marginRight: 8 }} />
                     {t('common.download', 'İndir')}
-                </MenuItem>
-                <MenuItem onClick={handleEditOpen}>
-                    <Edit2 size={16} style={{ marginRight: 8 }} />
-                    {t('common.edit', 'Düzenle')}
-                </MenuItem>
-                <Divider />
-                <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
-                    <Trash2 size={16} style={{ marginRight: 8 }} />
-                    {t('common.delete', 'Sil')}
                 </MenuItem>
             </Menu>
 

@@ -1,5 +1,6 @@
 package com.terrarosa.terra_crm.modules.health.service;
 
+import com.terrarosa.terra_crm.core.audit.annotation.AuditLog;
 import com.terrarosa.terra_crm.core.tenancy.TenantContext;
 import com.terrarosa.terra_crm.modules.auth.entity.User;
 import com.terrarosa.terra_crm.modules.auth.service.TenantSecurityService;
@@ -46,6 +47,7 @@ public class CustomerFileService {
     /**
      * Upload a file for a customer
      */
+    @AuditLog(action = "CUSTOMER_FILE_UPLOADED", resourceType = "FILE")
     @Transactional
     public CustomerFileDto uploadFile(UUID customerId, UUID categoryId, String displayName, MultipartFile file)
             throws IOException {
@@ -141,6 +143,7 @@ public class CustomerFileService {
     /**
      * Soft delete a file (move to trash)
      */
+    @AuditLog(action = "CUSTOMER_FILE_TRASHED", resourceType = "FILE")
     @Transactional
     public void deleteFile(UUID customerId, UUID fileId) {
         CustomerFile file = getFileById(fileId, customerId);
@@ -157,6 +160,7 @@ public class CustomerFileService {
     /**
      * Restore a file from trash
      */
+    @AuditLog(action = "CUSTOMER_FILE_RESTORED", resourceType = "FILE")
     @Transactional
     public CustomerFileDto restoreFile(UUID customerId, UUID fileId) {
         CustomerFile file = fileRepository.findById(fileId)
@@ -176,6 +180,7 @@ public class CustomerFileService {
     /**
      * Permanently delete a file
      */
+    @AuditLog(action = "CUSTOMER_FILE_PERMANENTLY_DELETED", resourceType = "FILE")
     @Transactional
     public void permanentlyDeleteFile(UUID fileId) {
         CustomerFile file = fileRepository.findById(fileId)

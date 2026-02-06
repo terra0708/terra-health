@@ -7,6 +7,7 @@ import com.terrarosa.terra_crm.modules.health.service.CustomerFileService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -31,6 +32,7 @@ public class FileManagementController {
      * GET /v1/health/files/trash
      */
     @GetMapping("/trash")
+    @PreAuthorize("@permissionEvaluator.hasPermission(authentication, 'CUSTOMERS_VIEW') or @permissionEvaluator.hasRole(authentication, 'ROLE_SUPER_ADMIN')")
     public ResponseEntity<List<CustomerFileDto>> getTrashFiles() {
         List<CustomerFileDto> files = fileService.getTrashFiles();
         return ResponseEntity.ok(files);
@@ -41,6 +43,7 @@ public class FileManagementController {
      * DELETE /v1/health/files/{fileId}/permanent
      */
     @DeleteMapping("/{fileId}/permanent")
+    @PreAuthorize("@permissionEvaluator.hasPermission(authentication, 'CUSTOMERS_UPDATE') or @permissionEvaluator.hasRole(authentication, 'ROLE_SUPER_ADMIN')")
     public ResponseEntity<Void> permanentlyDeleteFile(@PathVariable UUID fileId) {
         fileService.permanentlyDeleteFile(fileId);
         return ResponseEntity.noContent().build();

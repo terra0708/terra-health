@@ -28,6 +28,7 @@ const SuperAdminDashboard = lazy(() => import('@shared/views/SuperAdmin/Dashboar
 const TenantsPage = lazy(() => import('@shared/views/SuperAdmin/TenantsPage'));
 const UserSearchPage = lazy(() => import('@shared/views/SuperAdmin/UserSearchPage'));
 const AuditLogsPage = lazy(() => import('@shared/views/SuperAdmin/AuditLogsPage'));
+const TrashPage = lazy(() => import('@shared/views/Trash/TrashPage'));
 
 // Protected Route component with Hydration Control and Permission System
 const ProtectedRoute = ({ children, requiredPermission, requiredRole }) => {
@@ -187,6 +188,7 @@ function App() {
           </Route>
           <Route path="statistics" element={<ProtectedRoute requiredPermission={['STATISTICS_VIEW', 'MODULE_STATISTICS']}><LazyRoute moduleName="Statistics"><Views.Statistics /></LazyRoute></ProtectedRoute>} />
           <Route path="notifications" element={<ProtectedRoute requiredPermission={['NOTIFICATIONS_VIEW', 'MODULE_NOTIFICATIONS']}><LazyRoute moduleName="Notifications"><NotificationsPage /></LazyRoute></ProtectedRoute>} />
+          <Route path="trash" element={<ProtectedRoute requiredPermission={['CUSTOMERS_VIEW', 'MODULE_CUSTOMERS']}><LazyRoute moduleName="Trash"><TrashPage /></LazyRoute></ProtectedRoute>} />
           <Route path="settings">
             <Route index element={<ProtectedRoute requiredPermission={['SETTINGS_SYSTEM_UPDATE', 'MODULE_SETTINGS']}><LazyRoute moduleName="Settings"><SystemSettingsPage /></LazyRoute></ProtectedRoute>} />
             <Route path="users" element={<ProtectedRoute requiredPermission={['SETTINGS_USERS_VIEW', 'MODULE_SETTINGS']}><LazyRoute moduleName="Settings"><UsersPage /></LazyRoute></ProtectedRoute>} />

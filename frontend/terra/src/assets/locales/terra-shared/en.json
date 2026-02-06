@@ -129,7 +129,8 @@
         "settings": "Settings",
         "customer_panel": "Customer Parameters",
         "service_categories": "Service Categories",
-        "system_settings": "System Settings"
+        "system_settings": "System Settings",
+        "trash": "Trash"
     },
     "dashboard": {
         "title": "Dashboard",
@@ -498,5 +499,17 @@
             "admin_password": "Admin Password",
             "select_modules": "Select Modules"
         }
+    },
+    "trash": {
+        "title": "Trash",
+        "subtitle": "Files moved to trash are automatically deleted after 30 days.",
+        "empty_trash": "Trash is Empty",
+        "empty_trash_desc": "No deleted files found.",
+        "auto_delete_info": "Items in the trash will be permanently deleted after 30 days.",
+        "restore": "Restore",
+        "permanent_delete": "Permanent Delete",
+        "confirm_permanent_delete": "Are you sure you want to permanently delete this file? This action cannot be undone.",
+        "deleted_at": "Deleted at",
+        "customer_name": "Customer"
     }
 }

@@ -14,7 +14,8 @@ import {
     DialogContent,
     DialogActions,
     Alert,
-    Tooltip
+    Tooltip,
+    Snackbar
 } from '@mui/material';
 import {
     Trash2,
@@ -37,6 +38,7 @@ const TrashPage = () => {
     const { getLocalized } = useLookup();
 
     const [deleteDialog, setDeleteDialog] = useState({ open: false, file: null });
+    const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
     useEffect(() => {
         fileStore.fetchTrashFiles();
@@ -46,8 +48,10 @@ const TrashPage = () => {
     const handleRestore = async (file) => {
         try {
             await fileStore.restoreFile(file.customerId, file.id);
+            setSnackbar({ open: true, message: t('trash.restore_success', 'Dosya başarıyla geri yüklendi'), severity: 'success' });
         } catch (error) {
             console.error('Failed to restore file:', error);
+            setSnackbar({ open: true, message: t('common.error'), severity: 'error' });
         }
     };
 
@@ -56,8 +60,10 @@ const TrashPage = () => {
         try {
             await fileStore.permanentDeleteFile(deleteDialog.file.id);
             setDeleteDialog({ open: false, file: null });
+            setSnackbar({ open: true, message: t('trash.delete_success', 'Dosya kalıcı olarak silindi'), severity: 'success' });
         } catch (error) {
             console.error('Failed to permanently delete file:', error);
+            setSnackbar({ open: true, message: t('common.error'), severity: 'error' });
         }
     };
 
@@ -293,6 +299,17 @@ const TrashPage = () => {
                         </Button>
                     </DialogActions>
                 </Dialog>
+
+                <Snackbar
+                    open={snackbar.open}
+                    autoHideDuration={4000}
+                    onClose={() => setSnackbar({ ...snackbar, open: false })}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                >
+                    <Alert severity={snackbar.severity} sx={{ borderRadius: '16px', fontWeight: 700, px: 3, boxShadow: theme.shadows[10] }}>
+                        {snackbar.message}
+                    </Alert>
+                </Snackbar>
 
                 <style>{`
                     @keyframes fadeIn {

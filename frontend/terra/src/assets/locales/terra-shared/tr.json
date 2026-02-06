@@ -131,7 +131,8 @@
         "settings": "Ayarlar",
         "customer_panel": "Müşteri Parametreleri",
         "service_categories": "Hizmet Kategorileri",
-        "system_settings": "Sistem Ayarları"
+        "system_settings": "Sistem Ayarları",
+        "trash": "Çöp Kutusu"
     },
     "dashboard": {
         "title": "Dashboard",

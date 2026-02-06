@@ -17,6 +17,7 @@ import { RemindersTab } from './RemindersTab';
 import { FilesTab } from './FilesTab';
 import { PaymentsTab } from './PaymentsTab';
 import { useNotificationStore } from '@modules/notifications/hooks/useNotificationStore';
+import { useFileStore } from '@shared/modules/files';
 
 export const CustomerDrawer = ({ open, onClose, customer, client, t: tProp }) => {
     const theme = useTheme();
@@ -27,8 +28,10 @@ export const CustomerDrawer = ({ open, onClose, customer, client, t: tProp }) =>
     const settings = useCustomerSettingsStore();
     const { addClient, updateClient } = useClientStore();
     const { syncCustomerReminders } = useReminderStore();
+    const fileStore = useFileStore();
     const [tabValue, setTabValue] = React.useState(0);
     const [snackbar, setSnackbar] = React.useState({ open: false, message: '', severity: 'success' });
+    const [pendingFiles, setPendingFiles] = React.useState([]);
 
     const {
         register,
@@ -101,6 +104,7 @@ export const CustomerDrawer = ({ open, onClose, customer, client, t: tProp }) =>
                 });
             }
             setTabValue(0);
+            setPendingFiles([]);
         };
 
         initForm();
@@ -168,6 +172,23 @@ export const CustomerDrawer = ({ open, onClose, customer, client, t: tProp }) =>
             updateClient(clientId, payload).then(async () => {
                 // Sync Reminders (Intelligent sync instead of wipe-recreate)
                 await syncCustomerReminders(clientId, reminderNotes);
+
+                // Upload pending files
+                if (pendingFiles.length > 0) {
+                    for (const pf of pendingFiles) {
+                        try {
+                            await fileStore.uploadFile(
+                                clientId,
+                                pf.file,
+                                pf.categoryId,
+                                pf.displayName + (pf.extension ? '.' + pf.extension : '')
+                            );
+                        } catch (err) {
+                            console.error(`Failed to upload ${pf.displayName}:`, err);
+                        }
+                    }
+                }
+
                 setSnackbar({ open: true, message: t('common.success_update', 'Güncellendi'), severity: 'success' });
                 onClose();
             }).catch(err => {
@@ -182,6 +203,22 @@ export const CustomerDrawer = ({ open, onClose, customer, client, t: tProp }) =>
                 // Add reminders (Sync also works for new customers)
                 if (newId) {
                     await syncCustomerReminders(newId, reminderNotes);
+
+                    // Upload pending files
+                    if (pendingFiles.length > 0) {
+                        for (const pf of pendingFiles) {
+                            try {
+                                await fileStore.uploadFile(
+                                    newId,
+                                    pf.file,
+                                    pf.categoryId,
+                                    pf.displayName + (pf.extension ? '.' + pf.extension : '')
+                                );
+                            } catch (err) {
+                                console.error(`Failed to upload ${pf.displayName}:`, err);
+                            }
+                        }
+                    }
                 }
 
                 // Add notification
@@ -258,6 +295,8 @@ export const CustomerDrawer = ({ open, onClose, customer, client, t: tProp }) =>
                                 customerId={activeCustomer?.id}
                                 watch={watch}
                                 customerName={watch('name')}
+                                pendingFiles={pendingFiles}
+                                setPendingFiles={setPendingFiles}
                             />
 
                             <Box sx={{ mt: 6, display: 'flex', gap: 2 }}>
